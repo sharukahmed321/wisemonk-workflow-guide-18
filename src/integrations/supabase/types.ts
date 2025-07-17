@@ -47,6 +47,74 @@ export type Database = {
         }
         Relationships: []
       }
+      employees: {
+        Row: {
+          avatar_url: string | null
+          birthday: string | null
+          created_at: string | null
+          department: string
+          email: string
+          employee_id: string
+          employment_type: string
+          first_name: string
+          id: string
+          job_title: string
+          last_name: string
+          phone: string | null
+          salary: number | null
+          start_date: string
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          birthday?: string | null
+          created_at?: string | null
+          department: string
+          email: string
+          employee_id: string
+          employment_type: string
+          first_name: string
+          id?: string
+          job_title: string
+          last_name: string
+          phone?: string | null
+          salary?: number | null
+          start_date: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          birthday?: string | null
+          created_at?: string | null
+          department?: string
+          email?: string
+          employee_id?: string
+          employment_type?: string
+          first_name?: string
+          id?: string
+          job_title?: string
+          last_name?: string
+          phone?: string | null
+          salary?: number | null
+          start_date?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_locked_until: string | null

@@ -16,16 +16,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 const employeeSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(1, 'Phone number is required'),
   jobTitle: z.string().min(1, 'Job title is required'),
-  seniority: z.enum(['junior', 'mid-level', 'senior']),
-  jobDescription: z.string().optional(),
+  department: z.string().min(1, 'Department is required'),
+  employmentType: z.enum(['Full-time', 'Part-time', 'Contract']),
+  salary: z.number().min(0, 'Salary must be a positive number'),
   startDate: z.date(),
-  workLocation: z.enum(['remote', 'office', 'hybrid'])
+  birthday: z.date().optional(),
 });
 type EmployeeFormData = z.infer<typeof employeeSchema>;
 interface AddEmployeeFormProps {
@@ -35,9 +38,9 @@ export function AddEmployeeForm({
   onSuccess
 }: AddEmployeeFormProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isGeneratingJD, setIsGeneratingJD] = useState(false);
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
@@ -46,151 +49,78 @@ export function AddEmployeeForm({
       email: '',
       phone: '',
       jobTitle: '',
-      seniority: 'junior' as const,
-      jobDescription: '',
-      workLocation: 'remote'
+      department: '',
+      employmentType: 'Full-time' as const,
+      salary: 0,
     }
   });
-  const seniorityLevels = [
-    { value: 'junior', label: 'Junior' },
-    { value: 'mid-level', label: 'Mid-Level' },
-    { value: 'senior', label: 'Senior' }
+  const employmentTypes = [
+    { value: 'Full-time', label: 'Full-time' },
+    { value: 'Part-time', label: 'Part-time' },
+    { value: 'Contract', label: 'Contract' }
   ];
 
-  const generateJobDescription = async () => {
-    const jobTitle = form.getValues('jobTitle');
-    const seniority = form.getValues('seniority');
-    
-    if (!jobTitle) {
-      return;
-    }
-    
-    setIsGeneratingJD(true);
-    
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a professional HR specialist creating job descriptions for employment agreements. Generate comprehensive, professional job descriptions that are legally appropriate and industry-standard.'
-            },
-            {
-              role: 'user',
-              content: `Generate a professional job description for a ${seniority} level ${jobTitle} position. Include key responsibilities, requirements, qualifications, and benefits. Format it professionally for an employment agreement.`
-            }
-          ],
-          max_tokens: 800,
-          temperature: 0.7,
-        }),
-      });
+  const departments = [
+    'Engineering',
+    'Marketing',
+    'Sales',
+    'HR',
+    'Finance',
+    'Design',
+    'Operations'
+  ];
 
-      if (!response.ok) {
-        throw new Error('Failed to generate job description');
-      }
-
-      const data = await response.json();
-      const generatedJD = data.choices[0].message.content;
-      
-      form.setValue('jobDescription', generatedJD);
-    } catch (error) {
-      console.error('Error generating job description:', error);
-      
-      // Fallback to template-based generation
-      const templates = {
-        junior: `We are seeking a motivated Junior ${jobTitle} to join our dynamic team.
-
-Key Responsibilities:
-• Assist senior team members with daily tasks
-• Learn and apply best practices
-• Participate in team meetings and training sessions
-• Complete assigned projects under supervision
-• Collaborate with cross-functional teams
-
-Requirements:
-• Bachelor's degree or equivalent experience
-• 0-2 years of relevant experience
-• Strong willingness to learn
-• Good communication skills
-• Basic understanding of relevant technologies
-
-What We Offer:
-• Competitive salary and benefits package
-• Professional development opportunities
-• Collaborative and inclusive work environment
-• Flexible work arrangements
-• Career growth opportunities`,
-        'mid-level': `We are looking for an experienced ${jobTitle} to join our team.
-
-Key Responsibilities:
-• Lead and execute projects independently
-• Mentor junior team members
-• Collaborate with stakeholders on requirements
-• Implement solutions and best practices
-• Contribute to team processes and improvements
-
-Requirements:
-• Bachelor's degree or equivalent experience
-• 3-5 years of relevant experience
-• Proven track record of successful projects
-• Strong technical and communication skills
-• Experience with team collaboration
-
-What We Offer:
-• Competitive salary and benefits package
-• Professional development opportunities
-• Collaborative and inclusive work environment
-• Flexible work arrangements
-• Career growth opportunities`,
-        senior: `We seek a highly experienced Senior ${jobTitle} to join our leadership team.
-
-Key Responsibilities:
-• Lead complex projects and initiatives
-• Architect and design solutions
-• Mentor team members and drive technical excellence
-• Collaborate with leadership on strategic decisions
-• Drive innovation and process improvements
-
-Requirements:
-• Bachelor's degree or equivalent experience
-• 5+ years of relevant experience
-• Proven leadership and technical expertise
-• Excellent communication and strategic thinking
-• Experience leading teams and projects
-
-What We Offer:
-• Competitive salary and benefits package
-• Professional development opportunities
-• Collaborative and inclusive work environment
-• Flexible work arrangements
-• Career growth opportunities`
-      };
-      
-      const fallbackJD = templates[seniority] || templates.junior;
-      form.setValue('jobDescription', fallbackJD);
-    }
-    
-    setIsGeneratingJD(false);
+  const generateEmployeeId = () => {
+    // Generate a simple employee ID with format EMP + 3 digit number
+    const randomNum = Math.floor(Math.random() * 999) + 1;
+    return `EMP${randomNum.toString().padStart(3, '0')}`;
   };
   const onSubmit = async (data: EmployeeFormData) => {
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    setShowSuccess(true);
+    try {
+      const employeeId = generateEmployeeId();
+      
+      const { error } = await supabase
+        .from('employees')
+        .insert({
+          employee_id: employeeId,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          job_title: data.jobTitle,
+          department: data.department,
+          employment_type: data.employmentType,
+          salary: data.salary,
+          start_date: data.startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+          status: 'Active', // Default status for new employees
+          birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
+        });
 
-    // Auto-redirect after success
-    setTimeout(() => {
-      onSuccess?.();
-      navigate('/dashboard');
-    }, 2000);
+      if (error) throw error;
+
+      setShowSuccess(true);
+      toast({
+        title: "Success!",
+        description: `${data.firstName} ${data.lastName} has been added to your team.`,
+      });
+
+      // Auto-redirect after success
+      setTimeout(() => {
+        onSuccess?.();
+        navigate('/dashboard/people');
+      }, 2000);
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add employee. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   if (showSuccess) {
     return <div className="flex items-center justify-center min-h-[400px]">
@@ -292,26 +222,61 @@ What We Offer:
                         <FormMessage />
                       </FormItem>} />
 
-                  <FormField control={form.control} name="seniority" render={({
+                   <FormField control={form.control} name="department" render={({
                   field
                 }) => <FormItem>
-                        <FormLabel>Seniority *</FormLabel>
+                        <FormLabel>Department *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-11">
-                              <SelectValue placeholder="Select seniority level" />
+                              <SelectValue placeholder="Select department" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {seniorityLevels.map(level => <SelectItem key={level.value} value={level.value}>
-                                {level.label}
+                            {departments.map(dept => <SelectItem key={dept} value={dept}>
+                                {dept}
                               </SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>} />
 
-                  <FormField control={form.control} name="startDate" render={({
+                   <FormField control={form.control} name="employmentType" render={({
+                  field
+                }) => <FormItem>
+                        <FormLabel>Employment Type *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Select employment type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {employmentTypes.map(type => <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>} />
+
+                   <FormField control={form.control} name="salary" render={({
+                  field
+                }) => <FormItem>
+                        <FormLabel>Annual Salary *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="75000" 
+                            className="h-11" 
+                            {...field}
+                            onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>} />
+
+                   <FormField control={form.control} name="startDate" render={({
                   field
                 }) => <FormItem className="flex flex-col">
                         <FormLabel>Start Date *</FormLabel>
@@ -325,54 +290,37 @@ What We Offer:
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={date => date < new Date()} initialFocus className={cn("p-3 pointer-events-auto")} />
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus className={cn("p-3 pointer-events-auto")} />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>} />
+
+                   <FormField control={form.control} name="birthday" render={({
+                  field
+                }) => <FormItem className="flex flex-col">
+                        <FormLabel>Birthday (Optional)</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button variant="outline" className={cn("h-11 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                {field.value ? format(field.value, "PPP") : <span>Pick birthday</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus className={cn("p-3 pointer-events-auto")} />
                           </PopoverContent>
                         </Popover>
                         <FormMessage />
                       </FormItem>} />
                 </div>
-                
-                {/* Job Description */}
-                <div className="mt-6">
-                  <FormField control={form.control} name="jobDescription" render={({
-                    field
-                  }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>Job Description</FormLabel>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={generateJobDescription}
-                          disabled={isGeneratingJD || !form.getValues('jobTitle')}
-                          className="flex items-center gap-2"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                          {isGeneratingJD ? 'Generating...' : 'Generate JD using AI'}
-                        </Button>
-                      </div>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Describe the role, responsibilities, and requirements..." 
-                          className="min-h-[150px] resize-y"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
               </div>
 
-              {/* Work Location */}
-              <div>
-                
-                
-              </div>
 
               <div className="flex gap-4 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
+                <Button type="button" variant="outline" onClick={() => navigate('/dashboard/people')} className="flex-1">
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting} className="flex-1">

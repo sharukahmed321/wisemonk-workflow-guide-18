@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, LayoutGrid, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Employee, EmployeeStatus, Department, EmploymentType } from '@/types/employee';
-import { mockEmployees } from '@/data/employees';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { EmployeeTable } from '@/components/EmployeeTable';
 import { EmployeeCard } from '@/components/EmployeeCard';
 import { EmployeeFilters } from '@/components/EmployeeFilters';
@@ -11,14 +12,62 @@ import { Toggle } from '@/components/ui/toggle';
 
 export default function People() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedStatus, setSelectedStatus] = useState<EmployeeStatus | 'All'>('All');
   const [selectedDepartment, setSelectedDepartment] = useState<Department | 'All'>('All');
   const [selectedEmploymentType, setSelectedEmploymentType] = useState<EmploymentType | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch employees from database
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Transform database format to match Employee interface
+        const transformedEmployees: Employee[] = data.map(emp => ({
+          id: emp.id,
+          employeeId: emp.employee_id,
+          firstName: emp.first_name,
+          lastName: emp.last_name,
+          email: emp.email,
+          phone: emp.phone || '',
+          jobTitle: emp.job_title,
+          department: emp.department as Department,
+          employmentType: emp.employment_type as EmploymentType,
+          salary: emp.salary || 0,
+          startDate: emp.start_date,
+          status: emp.status as EmployeeStatus,
+          birthday: emp.birthday ? new Date(emp.birthday).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : '',
+          avatar: emp.avatar_url || '',
+        }));
+
+        setEmployees(transformedEmployees);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch employees. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, [toast]);
 
   const filteredEmployees = useMemo(() => {
-    let filtered = mockEmployees;
+    let filtered = employees;
 
     // Filter by search query
     if (searchQuery) {
@@ -47,15 +96,15 @@ export default function People() {
     }
 
     return filtered;
-  }, [searchQuery, selectedStatus, selectedDepartment, selectedEmploymentType]);
+  }, [employees, searchQuery, selectedStatus, selectedDepartment, selectedEmploymentType]);
 
   const statusCounts = useMemo(() => {
     return {
-      Active: mockEmployees.filter(emp => emp.status === 'Active').length,
-      Onboarding: mockEmployees.filter(emp => emp.status === 'Onboarding').length,
-      Exit: mockEmployees.filter(emp => emp.status === 'Exit').length,
+      Active: employees.filter(emp => emp.status === 'Active').length,
+      Onboarding: employees.filter(emp => emp.status === 'Onboarding').length,
+      Exit: employees.filter(emp => emp.status === 'Exit').length,
     };
-  }, []);
+  }, [employees]);
 
   const handleAddEmployee = () => {
     navigate('/dashboard/people/add');
@@ -112,19 +161,29 @@ export default function People() {
         selectedEmploymentType={selectedEmploymentType}
         onEmploymentTypeChange={setSelectedEmploymentType}
         statusCounts={statusCounts}
-        totalCount={mockEmployees.length}
+        totalCount={employees.length}
       />
 
       {/* Results Count */}
-      <div className="text-sm text-muted-foreground">
-        {filteredEmployees.length === mockEmployees.length
-          ? `Showing all ${filteredEmployees.length} employees`
-          : `Showing ${filteredEmployees.length} of ${mockEmployees.length} employees`
-        }
-      </div>
+      {loading ? (
+        <div className="text-sm text-muted-foreground">
+          Loading employees...
+        </div>
+      ) : (
+        <div className="text-sm text-muted-foreground">
+          {filteredEmployees.length === employees.length
+            ? `Showing all ${filteredEmployees.length} employees`
+            : `Showing ${filteredEmployees.length} of ${employees.length} employees`
+          }
+        </div>
+      )}
 
       {/* Employee Grid/Table */}
-      {filteredEmployees.length > 0 ? (
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading employees...</p>
+        </div>
+      ) : filteredEmployees.length > 0 ? (
         viewMode === 'grid' ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {filteredEmployees.map((employee) => (

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Cake } from "lucide-react";
-import { mockEmployees } from '@/data/employees';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BirthdayEmployee {
   id: string;
@@ -14,19 +14,21 @@ interface BirthdayEmployee {
   daysUntil: number;
 }
 
-const getUpcomingBirthdays = (): BirthdayEmployee[] => {
+const getUpcomingBirthdays = (employees: any[]): BirthdayEmployee[] => {
   const today = new Date();
   const currentYear = today.getFullYear();
   
-  return mockEmployees
+  return employees
     .filter(employee => employee.birthday && employee.status === 'Active')
     .map(employee => {
-      const [month, day] = employee.birthday!.split('-').map(Number);
-      let birthdayThisYear = new Date(currentYear, month - 1, day);
+      const birthdayDate = new Date(employee.birthday);
+      const month = birthdayDate.getMonth();
+      const day = birthdayDate.getDate();
+      let birthdayThisYear = new Date(currentYear, month, day);
       
       // If birthday has passed this year, consider next year's birthday
       if (birthdayThisYear < today) {
-        birthdayThisYear = new Date(currentYear + 1, month - 1, day);
+        birthdayThisYear = new Date(currentYear + 1, month, day);
       }
       
       const daysUntil = Math.ceil((birthdayThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -39,10 +41,10 @@ const getUpcomingBirthdays = (): BirthdayEmployee[] => {
       
       return {
         id: employee.id,
-        name: `${employee.firstName} ${employee.lastName}`,
+        name: `${employee.first_name} ${employee.last_name}`,
         date: dateLabel,
-        avatar: employee.avatar,
-        initials: `${employee.firstName[0]}${employee.lastName[0]}`,
+        avatar: employee.avatar_url,
+        initials: `${employee.first_name[0]}${employee.last_name[0]}`,
         daysUntil
       };
     })
@@ -51,7 +53,31 @@ const getUpcomingBirthdays = (): BirthdayEmployee[] => {
 };
 
 export function Birthdays() {
-  const upcomingBirthdays = getUpcomingBirthdays();
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('status', 'Active')
+          .not('birthday', 'is', null);
+
+        if (error) throw error;
+        setEmployees(data || []);
+      } catch (error) {
+        console.error('Error fetching employees for birthdays:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  const upcomingBirthdays = getUpcomingBirthdays(employees);
 
   return (
     <Card className="shadow-sm h-full">
@@ -69,7 +95,11 @@ export function Birthdays() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3 p-6 pt-0">
-        {upcomingBirthdays.length > 0 ? (
+        {loading ? (
+          <p className="text-xs text-muted-foreground text-center py-3">
+            Loading birthdays...
+          </p>
+        ) : upcomingBirthdays.length > 0 ? (
           upcomingBirthdays.map((employee) => (
             <div key={employee.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
               <div className="flex items-center gap-3">

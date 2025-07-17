@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
-import { mockEmployees } from '@/data/employees';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AnniversaryEmployee {
   id: string;
@@ -15,14 +15,14 @@ interface AnniversaryEmployee {
   daysUntil: number;
 }
 
-const getUpcomingAnniversaries = (): AnniversaryEmployee[] => {
+const getUpcomingAnniversaries = (employees: any[]): AnniversaryEmployee[] => {
   const today = new Date();
   const currentYear = today.getFullYear();
   
-  return mockEmployees
+  return employees
     .filter(employee => employee.status === 'Active')
     .map(employee => {
-      const startDate = new Date(employee.startDate);
+      const startDate = new Date(employee.start_date);
       const anniversaryThisYear = new Date(currentYear, startDate.getMonth(), startDate.getDate());
       
       // If anniversary has passed this year, consider next year's anniversary
@@ -42,10 +42,10 @@ const getUpcomingAnniversaries = (): AnniversaryEmployee[] => {
       
       return {
         id: employee.id,
-        name: `${employee.firstName} ${employee.lastName}`,
+        name: `${employee.first_name} ${employee.last_name}`,
         date: dateLabel,
-        avatar: employee.avatar,
-        initials: `${employee.firstName[0]}${employee.lastName[0]}`,
+        avatar: employee.avatar_url,
+        initials: `${employee.first_name[0]}${employee.last_name[0]}`,
         years,
         daysUntil
       };
@@ -56,7 +56,30 @@ const getUpcomingAnniversaries = (): AnniversaryEmployee[] => {
 };
 
 export function WorkAnniversaries() {
-  const upcomingAnniversaries = getUpcomingAnniversaries();
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('status', 'Active');
+
+        if (error) throw error;
+        setEmployees(data || []);
+      } catch (error) {
+        console.error('Error fetching employees for anniversaries:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  const upcomingAnniversaries = getUpcomingAnniversaries(employees);
 
   return (
     <Card className="shadow-sm h-full">
@@ -74,7 +97,11 @@ export function WorkAnniversaries() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3 p-6 pt-0">
-        {upcomingAnniversaries.length > 0 ? (
+        {loading ? (
+          <p className="text-xs text-muted-foreground text-center py-3">
+            Loading anniversaries...
+          </p>
+        ) : upcomingAnniversaries.length > 0 ? (
           upcomingAnniversaries.map((employee) => (
             <div key={employee.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
               <div className="flex items-center gap-3">
