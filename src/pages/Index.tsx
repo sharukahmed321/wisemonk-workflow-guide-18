@@ -4,19 +4,53 @@ import { BrandingSection } from '../components/BrandingSection';
 import { AuthSection } from '../components/AuthSection';
 import { OnboardingFlow } from '../components/OnboardingFlow';
 import { Dashboard } from '../components/Dashboard';
+import { useAuth } from '../contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const location = useLocation();
-  const [appState, setAppState] = useState('auth'); // 'auth', 'onboarding', 'dashboard'
+  const { user, loading } = useAuth();
+  const [appState, setAppState] = useState<'auth' | 'onboarding' | 'dashboard'>('auth');
   
-  // Check if we're on a dashboard route
   useEffect(() => {
-    if (location.pathname.startsWith('/dashboard')) {
-      setAppState('dashboard');
+    if (loading) return; // Wait for auth to load
+    
+    if (user) {
+      // User is authenticated
+      if (location.pathname.startsWith('/dashboard')) {
+        setAppState('dashboard');
+      } else {
+        // Check if user needs onboarding by checking their profile
+        checkUserOnboardingStatus();
+      }
+    } else {
+      // User is not authenticated
+      setAppState('auth');
     }
-  }, [location]);
+  }, [user, loading, location]);
+
+  const checkUserOnboardingStatus = async () => {
+    // For now, assume all authenticated users go to dashboard
+    // Later we can add logic to check if they completed onboarding
+    setAppState('dashboard');
+    if (!location.pathname.startsWith('/dashboard')) {
+      window.history.pushState({}, '', '/dashboard');
+    }
+  };
+
+  // Show loading spinner while auth is initializing
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
   
-  if (appState === 'dashboard') {
+  if (appState === 'dashboard' && user) {
     return <Dashboard />;
   }
   

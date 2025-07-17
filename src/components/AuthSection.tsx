@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,8 +9,11 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Separator } from "./ui/separator";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { Alert, AlertDescription } from "./ui/alert";
 import { OTPVerification, EmailVerified } from "./OTPVerification";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthSectionProps {
   onSignInComplete: () => void;
@@ -25,7 +28,9 @@ const signInSchema = z.object({
 
 const signUpSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number'),
   confirmPassword: z.string(),
   terms: z.boolean().refine(val => val === true, 'You must accept the terms and conditions'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -41,6 +46,9 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   const [userEmail, setUserEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -61,37 +69,160 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     },
   });
 
-  const onSignIn = async (data: SignInFormData) => {
+  // Log authentication events to audit table
+  const logAuthEvent = async (eventType: string, success: boolean, details?: any) => {
     try {
-      console.log('Sign in attempt:', data.email);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For existing users, go directly to dashboard (skip OTP and onboarding)
-      onSignInComplete();
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('auth_audit_logs').insert({
+        user_id: user?.id || null,
+        event_type: eventType,
+        success,
+        details: details || {},
+        ip_address: null, // Will be filled by database trigger if needed
+        user_agent: navigator.userAgent,
+      });
     } catch (error) {
-      console.error('Sign in failed:', error);
+      console.error('Failed to log auth event:', error);
+    }
+  };
+
+  const onSignIn = async (data: SignInFormData) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (authError) {
+        await logAuthEvent('sign_in_failed', false, { 
+          email: data.email, 
+          error: authError.message 
+        });
+        
+        if (authError.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please check your credentials and try again.');
+        } else if (authError.message.includes('Email not confirmed')) {
+          setError('Please verify your email address before signing in.');
+        } else {
+          setError(authError.message);
+        }
+        return;
+      }
+
+      if (authData.user) {
+        // Update last login time
+        await supabase
+          .from('profiles')
+          .update({ last_login_at: new Date().toISOString() })
+          .eq('user_id', authData.user.id);
+
+        await logAuthEvent('sign_in_success', true, { email: data.email });
+        
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+        
+        onSignInComplete();
+      }
+    } catch (error: any) {
+      await logAuthEvent('sign_in_error', false, { 
+        email: data.email, 
+        error: error.message 
+      });
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Sign in error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const onSignUp = async (data: SignUpFormData) => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      console.log('Sign up attempt:', data.email);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUserEmail(data.email);
-      setAuthState('otp');
-    } catch (error) {
-      console.error('Sign up failed:', error);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: '',
+            last_name: '',
+          }
+        }
+      });
+
+      if (authError) {
+        await logAuthEvent('sign_up_failed', false, { 
+          email: data.email, 
+          error: authError.message 
+        });
+        
+        if (authError.message.includes('User already registered')) {
+          setError('An account with this email already exists. Please sign in instead.');
+        } else {
+          setError(authError.message);
+        }
+        return;
+      }
+
+      if (authData.user) {
+        await logAuthEvent('sign_up_success', true, { email: data.email });
+        
+        setUserEmail(data.email);
+        
+        toast({
+          title: "Account created!",
+          description: "Please check your email to verify your account.",
+        });
+        
+        // Check if email confirmation is required
+        if (!authData.session) {
+          setAuthState('otp');
+        } else {
+          onSignUpComplete();
+        }
+      }
+    } catch (error: any) {
+      await logAuthEvent('sign_up_error', false, { 
+        email: data.email, 
+        error: error.message 
+      });
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Sign up error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSocialLogin = () => {
-    // Simulate Google login
-    console.log('Logging in with Google');
+  const handleGoogleAuth = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) {
+        await logAuthEvent('google_auth_failed', false, { error: error.message });
+        setError(error.message);
+      }
+    } catch (error: any) {
+      await logAuthEvent('google_auth_error', false, { error: error.message });
+      setError('Failed to sign in with Google. Please try again.');
+      console.error('Google auth error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (authState === 'otp') {
@@ -109,9 +240,22 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
       <EmailVerified onContinue={onSignUpComplete} />
     );
   }
+
   return (
     <div className="flex-1 flex flex-col justify-center px-6 py-8 lg:px-8 lg:w-1/2">
       <div className="mx-auto w-full max-w-sm">
+        <div className="mb-6 flex items-center justify-center">
+          <Shield className="h-8 w-8 text-primary mr-2" />
+          <h1 className="text-2xl font-bold text-foreground">Secure Access</h1>
+        </div>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="login">Sign In</TabsTrigger>
@@ -122,7 +266,8 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
             <div className="space-y-4">
               <Button 
                 variant="outline" 
-                onClick={handleSocialLogin}
+                onClick={handleGoogleAuth}
+                disabled={isLoading}
                 className="w-full h-11 flex items-center justify-center gap-3"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -153,7 +298,12 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                     <FormItem>
                       <FormLabel>Email address</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your email" className="h-11" {...field} />
+                        <Input 
+                          placeholder="Enter your email" 
+                          className="h-11" 
+                          disabled={isLoading}
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -172,6 +322,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password" 
                             className="h-11 pr-10"
+                            disabled={isLoading}
                             {...field} 
                           />
                           <Button
@@ -180,6 +331,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                             size="sm"
                             className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                             onClick={() => setShowPassword(!showPassword)}
+                            disabled={isLoading}
                           >
                             {showPassword ? (
                               <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -204,6 +356,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
+                            disabled={isLoading}
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none">
@@ -214,17 +367,21 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                       </FormItem>
                     )}
                   />
-                  <button type="button" className="text-sm text-primary hover:text-primary/80">
+                  <button 
+                    type="button" 
+                    className="text-sm text-primary hover:text-primary/80"
+                    disabled={isLoading}
+                  >
                     Forgot password?
                   </button>
                 </div>
                 
                 <Button 
                   type="submit"
-                  disabled={signInForm.formState.isSubmitting}
+                  disabled={isLoading}
                   className="w-full h-11"
                 >
-                  {signInForm.formState.isSubmitting ? 'Signing in...' : 'Sign in'}
+                  {isLoading ? 'Signing in...' : 'Sign in'}
                 </Button>
               </form>
             </Form>
@@ -234,7 +391,8 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
             <div className="space-y-4">
               <Button 
                 variant="outline" 
-                onClick={handleSocialLogin}
+                onClick={handleGoogleAuth}
+                disabled={isLoading}
                 className="w-full h-11 flex items-center justify-center gap-3"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -265,7 +423,12 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                     <FormItem>
                       <FormLabel>Email address</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your email" className="h-11" {...field} />
+                        <Input 
+                          placeholder="Enter your email" 
+                          className="h-11" 
+                          disabled={isLoading}
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -282,8 +445,9 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                         <div className="relative">
                           <Input 
                             type={showPassword ? "text" : "password"}
-                            placeholder="Create a password" 
+                            placeholder="Create a strong password" 
                             className="h-11 pr-10"
+                            disabled={isLoading}
                             {...field} 
                           />
                           <Button
@@ -292,6 +456,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                             size="sm"
                             className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                             onClick={() => setShowPassword(!showPassword)}
+                            disabled={isLoading}
                           >
                             {showPassword ? (
                               <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -302,6 +467,9 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                         </div>
                       </FormControl>
                       <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Must contain at least 8 characters with uppercase, lowercase, and number
+                      </p>
                     </FormItem>
                   )}
                 />
@@ -318,6 +486,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                             type={showConfirmPassword ? "text" : "password"}
                             placeholder="Confirm your password" 
                             className="h-11 pr-10"
+                            disabled={isLoading}
                             {...field} 
                           />
                           <Button
@@ -326,6 +495,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                             size="sm"
                             className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            disabled={isLoading}
                           >
                             {showConfirmPassword ? (
                               <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -349,6 +519,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={isLoading}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -370,10 +541,10 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                 
                 <Button 
                   type="submit"
-                  disabled={signUpForm.formState.isSubmitting}
+                  disabled={isLoading}
                   className="w-full h-11"
                 >
-                  {signUpForm.formState.isSubmitting ? 'Creating account...' : 'Create account'}
+                  {isLoading ? 'Creating account...' : 'Create account'}
                 </Button>
               </form>
             </Form>
