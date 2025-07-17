@@ -167,6 +167,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_role_priority: {
+        Args: { role_name: Database["public"]["Enums"]["app_role"] }
+        Returns: number
+      }
       has_role: {
         Args: {
           _user_id: string
