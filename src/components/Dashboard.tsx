@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import Settings from '../pages/Settings';
@@ -13,6 +14,7 @@ import { PublicHolidays } from './PublicHolidays';
 import { AddEmployeeTwoStepForm } from './AddEmployeeTwoStepForm';
 import { AddressStep, MSAStep, SetupComplete } from './SetupFlow';
 import { DashboardHeader } from './DashboardHeader';
+import { EmailVerificationGuard } from './EmailVerificationGuard';
 
 function DashboardHome() {
   const navigate = useNavigate();
@@ -75,47 +77,49 @@ export function Dashboard() {
   const navigate = useNavigate();
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <DashboardHeader />
+    <EmailVerificationGuard>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          
+          <div className="flex-1 flex flex-col">
+            {/* Header */}
+            <DashboardHeader />
 
-          {/* Main Content */}
-          <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
-            <Routes>
-              <Route index element={<DashboardHome />} />
-              <Route path="add-employee" element={<AddEmployeeTwoStepForm />} />
-              <Route path="setup/address" element={
-                <AddressStep onComplete={() => {
-                  navigate('/dashboard/setup/msa');
-                }} />
-              } />
-              <Route path="setup/msa" element={
-                <MSAStep onComplete={() => {
-                  navigate('/dashboard/setup/complete');
-                }} />
-              } />
-              <Route path="setup/complete" element={
-                <SetupComplete onContinue={() => {
-                  navigate('/dashboard');
-                }} />
-              } />
-              <Route path="people" element={<People />} />
-              <Route path="people/add" element={<AddEmployeeTwoStepForm onSuccess={() => navigate('/dashboard/people')} />} />
-              <Route path="teams" element={<PlaceholderPage title="Teams" />} />
-              <Route path="time" element={<PlaceholderPage title="Time & Attendance" />} />
-              <Route path="reports" element={<PlaceholderPage title="Reports" />} />
-              <Route path="billing" element={<PlaceholderPage title="Billing" />} />
-              <Route path="invoices" element={<PlaceholderPage title="Invoices" />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="notifications" element={<PlaceholderPage title="Notifications" />} />
-            </Routes>
-          </main>
+            {/* Main Content */}
+            <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
+              <Routes>
+                <Route index element={<DashboardHome />} />
+                <Route path="add-employee" element={<AddEmployeeTwoStepForm />} />
+                <Route path="setup/address" element={
+                  <AddressStep onComplete={() => {
+                    navigate('/dashboard/setup/msa');
+                  }} />
+                } />
+                <Route path="setup/msa" element={
+                  <MSAStep onComplete={() => {
+                    navigate('/dashboard/setup/complete');
+                  }} />
+                } />
+                <Route path="setup/complete" element={
+                  <SetupComplete onContinue={() => {
+                    navigate('/dashboard');
+                  }} />
+                } />
+                <Route path="people" element={<People />} />
+                <Route path="people/add" element={<AddEmployeeTwoStepForm onSuccess={() => navigate('/dashboard/people')} />} />
+                <Route path="teams" element={<PlaceholderPage title="Teams" />} />
+                <Route path="time" element={<PlaceholderPage title="Time & Attendance" />} />
+                <Route path="reports" element={<PlaceholderPage title="Reports" />} />
+                <Route path="billing" element={<PlaceholderPage title="Billing" />} />
+                <Route path="invoices" element={<PlaceholderPage title="Invoices" />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="notifications" element={<PlaceholderPage title="Notifications" />} />
+              </Routes>
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </EmailVerificationGuard>
   );
 }

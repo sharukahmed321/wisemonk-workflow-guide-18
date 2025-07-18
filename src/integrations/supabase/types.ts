@@ -117,55 +117,73 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_locked_reason: string | null
           account_locked_until: string | null
           avatar_url: string | null
           created_at: string
           department: string | null
           email: string
+          email_verification_attempts: number | null
+          email_verification_sent_at: string | null
           email_verified: boolean
           failed_login_attempts: number
           first_name: string | null
           id: string
           is_active: boolean
           job_title: string | null
+          last_failed_login_at: string | null
           last_login_at: string | null
           last_name: string | null
+          login_attempts_count: number | null
+          password_changed_at: string | null
           phone: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_locked_reason?: string | null
           account_locked_until?: string | null
           avatar_url?: string | null
           created_at?: string
           department?: string | null
           email: string
+          email_verification_attempts?: number | null
+          email_verification_sent_at?: string | null
           email_verified?: boolean
           failed_login_attempts?: number
           first_name?: string | null
           id?: string
           is_active?: boolean
           job_title?: string | null
+          last_failed_login_at?: string | null
           last_login_at?: string | null
           last_name?: string | null
+          login_attempts_count?: number | null
+          password_changed_at?: string | null
           phone?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_locked_reason?: string | null
           account_locked_until?: string | null
           avatar_url?: string | null
           created_at?: string
           department?: string | null
           email?: string
+          email_verification_attempts?: number | null
+          email_verification_sent_at?: string | null
           email_verified?: boolean
           failed_login_attempts?: number
           first_name?: string | null
           id?: string
           is_active?: boolean
           job_title?: string | null
+          last_failed_login_at?: string | null
           last_login_at?: string | null
           last_name?: string | null
+          login_attempts_count?: number | null
+          password_changed_at?: string | null
           phone?: string | null
           updated_at?: string
           user_id?: string
@@ -231,6 +249,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_send_verification_email: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
+      get_account_security_status: {
+        Args: { user_email: string }
+        Returns: Json
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
@@ -247,6 +273,28 @@ export type Database = {
         Returns: boolean
       }
       increment_failed_login_attempts: {
+        Args:
+          | { user_email: string }
+          | { user_email: string; ip_address?: string }
+        Returns: undefined
+      }
+      is_email_verified: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      require_email_verification: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      reset_failed_login_attempts: {
+        Args: { user_email: string; ip_address?: string }
+        Returns: undefined
+      }
+      should_lock_account: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
+      track_email_verification_attempt: {
         Args: { user_email: string }
         Returns: undefined
       }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,7 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Alert, AlertDescription } from "./ui/alert";
 import { OTPVerification, EmailVerified } from "./OTPVerification";
 import { ForgotPasswordModal } from "./ForgotPasswordModal";
-import { Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
+import { AccountLockoutModal } from "./AccountLockoutModal";
+import { Eye, EyeOff, Shield, AlertCircle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,8 +32,8 @@ const signInSchema = z.object({
 const signUpSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    .min(12, 'Password must be at least 12 characters')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
   confirmPassword: z.string(),
   terms: z.boolean().refine(val => val === true, 'You must accept the terms and conditions'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -51,6 +53,9 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordModalOpen, setForgotPasswordModalOpen] = useState(false);
+  const [lockoutModalOpen, setLockoutModalOpen] = useState(false);
+  const [lockoutData, setLockoutData] = useState<any>(null);
+  const [rateLimitCooldown, setRateLimitCooldown] = useState(0);
   const { toast } = useToast();
 
   const signInForm = useForm<SignInFormData>({
@@ -72,6 +77,33 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     },
   });
 
+  // Rate limiting cooldown timer
+  useEffect(() => {
+    if (rateLimitCooldown > 0) {
+      const timer = setTimeout(() => setRateLimitCooldown(rateLimitCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [rateLimitCooldown]);
+
+  // Check account security status
+  const checkAccountSecurity = async (email: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_account_security_status', {
+        user_email: email
+      });
+
+      if (error) {
+        console.error('Error checking account security:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error checking account security:', error);
+      return null;
+    }
+  };
+
   // Log authentication events to audit table
   const logAuthEvent = async (eventType: string, success: boolean, details?: any) => {
     try {
@@ -89,7 +121,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     }
   };
 
-  // Track failed login attempts
+  // Track failed login attempts with enhanced security
   const updateFailedLoginAttempts = async (email: string, increment: boolean = true) => {
     try {
       if (increment) {
@@ -100,13 +132,19 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         
         if (!error) {
           setShowForgotPassword(true);
+          
+          // Check if account should be locked
+          const securityStatus = await checkAccountSecurity(email);
+          if (securityStatus?.is_locked) {
+            setLockoutData(securityStatus);
+            setLockoutModalOpen(true);
+          }
         }
       } else {
         // Reset failed attempts on successful login
-        const { error } = await supabase
-          .from('profiles')
-          .update({ failed_login_attempts: 0 })
-          .eq('email', email);
+        await supabase.rpc('reset_failed_login_attempts', {
+          user_email: email
+        });
       }
     } catch (error) {
       console.error('Error updating failed login attempts:', error);
@@ -118,6 +156,15 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     setError(null);
     
     try {
+      // First check if account is locked
+      const securityStatus = await checkAccountSecurity(data.email);
+      if (securityStatus?.is_locked) {
+        setLockoutData(securityStatus);
+        setLockoutModalOpen(true);
+        setIsLoading(false);
+        return;
+      }
+
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
@@ -132,8 +179,14 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         if (authError.message.includes('Invalid login credentials')) {
           await updateFailedLoginAttempts(data.email, true);
           setError('Invalid email or password. Please check your credentials and try again.');
+          
+          // Add rate limiting for repeated failures
+          setRateLimitCooldown(5); // 5 second cooldown after failed attempt
         } else if (authError.message.includes('Email not confirmed')) {
           setError('Please verify your email address before signing in.');
+        } else if (authError.message.includes('rate limit')) {
+          setError('Too many login attempts. Please wait before trying again.');
+          setRateLimitCooldown(60); // 1 minute cooldown for rate limiting
         } else {
           setError(authError.message);
         }
@@ -144,7 +197,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         // Reset failed login attempts on successful login
         await updateFailedLoginAttempts(data.email, false);
         
-        // Update last login time
+        // Update last login time in profiles table
         await supabase
           .from('profiles')
           .update({ last_login_at: new Date().toISOString() })
@@ -180,7 +233,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             first_name: '',
             last_name: '',
@@ -209,7 +262,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         
         toast({
           title: "Account created!",
-          description: "Please check your email to verify your account.",
+          description: "Please check your email to verify your account before accessing the dashboard.",
         });
         
         // Check if email confirmation is required
@@ -290,6 +343,15 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {rateLimitCooldown > 0 && (
+          <Alert className="mb-6">
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              Please wait {rateLimitCooldown} seconds before trying again.
+            </AlertDescription>
           </Alert>
         )}
 
@@ -419,10 +481,10 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                 
                 <Button 
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || rateLimitCooldown > 0}
                   className="w-full h-11"
                 >
-                  {isLoading ? 'Signing in...' : 'Sign in'}
+                  {isLoading ? 'Signing in...' : rateLimitCooldown > 0 ? `Wait ${rateLimitCooldown}s` : 'Sign in'}
                 </Button>
               </form>
             </Form>
@@ -511,7 +573,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                       </FormControl>
                       <FormMessage />
                       <p className="text-xs text-muted-foreground">
-                        Must contain at least 8 characters with uppercase, lowercase, and number
+                        Must contain at least 12 characters with uppercase, lowercase, number, and special character
                       </p>
                     </FormItem>
                   )}
@@ -597,6 +659,13 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         <ForgotPasswordModal 
           isOpen={forgotPasswordModalOpen}
           onClose={() => setForgotPasswordModalOpen(false)}
+        />
+
+        <AccountLockoutModal
+          isOpen={lockoutModalOpen}
+          onClose={() => setLockoutModalOpen(false)}
+          lockoutData={lockoutData}
+          userEmail={userEmail || signInForm.getValues('email')}
         />
       </div>
     </div>
