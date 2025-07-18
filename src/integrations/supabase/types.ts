@@ -246,6 +246,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_failed_login_attempts: {
+        Args: { user_email: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

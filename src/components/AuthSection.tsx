@@ -93,10 +93,14 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   const updateFailedLoginAttempts = async (email: string, increment: boolean = true) => {
     try {
       if (increment) {
-        // Increment failed attempts
-        const { error } = await supabase.rpc('increment_failed_login_attempts', {
-          user_email: email
-        });
+        // Increment failed attempts using direct database update
+        const { error } = await supabase
+          .from('profiles')
+          .update({ 
+            failed_login_attempts: supabase.raw('failed_login_attempts + 1')
+          })
+          .eq('email', email);
+        
         if (!error) {
           setShowForgotPassword(true);
         }
