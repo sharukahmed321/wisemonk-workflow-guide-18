@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BrandingSection } from '../components/BrandingSection';
@@ -6,6 +7,7 @@ import { OnboardingFlow } from '../components/OnboardingFlow';
 import { Dashboard } from '../components/Dashboard';
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '../integrations/supabase/client';
 
 const Index = () => {
   const location = useLocation();
@@ -30,11 +32,41 @@ const Index = () => {
   }, [user, loading, location]);
 
   const checkUserOnboardingStatus = async () => {
-    // For now, assume all authenticated users go to dashboard
-    // Later we can add logic to check if they completed onboarding
-    setAppState('dashboard');
-    if (!location.pathname.startsWith('/dashboard')) {
-      window.history.pushState({}, '', '/dashboard');
+    try {
+      // Check if user profile has basic information filled out
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, job_title')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking profile:', error);
+        // Default to dashboard on error
+        setAppState('dashboard');
+        if (!location.pathname.startsWith('/dashboard')) {
+          window.history.pushState({}, '', '/dashboard');
+        }
+        return;
+      }
+
+      // If profile doesn't exist or is incomplete, go to onboarding
+      if (!profile || !profile.first_name || !profile.last_name || !profile.job_title) {
+        setAppState('onboarding');
+      } else {
+        // Profile is complete, go to dashboard
+        setAppState('dashboard');
+        if (!location.pathname.startsWith('/dashboard')) {
+          window.history.pushState({}, '', '/dashboard');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      // Default to dashboard on error
+      setAppState('dashboard');
+      if (!location.pathname.startsWith('/dashboard')) {
+        window.history.pushState({}, '', '/dashboard');
+      }
     }
   };
 
