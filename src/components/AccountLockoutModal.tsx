@@ -5,15 +5,24 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Shield, Clock, Mail } from 'lucide-react';
 
+interface SecurityStatus {
+  email: string;
+  is_locked: boolean;
+  locked_until: string | null;
+  lock_reason: string | null;
+  failed_attempts: number;
+  last_failed_login: string | null;
+  last_successful_login: string | null;
+  email_verified: boolean;
+  email_verified_at: string | null;
+  verification_attempts: number;
+  last_verification_sent: string | null;
+}
+
 interface AccountLockoutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  lockoutData: {
-    isLocked: boolean;
-    lockedUntil: string | null;
-    lockReason: string | null;
-    failedAttempts: number;
-  } | null;
+  lockoutData: SecurityStatus | null;
   userEmail: string;
 }
 
@@ -23,9 +32,9 @@ export function AccountLockoutModal({
   lockoutData, 
   userEmail 
 }: AccountLockoutModalProps) {
-  if (!lockoutData?.isLocked) return null;
+  if (!lockoutData?.is_locked) return null;
 
-  const lockedUntil = lockoutData.lockedUntil ? new Date(lockoutData.lockedUntil) : null;
+  const lockedUntil = lockoutData.locked_until ? new Date(lockoutData.locked_until) : null;
   const now = new Date();
   const remainingTime = lockedUntil ? Math.max(0, Math.floor((lockedUntil.getTime() - now.getTime()) / 1000 / 60)) : 0;
 
@@ -48,14 +57,14 @@ export function AccountLockoutModal({
             <AlertDescription>
               <strong>Security Protection Active</strong>
               <br />
-              {lockoutData.lockReason || 'Too many failed login attempts detected'}
+              {lockoutData.lock_reason || 'Too many failed login attempts detected'}
             </AlertDescription>
           </Alert>
 
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Failed attempts:</span>
-              <span className="font-medium">{lockoutData.failedAttempts}/5</span>
+              <span className="font-medium">{lockoutData.failed_attempts}/5</span>
             </div>
             
             {remainingTime > 0 && (

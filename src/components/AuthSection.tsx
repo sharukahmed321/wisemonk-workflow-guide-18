@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +20,20 @@ import { useToast } from "@/hooks/use-toast";
 interface AuthSectionProps {
   onSignInComplete: () => void;
   onSignUpComplete: () => void;
+}
+
+interface SecurityStatus {
+  email: string;
+  is_locked: boolean;
+  locked_until: string | null;
+  lock_reason: string | null;
+  failed_attempts: number;
+  last_failed_login: string | null;
+  last_successful_login: string | null;
+  email_verified: boolean;
+  email_verified_at: string | null;
+  verification_attempts: number;
+  last_verification_sent: string | null;
 }
 
 const signInSchema = z.object({
@@ -54,7 +67,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordModalOpen, setForgotPasswordModalOpen] = useState(false);
   const [lockoutModalOpen, setLockoutModalOpen] = useState(false);
-  const [lockoutData, setLockoutData] = useState<any>(null);
+  const [lockoutData, setLockoutData] = useState<SecurityStatus | null>(null);
   const [rateLimitCooldown, setRateLimitCooldown] = useState(0);
   const { toast } = useToast();
 
@@ -86,7 +99,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   }, [rateLimitCooldown]);
 
   // Check account security status
-  const checkAccountSecurity = async (email: string) => {
+  const checkAccountSecurity = async (email: string): Promise<SecurityStatus | null> => {
     try {
       const { data, error } = await supabase.rpc('get_account_security_status', {
         user_email: email
@@ -97,7 +110,8 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         return null;
       }
 
-      return data;
+      // Type cast the Json response to our SecurityStatus interface
+      return data as SecurityStatus;
     } catch (error) {
       console.error('Error checking account security:', error);
       return null;
