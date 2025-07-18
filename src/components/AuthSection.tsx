@@ -11,6 +11,7 @@ import { Separator } from "./ui/separator";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { Alert, AlertDescription } from "./ui/alert";
 import { OTPVerification, EmailVerified } from "./OTPVerification";
+import { ForgotPasswordModal } from "./ForgotPasswordModal";
 import { Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +49,8 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordModalOpen, setForgotPasswordModalOpen] = useState(false);
   const { toast } = useToast();
 
   const signInForm = useForm<SignInFormData>({
@@ -86,6 +89,29 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     }
   };
 
+  // Track failed login attempts
+  const updateFailedLoginAttempts = async (email: string, increment: boolean = true) => {
+    try {
+      if (increment) {
+        // Increment failed attempts
+        const { error } = await supabase.rpc('increment_failed_login_attempts', {
+          user_email: email
+        });
+        if (!error) {
+          setShowForgotPassword(true);
+        }
+      } else {
+        // Reset failed attempts on successful login
+        const { error } = await supabase
+          .from('profiles')
+          .update({ failed_login_attempts: 0 })
+          .eq('email', email);
+      }
+    } catch (error) {
+      console.error('Error updating failed login attempts:', error);
+    }
+  };
+
   const onSignIn = async (data: SignInFormData) => {
     setIsLoading(true);
     setError(null);
@@ -103,6 +129,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         });
         
         if (authError.message.includes('Invalid login credentials')) {
+          await updateFailedLoginAttempts(data.email, true);
           setError('Invalid email or password. Please check your credentials and try again.');
         } else if (authError.message.includes('Email not confirmed')) {
           setError('Please verify your email address before signing in.');
@@ -113,6 +140,9 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
       }
 
       if (authData.user) {
+        // Reset failed login attempts on successful login
+        await updateFailedLoginAttempts(data.email, false);
+        
         // Update last login time
         await supabase
           .from('profiles')
@@ -208,13 +238,19 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: `${window.location.origin}/dashboard`
         }
       });
 
       if (error) {
         await logAuthEvent('google_auth_failed', false, { error: error.message });
-        setError(error.message);
+        if (error.message.includes('OAuth state parameter missing')) {
+          setError('Google authentication failed. Please try again or contact support if the issue persists.');
+        } else {
+          setError(error.message);
+        }
+      } else {
+        await logAuthEvent('google_auth_initiated', true, {});
       }
     } catch (error: any) {
       await logAuthEvent('google_auth_error', false, { error: error.message });
@@ -270,6 +306,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                 disabled={isLoading}
                 className="w-full h-11 flex items-center justify-center gap-3"
               >
+                
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -367,13 +404,16 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                       </FormItem>
                     )}
                   />
-                  <button 
-                    type="button" 
-                    className="text-sm text-primary hover:text-primary/80"
-                    disabled={isLoading}
-                  >
-                    Forgot password?
-                  </button>
+                  {showForgotPassword && (
+                    <button 
+                      type="button" 
+                      className="text-sm text-primary hover:text-primary/80"
+                      disabled={isLoading}
+                      onClick={() => setForgotPasswordModalOpen(true)}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
                 </div>
                 
                 <Button 
@@ -395,6 +435,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                 disabled={isLoading}
                 className="w-full h-11 flex items-center justify-center gap-3"
               >
+                
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -416,6 +457,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
             
             <Form {...signUpForm}>
               <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4">
+                
                 <FormField
                   control={signUpForm.control}
                   name="email"
@@ -550,6 +592,11 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
             </Form>
           </TabsContent>
         </Tabs>
+
+        <ForgotPasswordModal 
+          isOpen={forgotPasswordModalOpen}
+          onClose={() => setForgotPasswordModalOpen(false)}
+        />
       </div>
     </div>
   );
