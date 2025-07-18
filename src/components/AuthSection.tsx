@@ -110,8 +110,8 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         return null;
       }
 
-      // Type cast the Json response to our SecurityStatus interface
-      return data as SecurityStatus;
+      // Type cast the Json response to our SecurityStatus interface using two-step conversion
+      return data as unknown as SecurityStatus;
     } catch (error) {
       console.error('Error checking account security:', error);
       return null;
