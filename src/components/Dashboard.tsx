@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import Settings from '../pages/Settings';
@@ -23,6 +24,16 @@ function DashboardHome() {
 
   useEffect(() => {
     checkOnboardingProgress();
+  }, []);
+
+  // Also refresh when returning to this route
+  useEffect(() => {
+    const handleFocus = () => {
+      checkOnboardingProgress();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const checkOnboardingProgress = async () => {
@@ -145,12 +156,12 @@ export function Dashboard() {
                 <Route path="add-employee" element={<AddEmployeeTwoStepForm />} />
                 <Route path="setup/address" element={
                   <AddressStep onComplete={() => {
-                    navigate('/dashboard/setup/msa');
+                    navigate('/dashboard');
                   }} />
                 } />
                 <Route path="setup/msa" element={
                   <MSAStep onComplete={() => {
-                    navigate('/dashboard/setup/complete');
+                    navigate('/dashboard');
                   }} />
                 } />
                 <Route path="setup/complete" element={

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -77,7 +76,8 @@ export function AddressStep({ onComplete }: AddressStepProps) {
         description: "Business address saved successfully.",
       });
 
-      onComplete();
+      // Navigate back to dashboard instead of calling onComplete
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error saving address:', error);
       toast({
@@ -241,7 +241,8 @@ export function MSAStep({ onComplete }: MSAStepProps) {
         description: "Master Service Agreement signed successfully.",
       });
 
-      onComplete();
+      // Navigate back to dashboard instead of calling onComplete
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error signing MSA:', error);
       toast({
