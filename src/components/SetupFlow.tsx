@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, ExternalLink, CheckCircle, FileText } from "lucide-react";
+import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -73,16 +73,42 @@ export function AddressStep({ onComplete }: AddressStepProps) {
 
       toast({
         title: "Success",
-        description: "Business address saved successfully.",
+        description: "Business address saved successfully. Generating MSA agreement...",
       });
 
-      // Navigate back to dashboard instead of calling onComplete
-      navigate('/dashboard');
+      // Generate MSA agreement after address is saved
+      console.log('🔄 Generating MSA agreement...');
+      const { data: authData } = await supabase.auth.getSession();
+      
+      if (!authData.session) {
+        throw new Error('No active session');
+      }
+
+      const response = await supabase.functions.invoke('generate-msa-agreement', {
+        headers: {
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        console.error('MSA generation error:', response.error);
+        throw new Error(`Failed to generate MSA: ${response.error.message}`);
+      }
+
+      console.log('✅ MSA agreement generated successfully');
+      
+      toast({
+        title: "Success",
+        description: "MSA agreement generated successfully! Proceeding to signature step.",
+      });
+
+      // Navigate to MSA step for signing
+      navigate('/dashboard/setup/msa');
     } catch (error) {
-      console.error('Error saving address:', error);
+      console.error('Error saving address or generating MSA:', error);
       toast({
         title: "Error",
-        description: "Failed to save business address. Please try again.",
+        description: "Failed to save address or generate MSA. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -182,7 +208,7 @@ export function AddressStep({ onComplete }: AddressStepProps) {
                     Save for Later
                   </Button>
                   <Button type="submit" disabled={isSubmitting} className="flex-1">
-                    {isSubmitting ? 'Saving...' : 'Continue'}
+                    {isSubmitting ? 'Generating Agreement...' : 'Continue & Generate MSA'}
                   </Button>
                 </div>
               </form>
@@ -201,12 +227,59 @@ interface MSAStepProps {
 export function MSAStep({ onComplete }: MSAStepProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<MSAFormData>({
     resolver: zodResolver(msaSchema),
     defaultValues: {}
   });
+
+  const downloadMSA = async () => {
+    setIsDownloading(true);
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      
+      if (!authData.session) {
+        throw new Error('No active session');
+      }
+
+      const response = await supabase.functions.invoke('generate-msa-agreement', {
+        headers: {
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(`Failed to generate MSA: ${response.error.message}`);
+      }
+
+      // Create blob and download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `MSA_Agreement_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "MSA agreement downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error downloading MSA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download MSA. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const onSubmit = async (data: MSAFormData) => {
     setIsSubmitting(true);
@@ -272,7 +345,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
               Master Service Agreement
             </CardTitle>
             <p className="text-muted-foreground">
-              Please review and accept our Master Service Agreement to continue.
+              Your personalized MSA agreement has been generated and is ready for review.
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -282,16 +355,21 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                 <h3 className="font-semibold text-foreground">
                   Wisemonk Master Service Agreement
                 </h3>
-                <Button variant="outline" size="sm" onClick={() => window.open('/documents/msa.pdf', '_blank')} className="flex items-center gap-2">
-                  View Full Document
-                  <ExternalLink className="h-4 w-4" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={downloadMSA}
+                  disabled={isDownloading}
+                  className="flex items-center gap-2"
+                >
+                  {isDownloading ? 'Generating...' : 'Download PDF'}
+                  <Download className="h-4 w-4" />
                 </Button>
               </div>
               
               <div className="space-y-4 text-sm text-muted-foreground">
                 <p>
-                  <strong>Summary:</strong> This Master Service Agreement ("Agreement") governs 
-                  the use of Wisemonk's HR management platform and related services.
+                  <strong>Summary:</strong> This Master Service Agreement has been personalized with your company and personal information.
                 </p>
                 
                 <div className="space-y-2">
@@ -319,8 +397,8 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                       🔐 What happens next?
                     </h4>
                     <div className="text-sm text-muted-foreground space-y-2">
-                      <p>You'll be redirected to a secure Zoho eSign tab where you can review and draw your signature to e-sign the agreement.</p>
-                      <p>This is legally binding, safe, and a copy will be saved for your records.</p>
+                      <p>You can download and review the agreement above, then proceed to sign it electronically.</p>
+                      <p>This is legally binding and a copy will be saved for your records.</p>
                     </div>
                   </div>
                 </div>
@@ -330,7 +408,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                     Review Later
                   </Button>
                   <Button type="submit" disabled={isSubmitting} className="flex-1">
-                    {isSubmitting ? 'Processing...' : 'Review & Sign Agreement'}
+                    {isSubmitting ? 'Processing...' : 'Accept & Sign Agreement'}
                   </Button>
                 </div>
               </form>
