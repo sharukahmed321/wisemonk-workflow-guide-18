@@ -60,6 +60,7 @@ export type Database = {
           id: string
           job_title: string
           last_name: string
+          organization_id: string | null
           phone: string | null
           salary: number | null
           start_date: string
@@ -79,6 +80,7 @@ export type Database = {
           id?: string
           job_title: string
           last_name: string
+          organization_id?: string | null
           phone?: string | null
           salary?: number | null
           start_date: string
@@ -98,6 +100,7 @@ export type Database = {
           id?: string
           job_title?: string
           last_name?: string
+          organization_id?: string | null
           phone?: string | null
           salary?: number | null
           start_date?: string
@@ -106,6 +109,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employees_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employees_user_id_fkey"
             columns: ["user_id"]

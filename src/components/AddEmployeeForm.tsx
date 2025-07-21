@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
 const employeeSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
@@ -30,10 +31,13 @@ const employeeSchema = z.object({
   startDate: z.date(),
   birthday: z.date().optional(),
 });
+
 type EmployeeFormData = z.infer<typeof employeeSchema>;
+
 interface AddEmployeeFormProps {
   onSuccess?: () => void;
 }
+
 export function AddEmployeeForm({
   onSuccess
 }: AddEmployeeFormProps) {
@@ -41,6 +45,9 @@ export function AddEmployeeForm({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [userOrganizationId, setUserOrganizationId] = useState<string | null>(null);
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(true);
+
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
@@ -54,6 +61,64 @@ export function AddEmployeeForm({
       salary: 0,
     }
   });
+
+  // Fetch user's organization ID on component mount
+  useEffect(() => {
+    const fetchUserOrganization = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            title: "Error",
+            description: "You must be logged in to add employees.",
+            variant: "destructive",
+          });
+          navigate('/dashboard');
+          return;
+        }
+
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          toast({
+            title: "Error",
+            description: "Failed to fetch user organization. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (!profile?.organization_id) {
+          toast({
+            title: "Organization Required",
+            description: "You must set up your organization before adding employees.",
+            variant: "destructive",
+          });
+          navigate('/dashboard/settings');
+          return;
+        }
+
+        setUserOrganizationId(profile.organization_id);
+      } catch (error) {
+        console.error('Error fetching organization:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch organization information.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingOrganization(false);
+      }
+    };
+
+    fetchUserOrganization();
+  }, [navigate, toast]);
+
   const employmentTypes = [
     { value: 'Full-time', label: 'Full-time' },
     { value: 'Part-time', label: 'Part-time' },
@@ -75,7 +140,17 @@ export function AddEmployeeForm({
     const randomNum = Math.floor(Math.random() * 999) + 1;
     return `EMP${randomNum.toString().padStart(3, '0')}`;
   };
+
   const onSubmit = async (data: EmployeeFormData) => {
+    if (!userOrganizationId) {
+      toast({
+        title: "Error",
+        description: "Organization information not available. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -96,6 +171,7 @@ export function AddEmployeeForm({
           start_date: data.startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
           status: 'Active', // Default status for new employees
           birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
+          organization_id: userOrganizationId, // Include organization ID
         });
 
       if (error) throw error;
@@ -122,6 +198,28 @@ export function AddEmployeeForm({
       setIsSubmitting(false);
     }
   };
+
+  // Show loading state while fetching organization
+  if (isLoadingOrganization) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Loading...</h3>
+              <p className="text-muted-foreground mt-1">
+                Fetching organization information...
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (showSuccess) {
     return <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md">
@@ -142,6 +240,7 @@ export function AddEmployeeForm({
         </Card>
       </div>;
   }
+
   return <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
