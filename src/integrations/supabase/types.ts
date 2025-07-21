@@ -125,6 +125,71 @@ export type Database = {
           },
         ]
       }
+      msa_documents: {
+        Row: {
+          created_at: string | null
+          document_type: string
+          document_version: number | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          generation_method: string | null
+          id: string
+          is_signed: boolean | null
+          metadata: Json | null
+          mime_type: string | null
+          organization_id: string
+          signed_at: string | null
+          signed_by: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_type?: string
+          document_version?: number | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          generation_method?: string | null
+          id?: string
+          is_signed?: boolean | null
+          metadata?: Json | null
+          mime_type?: string | null
+          organization_id: string
+          signed_at?: string | null
+          signed_by?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: string
+          document_version?: number | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          generation_method?: string | null
+          id?: string
+          is_signed?: boolean | null
+          metadata?: Json | null
+          mime_type?: string | null
+          organization_id?: string
+          signed_at?: string | null
+          signed_by?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msa_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           business_address: string | null

@@ -43,6 +43,7 @@ serve(async (req) => {
         first_name,
         last_name,
         job_title,
+        organization_id,
         organizations (
           id,
           name,
@@ -69,6 +70,45 @@ serve(async (req) => {
     console.log('✅ Fetched user data for:', profileData.first_name, profileData.last_name);
     console.log('✅ Organization:', organization.name);
 
+    // Check if a recent MSA document already exists
+    const { data: existingDoc } = await supabase
+      .from('msa_documents')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('organization_id', profileData.organization_id)
+      .eq('document_type', 'msa_agreement')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    // If document exists and is recent (within last 24 hours), return it
+    if (existingDoc && new Date(existingDoc.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)) {
+      console.log('📄 Returning existing document:', existingDoc.file_name);
+      
+      // Get signed URL for download
+      const { data: signedUrl } = await supabase.storage
+        .from('msa-agreements')
+        .createSignedUrl(existingDoc.file_path, 60 * 60); // 1 hour expiry
+
+      return new Response(JSON.stringify({
+        success: true,
+        document: {
+          id: existingDoc.id,
+          file_name: existingDoc.file_name,
+          file_path: existingDoc.file_path,
+          download_url: signedUrl?.signedUrl,
+          created_at: existingDoc.created_at,
+          is_signed: existingDoc.is_signed,
+          generation_method: existingDoc.generation_method
+        }
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
     // Prepare MSA data for placeholder replacement
     const msaData = {
       first_name: profileData.first_name,
@@ -93,12 +133,83 @@ serve(async (req) => {
     
     console.log('✅ MSA agreement PDF generated successfully, size:', pdfBuffer.length);
 
-    // Return the PDF as a response
-    return new Response(pdfBuffer, {
+    // Create file name and path
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `MSA_${organization.name.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}.pdf`;
+    const filePath = `${profileData.organization_id}/${user.id}/${fileName}`;
+
+    // Upload to Supabase storage
+    console.log('📤 Uploading PDF to storage bucket...');
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('msa-agreements')
+      .upload(filePath, pdfBuffer, {
+        contentType: 'application/pdf',
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('❌ Storage upload error:', uploadError);
+      // Fallback to direct download if storage fails
+      return new Response(pdfBuffer, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${fileName}"`,
+        },
+      });
+    }
+
+    console.log('✅ PDF uploaded to storage:', uploadData.path);
+
+    // Create database record
+    const { data: documentRecord, error: dbError } = await supabase
+      .from('msa_documents')
+      .insert({
+        user_id: user.id,
+        organization_id: profileData.organization_id,
+        document_type: 'msa_agreement',
+        file_name: fileName,
+        file_path: filePath,
+        file_size: pdfBuffer.length,
+        mime_type: 'application/pdf',
+        generation_method: templateDocId ? 'google_docs' : 'hardcoded_template',
+        document_version: 1,
+        is_signed: false,
+        metadata: msaData
+      })
+      .select()
+      .single();
+
+    if (dbError) {
+      console.error('❌ Database insertion error:', dbError);
+      // Continue anyway - storage upload was successful
+    }
+
+    console.log('✅ Database record created:', documentRecord?.id);
+
+    // Get signed URL for download
+    const { data: signedUrl } = await supabase.storage
+      .from('msa-agreements')
+      .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
+
+    // Return both document metadata and PDF buffer
+    return new Response(JSON.stringify({
+      success: true,
+      document: {
+        id: documentRecord?.id,
+        file_name: fileName,
+        file_path: filePath,
+        download_url: signedUrl?.signedUrl,
+        created_at: documentRecord?.created_at,
+        is_signed: false,
+        generation_method: templateDocId ? 'google_docs' : 'hardcoded_template'
+      },
+      pdf_buffer: Array.from(pdfBuffer) // Convert to array for JSON serialization
+    }), {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="MSA_${organization.name}_${Date.now()}.pdf"`,
+        'Content-Type': 'application/json',
       },
     });
 

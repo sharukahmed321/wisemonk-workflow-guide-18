@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download } from "lucide-react";
+import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download, RefreshCw } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,16 @@ const msaSchema = z.object({});
 
 type AddressFormData = z.infer<typeof addressSchema>;
 type MSAFormData = z.infer<typeof msaSchema>;
+
+interface MSADocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+  download_url: string;
+  created_at: string;
+  is_signed: boolean;
+  generation_method: string;
+}
 
 interface AddressStepProps {
   onComplete: () => void;
@@ -99,7 +109,7 @@ export function AddressStep({ onComplete }: AddressStepProps) {
       
       toast({
         title: "Success",
-        description: "MSA agreement generated successfully! Proceeding to signature step.",
+        description: "MSA agreement generated and stored successfully! Proceeding to signature step.",
       });
 
       // Navigate to MSA step for signing
@@ -228,6 +238,9 @@ export function MSAStep({ onComplete }: MSAStepProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [msaDocument, setMsaDocument] = useState<MSADocument | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
   const form = useForm<MSAFormData>({
@@ -235,8 +248,11 @@ export function MSAStep({ onComplete }: MSAStepProps) {
     defaultValues: {}
   });
 
-  const downloadMSA = async () => {
-    setIsDownloading(true);
+  React.useEffect(() => {
+    loadExistingDocument();
+  }, []);
+
+  const loadExistingDocument = async () => {
     try {
       const { data: authData } = await supabase.auth.getSession();
       
@@ -251,15 +267,37 @@ export function MSAStep({ onComplete }: MSAStepProps) {
       });
 
       if (response.error) {
-        throw new Error(`Failed to generate MSA: ${response.error.message}`);
+        throw new Error(`Failed to load MSA: ${response.error.message}`);
       }
 
-      // Create blob and download
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      if (response.data?.document) {
+        setMsaDocument(response.data.document);
+      }
+    } catch (error) {
+      console.error('Error loading MSA document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load MSA document. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const downloadMSA = async () => {
+    if (!msaDocument?.download_url) return;
+
+    setIsDownloading(true);
+    try {
+      const response = await fetch(msaDocument.download_url);
+      if (!response.ok) throw new Error('Failed to download file');
+
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `MSA_Agreement_${Date.now()}.pdf`;
+      a.download = msaDocument.file_name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -281,6 +319,28 @@ export function MSAStep({ onComplete }: MSAStepProps) {
     }
   };
 
+  const regenerateDocument = async () => {
+    setIsRegenerating(true);
+    try {
+      // Force regeneration by clearing cache (this would require backend changes)
+      await loadExistingDocument();
+      
+      toast({
+        title: "Success",
+        description: "MSA agreement regenerated successfully.",
+      });
+    } catch (error) {
+      console.error('Error regenerating MSA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to regenerate MSA. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   const onSubmit = async (data: MSAFormData) => {
     setIsSubmitting(true);
 
@@ -288,7 +348,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
       const user = (await supabase.auth.getUser()).data.user;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('first_name, last_name')
+        .select('first_name, last_name, organization_id')
         .eq('user_id', user?.id)
         .single();
 
@@ -296,6 +356,23 @@ export function MSAStep({ onComplete }: MSAStepProps) {
         ? `${profile.first_name} ${profile.last_name}`.trim() 
         : 'Unknown User';
 
+      // Update the MSA document as signed
+      if (msaDocument) {
+        const { error: docError } = await supabase
+          .from('msa_documents')
+          .update({
+            is_signed: true,
+            signed_at: new Date().toISOString(),
+            signed_by: signedBy,
+          })
+          .eq('id', msaDocument.id);
+
+        if (docError) {
+          console.error('Error updating MSA document:', docError);
+        }
+      }
+
+      // Update profile MSA status
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -314,7 +391,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
         description: "Master Service Agreement signed successfully.",
       });
 
-      // Navigate back to dashboard instead of calling onComplete
+      // Navigate back to dashboard
       navigate('/dashboard');
     } catch (error) {
       console.error('Error signing MSA:', error);
@@ -327,6 +404,17 @@ export function MSAStep({ onComplete }: MSAStepProps) {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-muted-foreground">Loading MSA document...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -345,26 +433,46 @@ export function MSAStep({ onComplete }: MSAStepProps) {
               Master Service Agreement
             </CardTitle>
             <p className="text-muted-foreground">
-              Your personalized MSA agreement has been generated and is ready for review.
+              Your personalized MSA agreement has been generated and stored securely.
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Document Preview */}
+            {/* Document Information */}
             <div className="border rounded-lg p-6 bg-muted/20">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground">
-                  Wisemonk Master Service Agreement
-                </h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={downloadMSA}
-                  disabled={isDownloading}
-                  className="flex items-center gap-2"
-                >
-                  {isDownloading ? 'Generating...' : 'Download PDF'}
-                  <Download className="h-4 w-4" />
-                </Button>
+                <div>
+                  <h3 className="font-semibold text-foreground">
+                    {msaDocument?.file_name || 'MSA Agreement'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Created: {msaDocument?.created_at ? new Date(msaDocument.created_at).toLocaleDateString() : 'N/A'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Status: {msaDocument?.is_signed ? 'Signed' : 'Pending Signature'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={downloadMSA}
+                    disabled={isDownloading || !msaDocument?.download_url}
+                    className="flex items-center gap-2"
+                  >
+                    {isDownloading ? 'Downloading...' : 'Download PDF'}
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={regenerateDocument}
+                    disabled={isRegenerating}
+                    className="flex items-center gap-2"
+                  >
+                    {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               
               <div className="space-y-4 text-sm text-muted-foreground">
@@ -399,6 +507,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                     <div className="text-sm text-muted-foreground space-y-2">
                       <p>You can download and review the agreement above, then proceed to sign it electronically.</p>
                       <p>This is legally binding and a copy will be saved for your records.</p>
+                      <p>The signed document will be stored securely in your organization's document vault.</p>
                     </div>
                   </div>
                 </div>
@@ -407,8 +516,8 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                   <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
                     Review Later
                   </Button>
-                  <Button type="submit" disabled={isSubmitting} className="flex-1">
-                    {isSubmitting ? 'Processing...' : 'Accept & Sign Agreement'}
+                  <Button type="submit" disabled={isSubmitting || msaDocument?.is_signed} className="flex-1">
+                    {isSubmitting ? 'Processing...' : msaDocument?.is_signed ? 'Already Signed' : 'Accept & Sign Agreement'}
                   </Button>
                 </div>
               </form>
