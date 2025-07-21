@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import Settings from '../pages/Settings';
 import People from '../pages/People';
@@ -15,11 +15,41 @@ import { AddEmployeeTwoStepForm } from './AddEmployeeTwoStepForm';
 import { AddressStep, MSAStep, SetupComplete } from './SetupFlow';
 import { DashboardHeader } from './DashboardHeader';
 import { EmailVerificationGuard } from './EmailVerificationGuard';
+import { supabase } from '@/integrations/supabase/client';
 
 function DashboardHome() {
   const navigate = useNavigate();
-  const [completedSteps, setCompletedSteps] = useState<string[]>(['basic-info']);
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [showSetupProgress, setShowSetupProgress] = useState(true);
+
+  useEffect(() => {
+    checkOnboardingProgress();
+  }, []);
+
+  const checkOnboardingProgress = async () => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('basic_info_completed, company_info_completed, address_completed, msa_completed')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (profile) {
+        const steps = [];
+        if (profile.basic_info_completed) steps.push('basic-info');
+        if (profile.company_info_completed) steps.push('company-info');
+        if (profile.address_completed) steps.push('address');
+        if (profile.msa_completed) steps.push('msa');
+        
+        setCompletedSteps(steps);
+      }
+    } catch (error) {
+      console.error('Error checking onboarding progress:', error);
+    }
+  };
 
   const handleSetupStepClick = (stepId: string) => {
     const stepUrls: Record<string, string> = {
@@ -37,10 +67,6 @@ function DashboardHome() {
     setShowSetupProgress(false);
   };
 
-  const handleCompleteSetup = (stepId: string) => {
-    setCompletedSteps(prev => [...prev, stepId]);
-  };
-
   return (
     <div className="p-6 md:p-8 space-y-6 md:space-y-8 w-full">
       {showSetupProgress && (
@@ -52,7 +78,6 @@ function DashboardHome() {
       )}
 
       <KPICards />
-
       <QuickActions />
 
       <div className="grid gap-6 md:gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -83,10 +108,8 @@ export function Dashboard() {
           <AppSidebar />
           
           <div className="flex-1 flex flex-col">
-            {/* Header */}
             <DashboardHeader />
 
-            {/* Main Content */}
             <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
               <Routes>
                 <Route index element={<DashboardHome />} />

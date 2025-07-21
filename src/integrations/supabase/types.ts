@@ -119,13 +119,38 @@ export type Database = {
         Row: {
           account_locked_reason: string | null
           account_locked_until: string | null
+          address_completed: boolean | null
+          address_completed_at: string | null
+          address_status:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
           avatar_url: string | null
+          basic_info_completed: boolean | null
+          basic_info_completed_at: string | null
+          basic_info_status:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
+          business_address: string | null
+          business_city: string | null
+          business_postal_code: string | null
+          business_state: string | null
+          company_info_completed: boolean | null
+          company_info_completed_at: string | null
+          company_info_status:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
+          company_legal_name: string | null
+          company_name: string | null
+          country: string | null
           created_at: string
           department: string | null
           email: string
           email_verification_attempts: number | null
           email_verification_sent_at: string | null
           email_verified: boolean
+          employee_count:
+            | Database["public"]["Enums"]["employee_count_range"]
+            | null
           failed_login_attempts: number
           first_name: string | null
           id: string
@@ -135,21 +160,54 @@ export type Database = {
           last_login_at: string | null
           last_name: string | null
           login_attempts_count: number | null
+          msa_completed: boolean | null
+          msa_completed_at: string | null
+          msa_signed: boolean | null
+          msa_signed_at: string | null
+          msa_signed_by: string | null
+          msa_status: Database["public"]["Enums"]["setup_step_status"] | null
           password_changed_at: string | null
           phone: string | null
+          setup_completed: boolean | null
+          setup_completed_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           account_locked_reason?: string | null
           account_locked_until?: string | null
+          address_completed?: boolean | null
+          address_completed_at?: string | null
+          address_status?:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
           avatar_url?: string | null
+          basic_info_completed?: boolean | null
+          basic_info_completed_at?: string | null
+          basic_info_status?:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
+          business_address?: string | null
+          business_city?: string | null
+          business_postal_code?: string | null
+          business_state?: string | null
+          company_info_completed?: boolean | null
+          company_info_completed_at?: string | null
+          company_info_status?:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
+          company_legal_name?: string | null
+          company_name?: string | null
+          country?: string | null
           created_at?: string
           department?: string | null
           email: string
           email_verification_attempts?: number | null
           email_verification_sent_at?: string | null
           email_verified?: boolean
+          employee_count?:
+            | Database["public"]["Enums"]["employee_count_range"]
+            | null
           failed_login_attempts?: number
           first_name?: string | null
           id?: string
@@ -159,21 +217,54 @@ export type Database = {
           last_login_at?: string | null
           last_name?: string | null
           login_attempts_count?: number | null
+          msa_completed?: boolean | null
+          msa_completed_at?: string | null
+          msa_signed?: boolean | null
+          msa_signed_at?: string | null
+          msa_signed_by?: string | null
+          msa_status?: Database["public"]["Enums"]["setup_step_status"] | null
           password_changed_at?: string | null
           phone?: string | null
+          setup_completed?: boolean | null
+          setup_completed_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           account_locked_reason?: string | null
           account_locked_until?: string | null
+          address_completed?: boolean | null
+          address_completed_at?: string | null
+          address_status?:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
           avatar_url?: string | null
+          basic_info_completed?: boolean | null
+          basic_info_completed_at?: string | null
+          basic_info_status?:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
+          business_address?: string | null
+          business_city?: string | null
+          business_postal_code?: string | null
+          business_state?: string | null
+          company_info_completed?: boolean | null
+          company_info_completed_at?: string | null
+          company_info_status?:
+            | Database["public"]["Enums"]["setup_step_status"]
+            | null
+          company_legal_name?: string | null
+          company_name?: string | null
+          country?: string | null
           created_at?: string
           department?: string | null
           email?: string
           email_verification_attempts?: number | null
           email_verification_sent_at?: string | null
           email_verified?: boolean
+          employee_count?:
+            | Database["public"]["Enums"]["employee_count_range"]
+            | null
           failed_login_attempts?: number
           first_name?: string | null
           id?: string
@@ -183,8 +274,16 @@ export type Database = {
           last_login_at?: string | null
           last_name?: string | null
           login_attempts_count?: number | null
+          msa_completed?: boolean | null
+          msa_completed_at?: string | null
+          msa_signed?: boolean | null
+          msa_signed_at?: string | null
+          msa_signed_by?: string | null
+          msa_status?: Database["public"]["Enums"]["setup_step_status"] | null
           password_changed_at?: string | null
           phone?: string | null
+          setup_completed?: boolean | null
+          setup_completed_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -261,6 +360,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_onboarding_progress: {
+        Args: { user_id_param: string }
+        Returns: Json
+      }
       get_role_priority: {
         Args: { role_name: Database["public"]["Enums"]["app_role"] }
         Returns: number
@@ -308,6 +411,14 @@ export type Database = {
         | "superadmin"
         | "client"
         | "contractor"
+      employee_count_range:
+        | "1-10"
+        | "11-50"
+        | "51-200"
+        | "201-500"
+        | "501-1000"
+        | "1000+"
+      setup_step_status: "pending" | "in_progress" | "completed" | "skipped"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -444,6 +555,15 @@ export const Constants = {
         "client",
         "contractor",
       ],
+      employee_count_range: [
+        "1-10",
+        "11-50",
+        "51-200",
+        "201-500",
+        "501-1000",
+        "1000+",
+      ],
+      setup_step_status: ["pending", "in_progress", "completed", "skipped"],
     },
   },
 } as const

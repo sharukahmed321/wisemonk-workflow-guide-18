@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +9,8 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -42,6 +45,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     country: '',
     employeeCount: ''
   });
+  const { toast } = useToast();
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -90,18 +94,47 @@ interface UserDetailsStepProps {
 }
 
 function UserDetailsStep({ onNext, userData, setUserData }: UserDetailsStepProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
   const form = useForm<UserDetailsFormData>({
     resolver: zodResolver(userDetailsSchema),
     defaultValues: userData,
   });
 
-  const onSubmit = (data: UserDetailsFormData) => {
-    // Save to persistent storage
-    import('@/lib/clientData').then(({ updateUserDetails }) => {
-      updateUserDetails(data);
-    });
-    setUserData(data);
-    onNext();
+  const onSubmit = async (data: UserDetailsFormData) => {
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: data.firstName,
+          last_name: data.lastName,
+          job_title: data.designation,
+        })
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setUserData(data);
+      toast({
+        title: "Success",
+        description: "Personal information saved successfully.",
+      });
+      onNext();
+    } catch (error) {
+      console.error('Error saving user details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save personal information. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -164,10 +197,10 @@ function UserDetailsStep({ onNext, userData, setUserData }: UserDetailsStepProps
 
           <Button 
             type="submit" 
-            disabled={form.formState.isSubmitting}
+            disabled={isSubmitting}
             className="w-full h-11 mt-6"
           >
-            Continue
+            {isSubmitting ? 'Saving...' : 'Continue'}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </form>
@@ -184,18 +217,48 @@ interface CompanyDetailsStepProps {
 }
 
 function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: CompanyDetailsStepProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
   const form = useForm<CompanyDetailsFormData>({
     resolver: zodResolver(companyDetailsSchema),
     defaultValues: companyData,
   });
 
-  const onSubmit = (data: CompanyDetailsFormData) => {
-    // Save to persistent storage
-    import('@/lib/clientData').then(({ updateCompanyDetails }) => {
-      updateCompanyDetails(data);
-    });
-    setCompanyData(data);
-    onNext();
+  const onSubmit = async (data: CompanyDetailsFormData) => {
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          company_name: data.companyName,
+          company_legal_name: data.legalName,
+          country: data.country,
+          employee_count: data.employeeCount as any,
+        })
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setCompanyData(data);
+      toast({
+        title: "Success",
+        description: "Company information saved successfully.",
+      });
+      onNext();
+    } catch (error) {
+      console.error('Error saving company details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save company information. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const countries = [
@@ -308,10 +371,10 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
             </Button>
             <Button 
               type="submit" 
-              disabled={form.formState.isSubmitting}
+              disabled={isSubmitting}
               className="flex-1 h-11"
             >
-              Continue
+              {isSubmitting ? 'Saving...' : 'Continue'}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

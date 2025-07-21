@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -20,21 +21,13 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  getClientData, 
-  updateUserDetails, 
-  updateCompanyDetails, 
-  updateBusinessAddress,
-  type UserDetails,
-  type CompanyDetails,
-  type BusinessAddress
-} from "@/lib/clientData";
+import { supabase } from '@/integrations/supabase/client';
 
 // Validation schemas
 const userDetailsSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  designation: z.string().min(1, 'Job title is required'),
+  jobTitle: z.string().min(1, 'Job title is required'),
 });
 
 const companyDetailsSchema = z.object({
@@ -51,7 +44,22 @@ const addressSchema = z.object({
   postalCode: z.string().min(1, 'Postal code is required'),
 });
 
-function getCompletionStatus(data: any) {
+type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
+type CompanyDetailsFormData = z.infer<typeof companyDetailsSchema>;
+type AddressFormData = z.infer<typeof addressSchema>;
+
+interface ProfileData {
+  userDetails: UserDetailsFormData;
+  companyDetails: CompanyDetailsFormData;
+  businessAddress: AddressFormData;
+  msaStatus: {
+    signed: boolean;
+    signedDate?: string;
+    signedBy?: string;
+  };
+}
+
+function getCompletionStatus(data: ProfileData) {
   const isEmpty = (obj: any) => !obj || Object.values(obj).some(v => !v || v === '');
   
   const profileComplete = !isEmpty(data.userDetails) && !isEmpty(data.companyDetails);
@@ -79,19 +87,20 @@ function StatusBadge({ complete, label }: { complete: boolean; label?: string })
 }
 
 function ProfileEditDialog({ userData, companyData, onSave }: { 
-  userData: UserDetails; 
-  companyData: CompanyDetails;
+  userData: UserDetailsFormData; 
+  companyData: CompanyDetailsFormData;
   onSave: () => void; 
 }) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
-  const userForm = useForm<UserDetails>({
+  const userForm = useForm<UserDetailsFormData>({
     resolver: zodResolver(userDetailsSchema),
     defaultValues: userData,
   });
 
-  const companyForm = useForm<CompanyDetails>({
+  const companyForm = useForm<CompanyDetailsFormData>({
     resolver: zodResolver(companyDetailsSchema),
     defaultValues: companyData,
   });
@@ -105,22 +114,47 @@ function ProfileEditDialog({ userData, companyData, onSave }: {
     '1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
   ];
 
-  const handleSave = () => {
-    const userValid = userForm.trigger();
-    const companyValid = companyForm.trigger();
+  const handleSave = async () => {
+    const userValid = await userForm.trigger();
+    const companyValid = await companyForm.trigger();
     
-    Promise.all([userValid, companyValid]).then(([userOk, companyOk]) => {
-      if (userOk && companyOk) {
-        updateUserDetails(userForm.getValues());
-        updateCompanyDetails(companyForm.getValues());
+    if (userValid && companyValid) {
+      setIsSubmitting(true);
+      
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            first_name: userForm.getValues().firstName,
+            last_name: userForm.getValues().lastName,
+            job_title: userForm.getValues().jobTitle,
+            company_name: companyForm.getValues().companyName,
+            company_legal_name: companyForm.getValues().legalName,
+            country: companyForm.getValues().country,
+            employee_count: companyForm.getValues().employeeCount as any,
+          })
+          .eq('user_id', user.user?.id);
+
+        if (error) throw error;
+
         toast({
           title: "Success",
           description: "Profile information updated successfully.",
         });
         setOpen(false);
         onSave();
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update profile information.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
       }
-    });
+    }
   };
 
   return (
@@ -176,7 +210,7 @@ function ProfileEditDialog({ userData, companyData, onSave }: {
 
               <FormField
                 control={userForm.control}
-                name="designation"
+                name="jobTitle"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Job Title *</FormLabel>
@@ -287,8 +321,8 @@ function ProfileEditDialog({ userData, companyData, onSave }: {
             <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">
               Cancel
             </Button>
-            <Button onClick={handleSave} className="flex-1">
-              Save Changes
+            <Button onClick={handleSave} disabled={isSubmitting} className="flex-1">
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </div>
@@ -298,25 +332,51 @@ function ProfileEditDialog({ userData, companyData, onSave }: {
 }
 
 function AddressEditDialog({ addressData, onSave }: { 
-  addressData: BusinessAddress;
+  addressData: AddressFormData;
   onSave: () => void; 
 }) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
-  const form = useForm<BusinessAddress>({
+  const form = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: addressData,
   });
 
-  const handleSave = (data: BusinessAddress) => {
-    updateBusinessAddress(data);
-    toast({
-      title: "Success",
-      description: "Business address updated successfully.",
-    });
-    setOpen(false);
-    onSave();
+  const handleSave = async (data: AddressFormData) => {
+    setIsSubmitting(true);
+    
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          business_address: data.address,
+          business_city: data.city,
+          business_state: data.state,
+          business_postal_code: data.postalCode,
+        })
+        .eq('user_id', user.user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Business address updated successfully.",
+      });
+      setOpen(false);
+      onSave();
+    } catch (error) {
+      console.error('Error updating address:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update business address.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -396,8 +456,8 @@ function AddressEditDialog({ addressData, onSave }: {
               <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1">
-                Save Address
+              <Button type="submit" disabled={isSubmitting} className="flex-1">
+                {isSubmitting ? 'Saving...' : 'Save Address'}
               </Button>
             </div>
           </form>
@@ -408,12 +468,71 @@ function AddressEditDialog({ addressData, onSave }: {
 }
 
 export default function Settings() {
-  const [clientData, setClientData] = useState(getClientData());
-  const { profileComplete, addressComplete, msaComplete } = getCompletionStatus(clientData);
+  const [profileData, setProfileData] = useState<ProfileData>({
+    userDetails: { firstName: '', lastName: '', jobTitle: '' },
+    companyDetails: { companyName: '', legalName: '', country: '', employeeCount: '' },
+    businessAddress: { address: '', city: '', state: '', postalCode: '' },
+    msaStatus: { signed: false }
+  });
   
-  const refreshData = () => {
-    setClientData(getClientData());
+  const [loading, setLoading] = useState(true);
+  const { profileComplete, addressComplete, msaComplete } = getCompletionStatus(profileData);
+  
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
+
+  const fetchProfileData = async () => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (profile) {
+        setProfileData({
+          userDetails: {
+            firstName: profile.first_name || '',
+            lastName: profile.last_name || '',
+            jobTitle: profile.job_title || '',
+          },
+          companyDetails: {
+            companyName: profile.company_name || '',
+            legalName: profile.company_legal_name || '',
+            country: profile.country || '',
+            employeeCount: profile.employee_count || '',
+          },
+          businessAddress: {
+            address: profile.business_address || '',
+            city: profile.business_city || '',
+            state: profile.business_state || '',
+            postalCode: profile.business_postal_code || '',
+          },
+          msaStatus: {
+            signed: profile.msa_signed || false,
+            signedDate: profile.msa_signed_at || '',
+            signedBy: profile.msa_signed_by || '',
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const refreshData = () => {
+    fetchProfileData();
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -443,8 +562,8 @@ export default function Settings() {
                 <div className="flex items-center gap-3">
                   <StatusBadge complete={profileComplete} />
                   <ProfileEditDialog 
-                    userData={clientData.userDetails}
-                    companyData={clientData.companyDetails}
+                    userData={profileData.userDetails}
+                    companyData={profileData.companyDetails}
                     onSave={refreshData}
                   />
                 </div>
@@ -457,15 +576,15 @@ export default function Settings() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <span className="text-sm text-muted-foreground">First Name</span>
-                    <p className="font-medium">{clientData.userDetails.firstName || 'Not provided'}</p>
+                    <p className="font-medium">{profileData.userDetails.firstName || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Last Name</span>
-                    <p className="font-medium">{clientData.userDetails.lastName || 'Not provided'}</p>
+                    <p className="font-medium">{profileData.userDetails.lastName || 'Not provided'}</p>
                   </div>
                   <div className="md:col-span-2">
                     <span className="text-sm text-muted-foreground">Job Title</span>
-                    <p className="font-medium">{clientData.userDetails.designation || 'Not provided'}</p>
+                    <p className="font-medium">{profileData.userDetails.jobTitle || 'Not provided'}</p>
                   </div>
                 </div>
               </div>
@@ -478,20 +597,20 @@ export default function Settings() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <span className="text-sm text-muted-foreground">Company Name</span>
-                    <p className="font-medium">{clientData.companyDetails.companyName || 'Not provided'}</p>
+                    <p className="font-medium">{profileData.companyDetails.companyName || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Legal Name</span>
-                    <p className="font-medium">{clientData.companyDetails.legalName || 'Not provided'}</p>
+                    <p className="font-medium">{profileData.companyDetails.legalName || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Country</span>
-                    <p className="font-medium">{clientData.companyDetails.country || 'Not provided'}</p>
+                    <p className="font-medium">{profileData.companyDetails.country || 'Not provided'}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Number of Employees</span>
                     <p className="font-medium">
-                      {clientData.companyDetails.employeeCount ? `${clientData.companyDetails.employeeCount} employees` : 'Not provided'}
+                      {profileData.companyDetails.employeeCount ? `${profileData.companyDetails.employeeCount} employees` : 'Not provided'}
                     </p>
                   </div>
                 </div>
@@ -515,7 +634,7 @@ export default function Settings() {
                 <div className="flex items-center gap-3">
                   <StatusBadge complete={addressComplete} />
                   <AddressEditDialog 
-                    addressData={clientData.businessAddress}
+                    addressData={profileData.businessAddress}
                     onSave={refreshData}
                   />
                 </div>
@@ -525,19 +644,19 @@ export default function Settings() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <span className="text-sm text-muted-foreground">Street Address</span>
-                  <p className="font-medium">{clientData.businessAddress.address || 'Not provided'}</p>
+                  <p className="font-medium">{profileData.businessAddress.address || 'Not provided'}</p>
                 </div>
                 <div>
                   <span className="text-sm text-muted-foreground">City</span>
-                  <p className="font-medium">{clientData.businessAddress.city || 'Not provided'}</p>
+                  <p className="font-medium">{profileData.businessAddress.city || 'Not provided'}</p>
                 </div>
                 <div>
                   <span className="text-sm text-muted-foreground">State</span>
-                  <p className="font-medium">{clientData.businessAddress.state || 'Not provided'}</p>
+                  <p className="font-medium">{profileData.businessAddress.state || 'Not provided'}</p>
                 </div>
                 <div>
                   <span className="text-sm text-muted-foreground">Postal Code</span>
-                  <p className="font-medium">{clientData.businessAddress.postalCode || 'Not provided'}</p>
+                  <p className="font-medium">{profileData.businessAddress.postalCode || 'Not provided'}</p>
                 </div>
               </div>
             </CardContent>
@@ -567,8 +686,8 @@ export default function Settings() {
                     <div>
                       <p className="font-medium">Master Service Agreement (MSA)</p>
                       <p className="text-sm text-muted-foreground">
-                        {clientData.msaStatus?.signed 
-                          ? `Signed on ${new Date(clientData.msaStatus.signedDate).toLocaleDateString()}` 
+                        {profileData.msaStatus?.signed && profileData.msaStatus?.signedDate
+                          ? `Signed on ${new Date(profileData.msaStatus.signedDate).toLocaleDateString()}` 
                           : 'Agreement pending signature'
                         }
                       </p>
@@ -576,10 +695,10 @@ export default function Settings() {
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge 
-                      complete={clientData.msaStatus?.signed} 
-                      label={clientData.msaStatus?.signed ? 'Signed' : 'Pending'}
+                      complete={profileData.msaStatus?.signed} 
+                      label={profileData.msaStatus?.signed ? 'Signed' : 'Pending'}
                     />
-                    {!clientData.msaStatus?.signed && (
+                    {!profileData.msaStatus?.signed && (
                       <Button variant="outline" size="sm">
                         Review & Sign
                       </Button>

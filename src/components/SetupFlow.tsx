@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -5,27 +6,33 @@ import * as z from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { ArrowLeft, ExternalLink, CheckCircle, FileText } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
 const addressSchema = z.object({
   address: z.string().min(1, 'Address is required'),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
   postalCode: z.string().min(1, 'Postal code is required')
 });
+
 const msaSchema = z.object({});
+
 type AddressFormData = z.infer<typeof addressSchema>;
 type MSAFormData = z.infer<typeof msaSchema>;
+
 interface AddressStepProps {
   onComplete: () => void;
 }
-export function AddressStep({
-  onComplete
-}: AddressStepProps) {
+
+export function AddressStep({ onComplete }: AddressStepProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
   const form = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
@@ -35,21 +42,45 @@ export function AddressStep({
       postalCode: ''
     }
   });
+
   const onSubmit = async (data: AddressFormData) => {
     setIsSubmitting(true);
 
-    // Save to persistent storage
-    const {
-      updateBusinessAddress
-    } = await import('@/lib/clientData');
-    updateBusinessAddress(data);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          business_address: data.address,
+          business_city: data.city,
+          business_state: data.state,
+          business_postal_code: data.postalCode,
+        })
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    onComplete();
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Business address saved successfully.",
+      });
+
+      onComplete();
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save business address. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-  return <div className="min-h-screen bg-background p-6">
+
+  return (
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
@@ -70,46 +101,62 @@ export function AddressStep({
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField control={form.control} name="address" render={({
-                field
-              }) => <FormItem>
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
                       <FormLabel>Street Address *</FormLabel>
                       <FormControl>
                         <Input placeholder="123 Business Street, Suite 100" className="h-11" {...field} />
                       </FormControl>
                       <FormMessage />
-                    </FormItem>} />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid gap-4 md:grid-cols-3">
-                  <FormField control={form.control} name="city" render={({
-                  field
-                }) => <FormItem>
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormLabel>City *</FormLabel>
                         <FormControl>
                           <Input placeholder="New York" className="h-11" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>} />
+                      </FormItem>
+                    )}
+                  />
 
-                  <FormField control={form.control} name="state" render={({
-                  field
-                }) => <FormItem>
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormLabel>State/Province *</FormLabel>
                         <FormControl>
                           <Input placeholder="NY" className="h-11" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>} />
+                      </FormItem>
+                    )}
+                  />
 
-                  <FormField control={form.control} name="postalCode" render={({
-                  field
-                }) => <FormItem>
+                  <FormField
+                    control={form.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormLabel>Postal Code *</FormLabel>
                         <FormControl>
                           <Input placeholder="10001" className="h-11" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>} />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="bg-muted/30 p-4 rounded-lg">
@@ -132,41 +179,72 @@ export function AddressStep({
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 }
+
 interface MSAStepProps {
   onComplete: () => void;
 }
-export function MSAStep({
-  onComplete
-}: MSAStepProps) {
+
+export function MSAStep({ onComplete }: MSAStepProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
   const form = useForm<MSAFormData>({
     resolver: zodResolver(msaSchema),
     defaultValues: {}
   });
+
   const onSubmit = async (data: MSAFormData) => {
     setIsSubmitting(true);
 
-    // Save MSA status to persistent storage
-    const {
-      updateMSAStatus,
-      getClientData
-    } = await import('@/lib/clientData');
-    const clientData = getClientData();
-    updateMSAStatus({
-      signed: true,
-      signedDate: new Date().toISOString(),
-      signedBy: `${clientData.userDetails.firstName} ${clientData.userDetails.lastName}`.trim() || 'Unknown User'
-    });
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('user_id', user?.id)
+        .single();
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    onComplete();
+      const signedBy = profile 
+        ? `${profile.first_name} ${profile.last_name}`.trim() 
+        : 'Unknown User';
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          msa_signed: true,
+          msa_signed_at: new Date().toISOString(),
+          msa_signed_by: signedBy,
+        })
+        .eq('user_id', user?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Master Service Agreement signed successfully.",
+      });
+
+      onComplete();
+    } catch (error) {
+      console.error('Error signing MSA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign the agreement. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-  return <div className="min-h-screen bg-background p-6">
+
+  return (
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
@@ -223,7 +301,6 @@ export function MSAStep({
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
                 <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
                   <div className="space-y-3">
                     <h4 className="font-semibold text-foreground flex items-center gap-2">
@@ -249,15 +326,17 @@ export function MSAStep({
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 }
+
 interface SetupCompleteProps {
   onContinue: () => void;
 }
-export function SetupComplete({
-  onContinue
-}: SetupCompleteProps) {
-  return <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+
+export function SetupComplete({ onContinue }: SetupCompleteProps) {
+  return (
+    <div className="min-h-screen bg-background p-6 flex items-center justify-center">
       <Card className="w-full max-w-md">
         <CardContent className="p-8 text-center space-y-6">
           <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto">
@@ -294,5 +373,6 @@ export function SetupComplete({
           </Button>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 }
