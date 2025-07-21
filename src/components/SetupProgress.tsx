@@ -3,13 +3,14 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, Circle, ArrowRight, X } from "lucide-react";
+import { CheckCircle, Circle, ArrowRight, X, Lock } from "lucide-react";
 
 interface SetupStep {
   id: string;
   title: string;
   description: string;
   completed: boolean;
+  active: boolean;
   action?: string;
   url?: string;
 }
@@ -20,46 +21,64 @@ interface SetupProgressProps {
   onDismiss: () => void;
 }
 
-const setupSteps: SetupStep[] = [
-  {
-    id: 'basic-info',
-    title: 'Basic Information',
-    description: 'Personal and company details',
-    completed: false
-  },
-  {
-    id: 'address',
-    title: 'Business Address',
-    description: 'Add your company address information',
-    completed: false,
-    action: 'Add Address',
-    url: '/dashboard/setup/address'
-  },
-  {
-    id: 'msa',
-    title: 'Master Service Agreement',
-    description: 'Review and sign the MSA document',
-    completed: false,
-    action: 'Sign Agreement',
-    url: '/dashboard/setup/msa'
-  },
-  {
-    id: 'first-employee',
-    title: 'Add First Employee',
-    description: 'Add your first team member',
-    completed: false,
-    action: 'Add Employee',
-    url: '/dashboard/add-employee'
-  }
-];
-
 export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupProgressProps) {
-  const updatedSteps = setupSteps.map(step => ({
-    ...step,
-    completed: completedSteps.includes(step.id)
-  }));
+  // Determine which steps are active based on completion status
+  const getStepStatus = (stepId: string, completedSteps: string[]) => {
+    const completed = completedSteps.includes(stepId);
+    let active = false;
 
-  const completedCount = updatedSteps.filter(step => step.completed).length;
+    switch (stepId) {
+      case 'basic-info':
+        active = true; // Always active as first step
+        break;
+      case 'address':
+        active = completedSteps.includes('basic-info');
+        break;
+      case 'msa':
+        active = completedSteps.includes('address');
+        break;
+      case 'first-employee':
+        active = completedSteps.includes('msa');
+        break;
+    }
+
+    return { completed, active };
+  };
+
+  const setupSteps: SetupStep[] = [
+    {
+      id: 'basic-info',
+      title: 'Basic Information',
+      description: 'Personal and company details',
+      ...getStepStatus('basic-info', completedSteps)
+    },
+    {
+      id: 'address',
+      title: 'Business Address',
+      description: 'Add your company address information',
+      ...getStepStatus('address', completedSteps),
+      action: 'Add Address',
+      url: '/dashboard/setup/address'
+    },
+    {
+      id: 'msa',
+      title: 'Master Service Agreement',
+      description: 'Review and sign the MSA document',
+      ...getStepStatus('msa', completedSteps),
+      action: 'Sign Agreement',
+      url: '/dashboard/setup/msa'
+    },
+    {
+      id: 'first-employee',
+      title: 'Add First Employee',
+      description: 'Add your first team member',
+      ...getStepStatus('first-employee', completedSteps),
+      action: 'Add Employee',
+      url: '/dashboard/add-employee'
+    }
+  ];
+
+  const completedCount = setupSteps.filter(step => step.completed).length;
   const progressPercentage = (completedCount / setupSteps.length) * 100;
   const isComplete = completedCount === setupSteps.length;
 
@@ -98,32 +117,48 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
       </CardHeader>
       
       <CardContent className="space-y-1.5 p-4 pt-0">
-        {updatedSteps.map((step) => (
+        {setupSteps.map((step) => (
           <div
             key={step.id}
             className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
               step.completed 
                 ? 'bg-success/10 border border-success/20' 
-                : 'bg-muted/30 hover:bg-muted/50'
+                : step.active
+                ? 'bg-muted/30 hover:bg-muted/50'
+                : 'bg-muted/10 opacity-60'
             }`}
           >
             <div className="flex items-center gap-2">
               <div className={`flex-shrink-0 ${
-                step.completed ? 'text-success' : 'text-muted-foreground'
+                step.completed 
+                  ? 'text-success' 
+                  : step.active 
+                  ? 'text-muted-foreground'
+                  : 'text-muted-foreground/50'
               }`}>
                 {step.completed ? (
                   <CheckCircle className="h-3.5 w-3.5" />
-                ) : (
+                ) : step.active ? (
                   <Circle className="h-3.5 w-3.5" />
+                ) : (
+                  <Lock className="h-3.5 w-3.5" />
                 )}
               </div>
               <div>
                 <h3 className={`text-xs font-medium ${
-                  step.completed ? 'text-success' : 'text-foreground'
+                  step.completed 
+                    ? 'text-success' 
+                    : step.active
+                    ? 'text-foreground'
+                    : 'text-muted-foreground/50'
                 }`}>
                   {step.title}
                 </h3>
-                <p className="text-xs text-muted-foreground">
+                <p className={`text-xs ${
+                  step.active 
+                    ? 'text-muted-foreground'
+                    : 'text-muted-foreground/50'
+                }`}>
                   {step.description}
                 </p>
               </div>
@@ -134,7 +169,10 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
                 variant="outline"
                 size="sm"
                 onClick={() => onStepClick(step.id)}
-                className="ml-2 flex-shrink-0 h-6 text-xs"
+                disabled={!step.active}
+                className={`ml-2 flex-shrink-0 h-6 text-xs ${
+                  !step.active ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 {step.action}
               </Button>
