@@ -115,6 +115,66 @@ export type Database = {
           },
         ]
       }
+      organizations: {
+        Row: {
+          business_address: string | null
+          business_city: string | null
+          business_postal_code: string | null
+          business_state: string | null
+          country: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          employee_count: Database["public"]["Enums"]["employee_count_range"]
+          id: string
+          industry: string | null
+          is_active: boolean
+          legal_name: string
+          name: string
+          phone: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          business_address?: string | null
+          business_city?: string | null
+          business_postal_code?: string | null
+          business_state?: string | null
+          country: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_count: Database["public"]["Enums"]["employee_count_range"]
+          id?: string
+          industry?: string | null
+          is_active?: boolean
+          legal_name: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          business_address?: string | null
+          business_city?: string | null
+          business_postal_code?: string | null
+          business_state?: string | null
+          country?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_count?: Database["public"]["Enums"]["employee_count_range"]
+          id?: string
+          industry?: string | null
+          is_active?: boolean
+          legal_name?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_locked_reason: string | null
@@ -130,27 +190,17 @@ export type Database = {
           basic_info_status:
             | Database["public"]["Enums"]["setup_step_status"]
             | null
-          business_address: string | null
-          business_city: string | null
-          business_postal_code: string | null
-          business_state: string | null
           company_info_completed: boolean | null
           company_info_completed_at: string | null
           company_info_status:
             | Database["public"]["Enums"]["setup_step_status"]
             | null
-          company_legal_name: string | null
-          company_name: string | null
-          country: string | null
           created_at: string
           department: string | null
           email: string
           email_verification_attempts: number | null
           email_verification_sent_at: string | null
           email_verified: boolean
-          employee_count:
-            | Database["public"]["Enums"]["employee_count_range"]
-            | null
           failed_login_attempts: number
           first_name: string | null
           id: string
@@ -166,6 +216,7 @@ export type Database = {
           msa_signed_at: string | null
           msa_signed_by: string | null
           msa_status: Database["public"]["Enums"]["setup_step_status"] | null
+          organization_id: string | null
           password_changed_at: string | null
           phone: string | null
           setup_completed: boolean | null
@@ -187,27 +238,17 @@ export type Database = {
           basic_info_status?:
             | Database["public"]["Enums"]["setup_step_status"]
             | null
-          business_address?: string | null
-          business_city?: string | null
-          business_postal_code?: string | null
-          business_state?: string | null
           company_info_completed?: boolean | null
           company_info_completed_at?: string | null
           company_info_status?:
             | Database["public"]["Enums"]["setup_step_status"]
             | null
-          company_legal_name?: string | null
-          company_name?: string | null
-          country?: string | null
           created_at?: string
           department?: string | null
           email: string
           email_verification_attempts?: number | null
           email_verification_sent_at?: string | null
           email_verified?: boolean
-          employee_count?:
-            | Database["public"]["Enums"]["employee_count_range"]
-            | null
           failed_login_attempts?: number
           first_name?: string | null
           id?: string
@@ -223,6 +264,7 @@ export type Database = {
           msa_signed_at?: string | null
           msa_signed_by?: string | null
           msa_status?: Database["public"]["Enums"]["setup_step_status"] | null
+          organization_id?: string | null
           password_changed_at?: string | null
           phone?: string | null
           setup_completed?: boolean | null
@@ -244,27 +286,17 @@ export type Database = {
           basic_info_status?:
             | Database["public"]["Enums"]["setup_step_status"]
             | null
-          business_address?: string | null
-          business_city?: string | null
-          business_postal_code?: string | null
-          business_state?: string | null
           company_info_completed?: boolean | null
           company_info_completed_at?: string | null
           company_info_status?:
             | Database["public"]["Enums"]["setup_step_status"]
             | null
-          company_legal_name?: string | null
-          company_name?: string | null
-          country?: string | null
           created_at?: string
           department?: string | null
           email?: string
           email_verification_attempts?: number | null
           email_verification_sent_at?: string | null
           email_verified?: boolean
-          employee_count?:
-            | Database["public"]["Enums"]["employee_count_range"]
-            | null
           failed_login_attempts?: number
           first_name?: string | null
           id?: string
@@ -280,6 +312,7 @@ export type Database = {
           msa_signed_at?: string | null
           msa_signed_by?: string | null
           msa_status?: Database["public"]["Enums"]["setup_step_status"] | null
+          organization_id?: string | null
           password_changed_at?: string | null
           phone?: string | null
           setup_completed?: boolean | null
@@ -287,7 +320,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_mfa_secrets: {
         Row: {
@@ -400,6 +441,24 @@ export type Database = {
       track_email_verification_attempt: {
         Args: { user_email: string }
         Returns: undefined
+      }
+      upsert_organization: {
+        Args: {
+          p_organization_id?: string
+          p_name?: string
+          p_legal_name?: string
+          p_country?: string
+          p_employee_count?: Database["public"]["Enums"]["employee_count_range"]
+          p_business_address?: string
+          p_business_city?: string
+          p_business_state?: string
+          p_business_postal_code?: string
+          p_website?: string
+          p_phone?: string
+          p_industry?: string
+          p_description?: string
+        }
+        Returns: string
       }
     }
     Enums: {

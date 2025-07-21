@@ -57,6 +57,7 @@ interface ProfileData {
     signedDate?: string;
     signedBy?: string;
   };
+  organizationId?: string;
 }
 
 function getCompletionStatus(data: ProfileData) {
@@ -86,9 +87,10 @@ function StatusBadge({ complete, label }: { complete: boolean; label?: string })
   );
 }
 
-function ProfileEditDialog({ userData, companyData, onSave }: { 
+function ProfileEditDialog({ userData, companyData, organizationId, onSave }: { 
   userData: UserDetailsFormData; 
   companyData: CompanyDetailsFormData;
+  organizationId?: string;
   onSave: () => void; 
 }) {
   const [open, setOpen] = useState(false);
@@ -123,20 +125,29 @@ function ProfileEditDialog({ userData, companyData, onSave }: {
       
       try {
         const { data: user } = await supabase.auth.getUser();
-        const { error } = await supabase
+        
+        // Update user profile
+        const { error: profileError } = await supabase
           .from('profiles')
           .update({
             first_name: userForm.getValues().firstName,
             last_name: userForm.getValues().lastName,
             job_title: userForm.getValues().jobTitle,
-            company_name: companyForm.getValues().companyName,
-            company_legal_name: companyForm.getValues().legalName,
-            country: companyForm.getValues().country,
-            employee_count: companyForm.getValues().employeeCount as any,
           })
           .eq('user_id', user.user?.id);
 
-        if (error) throw error;
+        if (profileError) throw profileError;
+
+        // Update organization
+        const { error: orgError } = await supabase.rpc('upsert_organization', {
+          p_organization_id: organizationId || null,
+          p_name: companyForm.getValues().companyName,
+          p_legal_name: companyForm.getValues().legalName,
+          p_country: companyForm.getValues().country,
+          p_employee_count: companyForm.getValues().employeeCount as any,
+        });
+
+        if (orgError) throw orgError;
 
         toast({
           title: "Success",
@@ -331,8 +342,9 @@ function ProfileEditDialog({ userData, companyData, onSave }: {
   );
 }
 
-function AddressEditDialog({ addressData, onSave }: { 
+function AddressEditDialog({ addressData, organizationId, onSave }: { 
   addressData: AddressFormData;
+  organizationId?: string;
   onSave: () => void; 
 }) {
   const [open, setOpen] = useState(false);
@@ -348,16 +360,13 @@ function AddressEditDialog({ addressData, onSave }: {
     setIsSubmitting(true);
     
     try {
-      const { data: user } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          business_address: data.address,
-          business_city: data.city,
-          business_state: data.state,
-          business_postal_code: data.postalCode,
-        })
-        .eq('user_id', user.user?.id);
+      const { error } = await supabase.rpc('upsert_organization', {
+        p_organization_id: organizationId || null,
+        p_business_address: data.address,
+        p_business_city: data.city,
+        p_business_state: data.state,
+        p_business_postal_code: data.postalCode,
+      });
 
       if (error) throw error;
 
@@ -489,11 +498,25 @@ export default function Settings() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          organizations (
+            id,
+            name,
+            legal_name,
+            country,
+            employee_count,
+            business_address,
+            business_city,
+            business_state,
+            business_postal_code
+          )
+        `)
         .eq('user_id', user.user.id)
         .single();
 
       if (profile) {
+        const org = profile.organizations;
         setProfileData({
           userDetails: {
             firstName: profile.first_name || '',
@@ -501,22 +524,23 @@ export default function Settings() {
             jobTitle: profile.job_title || '',
           },
           companyDetails: {
-            companyName: profile.company_name || '',
-            legalName: profile.company_legal_name || '',
-            country: profile.country || '',
-            employeeCount: profile.employee_count || '',
+            companyName: org?.name || '',
+            legalName: org?.legal_name || '',
+            country: org?.country || '',
+            employeeCount: org?.employee_count || '',
           },
           businessAddress: {
-            address: profile.business_address || '',
-            city: profile.business_city || '',
-            state: profile.business_state || '',
-            postalCode: profile.business_postal_code || '',
+            address: org?.business_address || '',
+            city: org?.business_city || '',
+            state: org?.business_state || '',
+            postalCode: org?.business_postal_code || '',
           },
           msaStatus: {
             signed: profile.msa_signed || false,
             signedDate: profile.msa_signed_at || '',
             signedBy: profile.msa_signed_by || '',
-          }
+          },
+          organizationId: org?.id || undefined,
         });
       }
     } catch (error) {
@@ -564,6 +588,7 @@ export default function Settings() {
                   <ProfileEditDialog 
                     userData={profileData.userDetails}
                     companyData={profileData.companyDetails}
+                    organizationId={profileData.organizationId}
                     onSave={refreshData}
                   />
                 </div>
@@ -635,6 +660,7 @@ export default function Settings() {
                   <StatusBadge complete={addressComplete} />
                   <AddressEditDialog 
                     addressData={profileData.businessAddress}
+                    organizationId={profileData.organizationId}
                     onSave={refreshData}
                   />
                 </div>

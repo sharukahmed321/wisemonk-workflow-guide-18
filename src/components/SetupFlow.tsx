@@ -47,15 +47,26 @@ export function AddressStep({ onComplete }: AddressStepProps) {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
+      // Get the user's current profile to find organization_id
+      const { data: user } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
         .from('profiles')
-        .update({
-          business_address: data.address,
-          business_city: data.city,
-          business_state: data.state,
-          business_postal_code: data.postalCode,
-        })
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .select('organization_id')
+        .eq('user_id', user.user?.id)
+        .single();
+
+      if (!profile?.organization_id) {
+        throw new Error('No organization found for user');
+      }
+
+      // Update the organization with address information
+      const { error } = await supabase.rpc('upsert_organization', {
+        p_organization_id: profile.organization_id,
+        p_business_address: data.address,
+        p_business_city: data.city,
+        p_business_state: data.state,
+        p_business_postal_code: data.postalCode,
+      });
 
       if (error) {
         throw error;

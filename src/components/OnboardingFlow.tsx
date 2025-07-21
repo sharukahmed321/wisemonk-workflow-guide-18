@@ -229,18 +229,16 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          company_name: data.companyName,
-          company_legal_name: data.legalName,
-          country: data.country,
-          employee_count: data.employeeCount as any,
-        })
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+      // Create or update organization using the new upsert function
+      const { data: organizationId, error: orgError } = await supabase.rpc('upsert_organization', {
+        p_name: data.companyName,
+        p_legal_name: data.legalName,
+        p_country: data.country,
+        p_employee_count: data.employeeCount as any,
+      });
 
-      if (error) {
-        throw error;
+      if (orgError) {
+        throw orgError;
       }
 
       setCompanyData(data);
