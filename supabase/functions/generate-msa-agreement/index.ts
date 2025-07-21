@@ -125,13 +125,16 @@ serve(async (req) => {
 
     console.log('🔄 Generating PDF with MSA data...');
     
-    // Get template document ID from secrets
+    // Get template document ID from secrets (required)
     const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
+    if (!templateDocId) {
+      throw new Error('DEFAULT_GOOGLE_DOC_ID environment variable is not configured. Please add the Google Docs template ID to your secrets.');
+    }
     
-    // Generate the MSA agreement PDF
+    // Generate the MSA agreement PDF using Google Docs
     const pdfBuffer = await generateAgreementPDF(msaData, templateDocId);
     
-    console.log('✅ MSA agreement PDF generated successfully, size:', pdfBuffer.length);
+    console.log('✅ MSA agreement PDF generated successfully, size:', pdfBuffer.byteLength);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -171,9 +174,9 @@ serve(async (req) => {
         document_type: 'msa_agreement',
         file_name: fileName,
         file_path: filePath,
-        file_size: pdfBuffer.length,
+        file_size: pdfBuffer.byteLength,
         mime_type: 'application/pdf',
-        generation_method: templateDocId ? 'google_docs' : 'hardcoded_template',
+        generation_method: 'google_docs',
         document_version: 1,
         is_signed: false,
         metadata: msaData
@@ -203,7 +206,7 @@ serve(async (req) => {
         download_url: signedUrl?.signedUrl,
         created_at: documentRecord?.created_at,
         is_signed: false,
-        generation_method: templateDocId ? 'google_docs' : 'hardcoded_template'
+        generation_method: 'google_docs'
       },
       pdf_buffer: Array.from(pdfBuffer) // Convert to array for JSON serialization
     }), {
@@ -218,7 +221,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        details: 'Failed to generate MSA agreement'
+        details: 'Failed to generate MSA agreement using Google Docs. Please ensure the template document is configured and accessible.'
       }), 
       {
         status: 500,
