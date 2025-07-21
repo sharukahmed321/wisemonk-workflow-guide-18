@@ -348,10 +348,6 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   return (
     <div className="flex-1 flex flex-col justify-center px-6 py-8 lg:px-8 lg:w-1/2">
       <div className="mx-auto w-full max-w-sm">
-        <div className="mb-6 flex items-center justify-center">
-          <Shield className="h-8 w-8 text-primary mr-2" />
-          <h1 className="text-2xl font-bold text-foreground">Secure Access</h1>
-        </div>
         
         {error && (
           <Alert variant="destructive" className="mb-6">
