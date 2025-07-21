@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import Settings from '../pages/Settings';
@@ -31,20 +30,50 @@ function DashboardHome() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
 
+      // Get profile data
       const { data: profile } = await supabase
         .from('profiles')
-        .select('basic_info_completed, company_info_completed, address_completed, msa_completed')
+        .select('basic_info_completed, address_completed, msa_completed, organization_id')
         .eq('user_id', user.user.id)
         .single();
 
       if (profile) {
         const steps = [];
-        if (profile.basic_info_completed) steps.push('basic-info');
-        if (profile.company_info_completed) steps.push('company-info');
-        if (profile.address_completed) steps.push('address');
-        if (profile.msa_completed) steps.push('msa');
+        
+        // Check basic info completion
+        if (profile.basic_info_completed) {
+          steps.push('basic-info');
+        }
+        
+        // Check address completion
+        if (profile.address_completed) {
+          steps.push('address');
+        }
+        
+        // Check MSA completion
+        if (profile.msa_completed) {
+          steps.push('msa');
+        }
+        
+        // Check if first employee has been added
+        if (profile.organization_id) {
+          const { data: employees } = await supabase
+            .from('employees')
+            .select('id')
+            .eq('organization_id', profile.organization_id)
+            .limit(1);
+            
+          if (employees && employees.length > 0) {
+            steps.push('first-employee');
+          }
+        }
         
         setCompletedSteps(steps);
+        
+        // Hide setup progress if all steps are completed
+        if (steps.includes('first-employee')) {
+          setShowSetupProgress(false);
+        }
       }
     } catch (error) {
       console.error('Error checking onboarding progress:', error);

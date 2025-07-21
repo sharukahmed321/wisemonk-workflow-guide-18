@@ -22,6 +22,15 @@ interface SetupProgressProps {
 }
 
 export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupProgressProps) {
+  // Calculate progress based on specific percentages
+  const getProgressPercentage = (completedSteps: string[]) => {
+    if (completedSteps.includes('first-employee')) return 100;
+    if (completedSteps.includes('msa')) return 75;
+    if (completedSteps.includes('address')) return 50;
+    if (completedSteps.includes('basic-info')) return 25;
+    return 0;
+  };
+
   // Determine which steps are active based on completion status
   const getStepStatus = (stepId: string, completedSteps: string[]) => {
     const completed = completedSteps.includes(stepId);
@@ -78,9 +87,8 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
     }
   ];
 
-  const completedCount = setupSteps.filter(step => step.completed).length;
-  const progressPercentage = (completedCount / setupSteps.length) * 100;
-  const isComplete = completedCount === setupSteps.length;
+  const progressPercentage = getProgressPercentage(completedSteps);
+  const isComplete = completedSteps.includes('first-employee');
 
   if (isComplete) {
     return null; // Don't show when complete
@@ -99,7 +107,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
                 Complete Setup
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                {Math.round(progressPercentage)}% complete
+                {progressPercentage}% complete
               </p>
             </div>
           </div>
