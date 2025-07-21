@@ -375,6 +375,7 @@ export type Database = {
           assigned_at: string
           assigned_by: string | null
           id: string
+          organization_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -382,6 +383,7 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string | null
           id?: string
+          organization_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -389,16 +391,33 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string | null
           id?: string
+          organization_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      assign_organization_role: {
+        Args: {
+          p_user_id: string
+          p_organization_id: string
+          p_role?: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: undefined
+      }
       can_send_verification_email: {
         Args: { user_email: string }
         Returns: boolean
