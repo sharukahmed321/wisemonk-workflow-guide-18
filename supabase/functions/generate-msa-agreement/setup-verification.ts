@@ -25,8 +25,17 @@ export interface IDVerificationResult {
 // Detailed debug function to diagnose Shared Drive permission issues
 export async function debugSharedDrivePermissions(accessToken: string) {
   const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+  const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
+  
   console.log('🔍 Debugging Shared Drive Permissions in Detail...');
-  console.log(`Target Shared Drive ID: ${sharedDriveId}`);
+  console.log(`📄 Template Document ID: ${templateDocId}`);
+  console.log(`📁 Target Shared Drive ID: ${sharedDriveId}`);
+  
+  // Add safety check to prevent ID mix-up
+  if (templateDocId === sharedDriveId) {
+    console.error('💥 CRITICAL ERROR: Template Document ID and Shared Drive ID are the same!');
+    return { success: false, error: 'Configuration error: Template and Shared Drive IDs cannot be identical' };
+  }
 
   try {
     // Step 1: List all drives the service account can see
@@ -120,9 +129,12 @@ export async function debugSharedDrivePermissions(accessToken: string) {
       console.log('❌ Method 1 ERROR:', error.message);
     }
 
-    // Method 2: Copy template to drive
+    // Method 2: Copy template to drive - CRITICAL FIX HERE
     console.log('Testing Method 2: Template copy...');
-    const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
+    console.log(`🔍 Using Template ID: ${templateDocId}`);
+    console.log(`🔍 Copying to Shared Drive ID: ${sharedDriveId}`);
+    console.log(`🔍 Copy URL will be: https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`);
+    
     try {
       const method2Response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy?supportsAllDrives=true`, {
         method: 'POST',
@@ -222,6 +234,7 @@ export async function checkActualPermissions(accessToken: string) {
   const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
   
   console.log('🔍 Checking ACTUAL permissions (not UI)...');
+  console.log(`📁 Checking permissions for Shared Drive: ${sharedDriveId}`);
   
   try {
     // Get drive with permissions info
@@ -265,6 +278,9 @@ export const quickSetupCheck = (): SetupCheckResult => {
   const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
   const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
   const serviceAccountKey = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY');
+
+  console.log(`🔍 Template Document ID: ${templateDocId}`);
+  console.log(`🔍 Shared Drive ID: ${sharedDriveId}`);
 
   if (!templateDocId) {
     result.valid = false;
@@ -324,6 +340,10 @@ export const verifyBothIDs = async (accessToken: string): Promise<IDVerification
   
   const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
   const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+
+  // Log IDs for verification
+  console.log(`📄 Using Template Document ID: ${templateDocId}`);
+  console.log(`📁 Using Shared Drive ID: ${sharedDriveId}`);
 
   const result: IDVerificationResult = {
     templateDoc: { accessible: false },
