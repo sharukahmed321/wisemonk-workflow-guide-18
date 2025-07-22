@@ -1,4 +1,3 @@
-
 import { getGoogleAccessToken } from './google-auth.ts';
 
 export interface SetupCheckResult {
@@ -28,12 +27,20 @@ export async function debugSharedDrivePermissions(accessToken: string) {
   const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
   
   console.log('🔍 Debugging Shared Drive Permissions in Detail...');
-  console.log(`📄 Template Document ID: ${templateDocId}`);
-  console.log(`📁 Target Shared Drive ID: ${sharedDriveId}`);
+  console.log(`📄 Template Document ID from ENV: ${templateDocId}`);
+  console.log(`📁 Target Shared Drive ID from ENV: ${sharedDriveId}`);
   
-  // Add safety check to prevent ID mix-up
+  // Critical validation - ensure IDs are different and valid
+  if (!templateDocId || !sharedDriveId) {
+    console.error('💥 CRITICAL ERROR: Missing environment variables!');
+    console.error(`📄 DEFAULT_GOOGLE_DOC_ID: ${templateDocId || 'MISSING'}`);
+    console.error(`📁 GOOGLE_SHARED_DRIVE_ID: ${sharedDriveId || 'MISSING'}`);
+    return { success: false, error: 'Missing required environment variables' };
+  }
+  
   if (templateDocId === sharedDriveId) {
     console.error('💥 CRITICAL ERROR: Template Document ID and Shared Drive ID are the same!');
+    console.error(`Both are set to: ${templateDocId}`);
     return { success: false, error: 'Configuration error: Template and Shared Drive IDs cannot be identical' };
   }
 
@@ -131,12 +138,17 @@ export async function debugSharedDrivePermissions(accessToken: string) {
 
     // Method 2: Copy template to drive - CRITICAL FIX HERE
     console.log('Testing Method 2: Template copy...');
-    console.log(`🔍 Using Template ID: ${templateDocId}`);
-    console.log(`🔍 Copying to Shared Drive ID: ${sharedDriveId}`);
+    console.log(`🔍 VERIFICATION - Template ID: "${templateDocId}"`);
+    console.log(`🔍 VERIFICATION - Shared Drive ID: "${sharedDriveId}"`);
+    console.log(`🔍 VERIFICATION - Are they different? ${templateDocId !== sharedDriveId ? 'YES ✅' : 'NO ❌'}`);
     console.log(`🔍 Copy URL will be: https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`);
     
     try {
-      const method2Response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy?supportsAllDrives=true`, {
+      // CRITICAL: Ensure we're using the TEMPLATE document ID, not the Shared Drive ID
+      const copyUrl = `https://www.googleapis.com/drive/v3/files/${templateDocId}/copy?supportsAllDrives=true`;
+      console.log(`🔗 Making request to: ${copyUrl}`);
+      
+      const method2Response = await fetch(copyUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -144,13 +156,14 @@ export async function debugSharedDrivePermissions(accessToken: string) {
         },
         body: JSON.stringify({
           name: `test-copy-${Date.now()}`,
-          parents: [sharedDriveId]
+          parents: [sharedDriveId]  // This is correct - copying TO the Shared Drive
         })
       });
 
       if (method2Response.ok) {
         const testCopy = await method2Response.json();
         console.log('✅ Method 2 SUCCESS - Template copy works');
+        console.log(`✅ Successfully copied template ${templateDocId} to Shared Drive ${sharedDriveId}`);
         
         // Clean up
         await fetch(`https://www.googleapis.com/drive/v3/files/${testCopy.id}?supportsAllDrives=true`, {
@@ -162,6 +175,9 @@ export async function debugSharedDrivePermissions(accessToken: string) {
       } else {
         const errorText = await method2Response.text();
         console.log('❌ Method 2 FAILED:', errorText);
+        console.log(`❌ Failed URL: ${copyUrl}`);
+        console.log(`❌ Template ID used: ${templateDocId}`);
+        console.log(`❌ Shared Drive ID used: ${sharedDriveId}`);
         
         // Parse the specific error
         try {
@@ -175,6 +191,11 @@ export async function debugSharedDrivePermissions(accessToken: string) {
           
           if (errorData.error?.message?.includes('quotaExceeded')) {
             console.log('💡 DIAGNOSIS: Quota exceeded in Shared Drive');
+          }
+          
+          if (errorData.error?.message?.includes('File not found')) {
+            console.log('💡 DIAGNOSIS: Template document not found or not accessible');
+            console.log(`   Check if template document ${templateDocId} exists and is accessible`);
           }
         } catch {
           // Error text is not JSON
