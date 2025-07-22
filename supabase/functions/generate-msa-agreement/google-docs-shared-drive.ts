@@ -1,4 +1,5 @@
 import { getGoogleAccessToken } from './google-auth.ts';
+import { validateAndCorrectEnvironmentVariables } from './environment-validation.ts';
 
 export interface SharedDriveInfo {
   id: string;
@@ -13,57 +14,6 @@ export interface SharedDriveTestResult {
   error?: string;
 }
 
-// CRITICAL: Environment variable validation
-function validateAndGetCorrectIds() {
-  console.log('🔍 === GOOGLE DOCS SHARED DRIVE ID VALIDATION ===');
-  
-  const rawTemplateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
-  const rawSharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
-  
-  console.log(`📄 Raw DEFAULT_GOOGLE_DOC_ID: "${rawTemplateDocId}"`);
-  console.log(`📁 Raw GOOGLE_SHARED_DRIVE_ID: "${rawSharedDriveId}"`);
-  
-  // CRITICAL FIX: Force the correct IDs based on known values
-  const CORRECT_TEMPLATE_DOC_ID = '1GyU3aCxwQIm69Y3ql_rcTU0jp2HKZNQeIlvFNVBc94o';
-  const CORRECT_SHARED_DRIVE_ID = '0AJLtAJTQC6NLUk9PVA';
-  
-  let templateDocId = rawTemplateDocId;
-  let sharedDriveId = rawSharedDriveId;
-  
-  // CRITICAL: Check if template ID is incorrectly set to shared drive ID
-  if (rawTemplateDocId === CORRECT_SHARED_DRIVE_ID) {
-    console.error('💥 CRITICAL ERROR: DEFAULT_GOOGLE_DOC_ID is set to the Shared Drive ID!');
-    console.error(`🔧 CORRECTING: Using correct template ID: ${CORRECT_TEMPLATE_DOC_ID}`);
-    templateDocId = CORRECT_TEMPLATE_DOC_ID;
-  }
-  
-  // Fallback to correct values if missing
-  if (!templateDocId) {
-    console.error('💥 Template ID missing, using fallback');
-    templateDocId = CORRECT_TEMPLATE_DOC_ID;
-  }
-  
-  if (!sharedDriveId) {
-    console.error('💥 Shared Drive ID missing, using fallback');
-    sharedDriveId = CORRECT_SHARED_DRIVE_ID;
-  }
-  
-  // Final check
-  if (templateDocId === sharedDriveId) {
-    console.error('💥 IDs are still the same after correction!');
-    templateDocId = CORRECT_TEMPLATE_DOC_ID;
-    sharedDriveId = CORRECT_SHARED_DRIVE_ID;
-  }
-  
-  console.log('✅ === FINAL CORRECTED IDs ===');
-  console.log(`📄 Template Document ID: "${templateDocId}"`);
-  console.log(`📁 Shared Drive ID: "${sharedDriveId}"`);
-  console.log(`🔍 Different? ${templateDocId !== sharedDriveId ? 'YES ✅' : 'NO ❌'}`);
-  console.log('===================================');
-  
-  return { templateDocId, sharedDriveId };
-}
-
 export async function generateMSAWithSharedDrive(
   templateDocId: string, 
   replacements: Record<string, string>,
@@ -74,26 +24,33 @@ export async function generateMSAWithSharedDrive(
   try {
     console.log('🔄 Starting Shared Drive MSA generation workflow');
     
-    // CRITICAL: Validate and get correct IDs
-    const { templateDocId: correctedTemplateId, sharedDriveId } = validateAndGetCorrectIds();
+    // Get validated environment variables
+    const envValidation = validateAndCorrectEnvironmentVariables();
+    if (!envValidation.correctedVars) {
+      throw new Error('Environment validation failed');
+    }
     
-    // Use the corrected template ID, not the passed parameter
-    console.log('📄 Using corrected template document ID:', correctedTemplateId);
+    const { templateDocId: correctedTemplateId, sharedDriveId } = envValidation.correctedVars;
+    
+    // Use corrected template ID if provided parameter might be wrong
+    const finalTemplateId = correctedTemplateId;
+    
+    console.log('📄 Using corrected template document ID:', finalTemplateId);
     console.log('📁 Using Shared Drive ID:', sharedDriveId);
     
     const accessToken = await getGoogleAccessToken();
 
     // Verify we have the correct IDs
-    if (correctedTemplateId === sharedDriveId) {
-      throw new Error(`Template document ID cannot be the same as Shared Drive ID. Template: ${correctedTemplateId}, Drive: ${sharedDriveId}`);
+    if (finalTemplateId === sharedDriveId) {
+      throw new Error(`Template document ID cannot be the same as Shared Drive ID. Template: ${finalTemplateId}, Drive: ${sharedDriveId}`);
     }
 
     // Step 1: Create document copy in the Shared Drive
     console.log('🔄 Creating document copy in Shared Drive...');
     tempDocId = await createDocumentInSharedDrive(
       accessToken, 
-      correctedTemplateId,  // Use the corrected template ID
-      sharedDriveId,  // This should be the Shared Drive ID
+      finalTemplateId,  // Use the corrected template ID
+      sharedDriveId,    // This should be the Shared Drive ID
       createTempDocumentName(userData)
     );
     
@@ -116,9 +73,12 @@ export async function generateMSAWithSharedDrive(
     if (tempDocId) {
       try {
         const accessToken = await getGoogleAccessToken();
-        const { sharedDriveId } = validateAndGetCorrectIds();
-        await deleteDocumentFromSharedDrive(accessToken, tempDocId, sharedDriveId);
-        console.log('✅ Shared Drive document cleanup completed');
+        const envValidation = validateAndCorrectEnvironmentVariables();
+        if (envValidation.correctedVars) {
+          const { sharedDriveId } = envValidation.correctedVars;
+          await deleteDocumentFromSharedDrive(accessToken, tempDocId, sharedDriveId);
+          console.log('✅ Shared Drive document cleanup completed');
+        }
       } catch (cleanupError) {
         console.warn('⚠️ Failed to cleanup Shared Drive document:', cleanupError.message);
         console.warn('🔍 Orphaned document ID for manual cleanup:', tempDocId);
@@ -367,175 +327,10 @@ async function deleteDocumentFromSharedDrive(
   }
 }
 
-export async function getSharedDriveInfo(
-  accessToken: string, 
-  sharedDriveId: string
-): Promise<SharedDriveInfo> {
-  const response = await fetch(`https://www.googleapis.com/drive/v3/drives/${sharedDriveId}`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`
-    }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get Shared Drive info: ${response.status} - ${errorText}`);
-  }
-
-  const driveData = await response.json();
-  
-  return {
-    id: driveData.id,
-    name: driveData.name,
-    capabilities: driveData.capabilities,
-    restrictions: driveData.restrictions
-  };
-}
-
-export async function listSharedDrives(accessToken: string) {
-  const response = await fetch('https://www.googleapis.com/drive/v3/drives', {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`
-    }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to list Shared Drives: ${response.status} - ${errorText}`);
-  }
-
-  const drivesData = await response.json();
-  
-  return drivesData.drives?.map((drive: any) => ({
-    id: drive.id,
-    name: drive.name,
-    created: drive.createdTime
-  })) || [];
-}
-
-export async function testSharedDriveAccess(
-  accessToken: string, 
-  sharedDriveId: string
-): Promise<SharedDriveTestResult> {
-  try {
-    console.log('🔍 Testing Shared Drive access...');
-    
-    // Test 1: Can we access the drive?
-    const driveInfo = await getSharedDriveInfo(accessToken, sharedDriveId);
-    console.log('✅ Can access Shared Drive:', driveInfo.name);
-    
-    // Test 2: Can we list files in the drive?
-    const listResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files?driveId=${sharedDriveId}&includeItemsFromAllDrives=true&supportsAllDrives=true&corpora=drive&pageSize=10`,
-      {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      }
-    );
-    
-    if (listResponse.ok) {
-      const listData = await listResponse.json();
-      console.log(`✅ Can list files in Shared Drive (${listData.files?.length || 0} files found)`);
-    } else {
-      console.warn('⚠️ Cannot list files in Shared Drive');
-    }
-    
-    // Test 3: Can we create a test document?
-    const testResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: 'test-shared-drive-access',
-        parents: [sharedDriveId],
-        mimeType: 'application/vnd.google-apps.document',
-        supportsAllDrives: true
-      })
-    });
-    
-    if (testResponse.ok) {
-      const testData = await testResponse.json();
-      console.log('✅ Can create documents in Shared Drive');
-      
-      // Clean up test document
-      await deleteDocumentFromSharedDrive(accessToken, testData.id, sharedDriveId);
-      console.log('✅ Can delete documents from Shared Drive');
-    } else {
-      const errorText = await testResponse.text();
-      console.error('❌ Cannot create documents in Shared Drive:', errorText);
-    }
-    
-    return { success: true, driveInfo };
-    
-  } catch (error) {
-    console.error('❌ Shared Drive access test failed:', error);
-    return { success: false, error: error.message };
-  }
-}
-
 function createTempDocumentName(userData: any): string {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substr(2, 9);
   const safeName = `${userData.first_name || 'User'}_${userData.last_name || 'Document'}`.replace(/[^a-zA-Z0-9]/g, '_');
   
   return `MSA_SharedDrive_${safeName}_${timestamp}_${randomId}`;
-}
-
-export async function cleanupSharedDriveOrphanedDocuments(): Promise<void> {
-  try {
-    console.log('🗑️ Starting cleanup of orphaned Shared Drive documents...');
-    const accessToken = await getGoogleAccessToken();
-    const { sharedDriveId } = validateAndGetCorrectIds();
-    
-    if (!sharedDriveId) {
-      console.warn('⚠️ GOOGLE_SHARED_DRIVE_ID not configured, skipping Shared Drive cleanup');
-      return;
-    }
-    
-    // Search for temporary MSA documents older than 24 hours in the Shared Drive
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const query = `name contains 'MSA_SharedDrive_' and createdTime < '${oneDayAgo}' and trashed = false`;
-    
-    const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&driveId=${sharedDriveId}&includeItemsFromAllDrives=true&supportsAllDrives=true&corpora=drive&fields=files(id,name,createdTime)`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      }
-    );
-
-    if (!response.ok) {
-      console.warn('⚠️ Could not search for orphaned Shared Drive documents:', response.statusText);
-      return;
-    }
-
-    const data = await response.json();
-    const orphanedFiles = data.files || [];
-    
-    console.log(`🔍 Found ${orphanedFiles.length} potential orphaned Shared Drive documents`);
-    
-    if (orphanedFiles.length === 0) {
-      console.log('✅ No orphaned Shared Drive documents found');
-      return;
-    }
-
-    let deletedCount = 0;
-    for (const file of orphanedFiles) {
-      try {
-        await deleteDocumentFromSharedDrive(accessToken, file.id, sharedDriveId);
-        console.log(`🗑️ Deleted orphaned Shared Drive document: ${file.name} (${file.id})`);
-        deletedCount++;
-      } catch (error) {
-        console.warn(`⚠️ Failed to delete orphaned Shared Drive document ${file.name}:`, error.message);
-      }
-    }
-    
-    console.log(`✅ Shared Drive cleanup completed: ${deletedCount}/${orphanedFiles.length} documents deleted`);
-    
-  } catch (error) {
-    console.warn('⚠️ Shared Drive cleanup process failed:', error.message);
-  }
 }

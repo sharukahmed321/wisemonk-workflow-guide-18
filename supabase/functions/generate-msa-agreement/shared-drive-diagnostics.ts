@@ -1,392 +1,284 @@
 
 import { getGoogleAccessToken } from './google-auth.ts';
+import { validateAndCorrectEnvironmentVariables, logEnvironmentIssues } from './environment-validation.ts';
 
-export interface DiagnosticResult {
-  success: boolean;
-  message: string;
-  details?: any;
-}
-
-export interface ComprehensiveDiagnostic {
-  sharedDriveAccess: DiagnosticResult;
-  templateDocumentAccess: DiagnosticResult;
-  serviceAccountInfo: DiagnosticResult;
-  overallStatus: 'ready' | 'configuration_error' | 'access_error';
+export interface SharedDriveDiagnosticResult {
+  status: 'success' | 'access_error' | 'configuration_error';
+  templateDoc: {
+    accessible: boolean;
+    name?: string;
+    error?: string;
+  };
+  sharedDrive: {
+    accessible: boolean;
+    name?: string;
+    canCreateDocuments?: boolean;
+    error?: string;
+  };
+  serviceAccount: {
+    email?: string;
+    authenticated: boolean;
+  };
   recommendations: string[];
 }
 
-export const runComprehensiveDiagnostics = async (): Promise<ComprehensiveDiagnostic> => {
+export async function runComprehensiveSharedDriveDiagnostics(): Promise<SharedDriveDiagnosticResult> {
   console.log('🔍 Running comprehensive Shared Drive diagnostics...');
   
-  const results: ComprehensiveDiagnostic = {
-    sharedDriveAccess: { success: false, message: 'Not tested' },
-    templateDocumentAccess: { success: false, message: 'Not tested' },
-    serviceAccountInfo: { success: false, message: 'Not tested' },
-    overallStatus: 'configuration_error',
-    recommendations: []
-  };
-
+  // Step 1: Validate and correct environment variables
+  const envValidation = validateAndCorrectEnvironmentVariables();
+  logEnvironmentIssues(envValidation);
+  
+  if (!envValidation.valid || !envValidation.correctedVars) {
+    return {
+      status: 'configuration_error',
+      templateDoc: { accessible: false, error: 'Environment validation failed' },
+      sharedDrive: { accessible: false, error: 'Environment validation failed' },
+      serviceAccount: { authenticated: false },
+      recommendations: [
+        'Fix environment variable configuration in Supabase secrets',
+        ...envValidation.issues
+      ]
+    };
+  }
+  
+  const { templateDocId, sharedDriveId } = envValidation.correctedVars;
+  
   try {
+    // Step 2: Get access token
+    console.log('🔄 Getting access token...');
     const accessToken = await getGoogleAccessToken();
     
-    // Test 1: Service Account Info
-    results.serviceAccountInfo = await testServiceAccountInfo(accessToken);
-    
-    // Test 2: Shared Drive Access
-    const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
-    if (sharedDriveId) {
-      results.sharedDriveAccess = await testSharedDriveAccess(accessToken, sharedDriveId);
-    } else {
-      results.sharedDriveAccess = {
-        success: false,
-        message: 'GOOGLE_SHARED_DRIVE_ID environment variable not configured'
-      };
-    }
-    
-    // Test 3: Template Document Access
-    const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
-    if (templateDocId) {
-      results.templateDocumentAccess = await testTemplateDocumentAccess(accessToken, templateDocId, sharedDriveId);
-    } else {
-      results.templateDocumentAccess = {
-        success: false,
-        message: 'DEFAULT_GOOGLE_DOC_ID environment variable not configured'
-      };
-    }
-    
-    // Determine overall status and recommendations
-    const allTestsPassed = results.serviceAccountInfo.success && 
-                          results.sharedDriveAccess.success && 
-                          results.templateDocumentAccess.success;
-    
-    if (allTestsPassed) {
-      results.overallStatus = 'ready';
-      results.recommendations.push('✅ All diagnostics passed! Shared Drive workflow should work correctly.');
-    } else {
-      results.overallStatus = 'access_error';
-      
-      if (!results.serviceAccountInfo.success) {
-        results.recommendations.push('❌ Service account configuration issue detected. Check GOOGLE_SERVICE_ACCOUNT_KEY.');
-      }
-      
-      if (!results.sharedDriveAccess.success) {
-        results.recommendations.push('❌ Shared Drive access failed. Verify GOOGLE_SHARED_DRIVE_ID and service account permissions.');
-      }
-      
-      if (!results.templateDocumentAccess.success) {
-        results.recommendations.push('❌ Template document access failed. Verify DEFAULT_GOOGLE_DOC_ID and document permissions.');
-      }
-    }
-    
-  } catch (error) {
-    console.error('💥 Diagnostic process failed:', error);
-    results.recommendations.push(`💥 Diagnostic process failed: ${error.message}`);
-  }
-  
-  return results;
-};
-
-async function testServiceAccountInfo(accessToken: string): Promise<DiagnosticResult> {
-  try {
+    // Step 3: Get service account info
     console.log('🔍 Testing service account info...');
+    const serviceAccountInfo = await getServiceAccountInfo();
     
-    const response = await fetch('https://www.googleapis.com/oauth2/v1/tokeninfo', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-    
-    if (!response.ok) {
-      return {
-        success: false,
-        message: `Service account token validation failed: ${response.status}`,
-        details: await response.text()
-      };
-    }
-    
-    const tokenInfo = await response.json();
-    console.log('✅ Service account email:', tokenInfo.email);
-    
-    return {
-      success: true,
-      message: `Service account authenticated as: ${tokenInfo.email}`,
-      details: tokenInfo
-    };
-    
-  } catch (error) {
-    return {
-      success: false,
-      message: `Service account test failed: ${error.message}`
-    };
-  }
-}
-
-async function testSharedDriveAccess(accessToken: string, sharedDriveId: string): Promise<DiagnosticResult> {
-  try {
-    console.log('🔍 Testing Shared Drive access...');
+    console.log('📄 Template Document ID:', templateDocId);
     console.log('📁 Shared Drive ID:', sharedDriveId);
+    console.log('✅ Service account email:', serviceAccountInfo.email);
     
-    // Test 1: Can we get drive info?
-    const driveResponse = await fetch(`https://www.googleapis.com/drive/v3/drives/${sharedDriveId}`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    
-    if (!driveResponse.ok) {
-      const errorText = await driveResponse.text();
-      console.error('❌ Shared Drive info failed:', errorText);
-      
-      if (driveResponse.status === 404) {
-        return {
-          success: false,
-          message: `Shared Drive not found. ID '${sharedDriveId}' may be incorrect or inaccessible.`,
-          details: { status: 404, response: errorText }
-        };
-      }
-      
-      return {
-        success: false,
-        message: `Shared Drive access failed: ${driveResponse.status}`,
-        details: { status: driveResponse.status, response: errorText }
-      };
-    }
-    
-    const driveInfo = await driveResponse.json();
-    console.log('✅ Shared Drive found:', driveInfo.name);
-    
-    // Test 2: Can we list files in the drive?
-    const listResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files?driveId=${sharedDriveId}&includeItemsFromAllDrives=true&supportsAllDrives=true&corpora=drive&pageSize=10`,
-      {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      }
-    );
-    
-    if (!listResponse.ok) {
-      const errorText = await listResponse.text();
-      console.warn('⚠️ Cannot list files in Shared Drive:', errorText);
-      
-      return {
-        success: false,
-        message: `Can access Shared Drive '${driveInfo.name}' but cannot list files. Check service account permissions.`,
-        details: { driveInfo, listError: errorText }
-      };
-    }
-    
-    const listData = await listResponse.json();
-    console.log(`✅ Can list files in Shared Drive (${listData.files?.length || 0} files found)`);
-    
-    // Test 3: Can we create a test document?
-    // FIXED: Use proper Shared Drive document creation
-    const testCreateResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
+    const result: SharedDriveDiagnosticResult = {
+      status: 'success',
+      templateDoc: { accessible: false },
+      sharedDrive: { accessible: false },
+      serviceAccount: { 
+        email: serviceAccountInfo.email,
+        authenticated: true 
       },
-      body: JSON.stringify({
-        name: `diagnostic-test-${Date.now()}`,
-        parents: [sharedDriveId],  // This is the correct way to specify the Shared Drive as parent
-        mimeType: 'application/vnd.google-apps.document',
-        supportsAllDrives: true
-      })
-    });
+      recommendations: []
+    };
     
-    if (testCreateResponse.ok) {
-      const testDoc = await testCreateResponse.json();
-      console.log('✅ Can create documents in Shared Drive');
-      
-      // Clean up test document
-      await fetch(`https://www.googleapis.com/drive/v3/files/${testDoc.id}?supportsAllDrives=true`, {
-        method: 'DELETE',
+    // Step 4: Test template document access
+    console.log('🔍 Testing template document access...');
+    try {
+      const templateResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}?supportsAllDrives=true&fields=id,name,mimeType`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
-      console.log('✅ Test document cleaned up');
       
-      return {
-        success: true,
-        message: `Full access to Shared Drive '${driveInfo.name}' confirmed. Can read, list, create, and delete documents.`,
-        details: { driveInfo, fileCount: listData.files?.length || 0 }
-      };
-    } else {
-      const createErrorText = await testCreateResponse.text();
-      console.error('❌ Cannot create documents in Shared Drive:', createErrorText);
-      
-      return {
-        success: false,
-        message: `Can access Shared Drive '${driveInfo.name}' but cannot create documents. Service account needs Editor permissions.`,
-        details: { driveInfo, createError: createErrorText }
-      };
+      if (templateResponse.ok) {
+        const templateData = await templateResponse.json();
+        result.templateDoc.accessible = true;
+        result.templateDoc.name = templateData.name;
+        console.log(`✅ Template document found: ${templateData.name}`);
+        
+        // Test if we can read the document content
+        const contentResponse = await fetch(`https://docs.googleapis.com/v1/documents/${templateDocId}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        
+        if (contentResponse.ok) {
+          console.log('✅ Can read template document content');
+        } else {
+          console.warn('⚠️ Can access template but cannot read content');
+        }
+      } else {
+        const errorText = await templateResponse.text();
+        result.templateDoc.error = `Cannot access template document: ${templateResponse.status}`;
+        console.error(`❌ Template document access failed: ${errorText}`);
+        result.recommendations.push('❌ Template document access failed. Verify DEFAULT_GOOGLE_DOC_ID and document permissions.');
+      }
+    } catch (error) {
+      result.templateDoc.error = error.message;
+      console.error('❌ Template document test failed:', error);
+      result.recommendations.push('❌ Template document access failed. Verify DEFAULT_GOOGLE_DOC_ID and document permissions.');
     }
     
+    // Step 5: Test Shared Drive access
+    console.log('🔍 Testing Shared Drive access...');
+    try {
+      const driveResponse = await fetch(`https://www.googleapis.com/drive/v3/drives/${sharedDriveId}?fields=id,name,capabilities`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      
+      if (driveResponse.ok) {
+        const driveData = await driveResponse.json();
+        result.sharedDrive.accessible = true;
+        result.sharedDrive.name = driveData.name;
+        console.log(`✅ Shared Drive found: ${driveData.name}`);
+        
+        // Test if we can list files in the drive
+        const listResponse = await fetch(
+          `https://www.googleapis.com/drive/v3/files?driveId=${sharedDriveId}&includeItemsFromAllDrives=true&supportsAllDrives=true&corpora=drive&pageSize=5`,
+          { headers: { 'Authorization': `Bearer ${accessToken}` } }
+        );
+        
+        if (listResponse.ok) {
+          const listData = await listResponse.json();
+          console.log(`✅ Can list files in Shared Drive (${listData.files?.length || 0} files found)`);
+          
+          // FIXED: Test document creation in Shared Drive (using correct Shared Drive ID)
+          const createTestResponse = await fetch('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name: `diagnostic-test-${Date.now()}`,
+              mimeType: 'application/vnd.google-apps.document',
+              parents: [sharedDriveId] // FIXED: Use sharedDriveId, not templateDocId
+            })
+          });
+          
+          if (createTestResponse.ok) {
+            const testDoc = await createTestResponse.json();
+            result.sharedDrive.canCreateDocuments = true;
+            console.log('✅ Can create documents in Shared Drive');
+            
+            // Clean up test document
+            await fetch(`https://www.googleapis.com/drive/v3/files/${testDoc.id}?supportsAllDrives=true`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            console.log('✅ Test document cleaned up');
+          } else {
+            const errorText = await createTestResponse.text();
+            result.sharedDrive.canCreateDocuments = false;
+            console.error(`❌ Cannot create documents in Shared Drive: ${errorText}`);
+            result.recommendations.push('❌ Shared Drive access failed. Verify GOOGLE_SHARED_DRIVE_ID and service account permissions.');
+          }
+        }
+      } else {
+        const errorText = await driveResponse.text();
+        result.sharedDrive.error = `Cannot access Shared Drive: ${driveResponse.status}`;
+        console.error(`❌ Shared Drive access failed: ${errorText}`);
+        result.recommendations.push('❌ Shared Drive access failed. Verify GOOGLE_SHARED_DRIVE_ID and service account permissions.');
+      }
+    } catch (error) {
+      result.sharedDrive.error = error.message;
+      console.error('❌ Shared Drive test failed:', error);
+      result.recommendations.push('❌ Shared Drive access failed. Verify GOOGLE_SHARED_DRIVE_ID and service account permissions.');
+    }
+    
+    // Step 6: Test template copy to Shared Drive
+    if (result.templateDoc.accessible && result.sharedDrive.accessible) {
+      console.log('🔍 Testing template copy to Shared Drive...');
+      try {
+        // FIXED: Use correct templateDocId for copy source, sharedDriveId for destination
+        const copyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy?supportsAllDrives=true`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: `copy-test-${Date.now()}`,
+            parents: [sharedDriveId] // FIXED: Use sharedDriveId as destination
+          })
+        });
+        
+        if (copyResponse.ok) {
+          const copyDoc = await copyResponse.json();
+          console.log('✅ Can copy template document to Shared Drive');
+          
+          // Clean up test copy
+          await fetch(`https://www.googleapis.com/drive/v3/files/${copyDoc.id}?supportsAllDrives=true`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+          console.log('✅ Test copy cleaned up');
+        } else {
+          const errorText = await copyResponse.text();
+          console.error(`❌ Cannot copy template document to Shared Drive: ${errorText}`);
+          result.recommendations.push('❌ Can access template document and Shared Drive separately but cannot copy template to Shared Drive. Check template permissions or Shared Drive access.');
+        }
+      } catch (error) {
+        console.error('❌ Template copy test failed:', error);
+        result.recommendations.push('❌ Can access template document and Shared Drive separately but cannot copy template to Shared Drive. Check template permissions or Shared Drive access.');
+      }
+    }
+    
+    // Determine overall status
+    if (result.templateDoc.accessible && result.sharedDrive.accessible && result.sharedDrive.canCreateDocuments) {
+      result.status = 'success';
+    } else {
+      result.status = 'access_error';
+    }
+    
+    return result;
+    
   } catch (error) {
+    console.error('❌ Comprehensive diagnostic failed:', error);
     return {
-      success: false,
-      message: `Shared Drive test failed: ${error.message}`
+      status: 'configuration_error',
+      templateDoc: { accessible: false, error: 'Diagnostic failed' },
+      sharedDrive: { accessible: false, error: 'Diagnostic failed' },
+      serviceAccount: { authenticated: false },
+      recommendations: [
+        '❌ Diagnostic process failed. Check Google service account configuration and permissions.'
+      ]
     };
   }
 }
 
-async function testTemplateDocumentAccess(accessToken: string, templateDocId: string, sharedDriveId?: string): Promise<DiagnosticResult> {
+async function getServiceAccountInfo(): Promise<{ email?: string }> {
   try {
-    console.log('🔍 Testing template document access...');
-    console.log('📄 Template document ID:', templateDocId);
-    
-    // Test 1: Can we get document metadata?
-    const metadataResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}?supportsAllDrives=true`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    
-    if (!metadataResponse.ok) {
-      const errorText = await metadataResponse.text();
-      console.error('❌ Template document metadata failed:', errorText);
-      
-      if (metadataResponse.status === 404) {
-        return {
-          success: false,
-          message: `Template document not found. ID '${templateDocId}' may be incorrect or inaccessible.`,
-          details: { status: 404, response: errorText }
-        };
-      }
-      
-      return {
-        success: false,
-        message: `Template document access failed: ${metadataResponse.status}`,
-        details: { status: metadataResponse.status, response: errorText }
-      };
+    const serviceAccountKey = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY');
+    if (serviceAccountKey) {
+      const credentials = JSON.parse(serviceAccountKey);
+      return { email: credentials.client_email };
     }
-    
-    const docMetadata = await metadataResponse.json();
-    console.log('✅ Template document found:', docMetadata.name);
-    
-    // Test 2: Can we read the document content?
-    const contentResponse = await fetch(`https://docs.googleapis.com/v1/documents/${templateDocId}`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    
-    if (!contentResponse.ok) {
-      const errorText = await contentResponse.text();
-      console.error('❌ Template document content access failed:', errorText);
-      
-      return {
-        success: false,
-        message: `Can see template document '${docMetadata.name}' but cannot read content. Service account needs Viewer permissions.`,
-        details: { docMetadata, contentError: errorText }
-      };
-    }
-    
-    const docContent = await contentResponse.json();
-    console.log('✅ Can read template document content');
-    
-    // Test 3: Can we copy the document to Shared Drive?
-    if (sharedDriveId) {
-      const testCopyName = `diagnostic-copy-test-${Date.now()}`;
-      const copyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: testCopyName,
-          parents: [sharedDriveId],  // Copy to Shared Drive
-          driveId: sharedDriveId,    // Specify the Shared Drive
-          supportsAllDrives: true
-        })
-      });
-      
-      if (copyResponse.ok) {
-        const copyDoc = await copyResponse.json();
-        console.log('✅ Can copy template document to Shared Drive');
-        
-        // Clean up test copy
-        await fetch(`https://www.googleapis.com/drive/v3/files/${copyDoc.id}?supportsAllDrives=true`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        console.log('✅ Test copy cleaned up');
-        
-        return {
-          success: true,
-          message: `Full access to template document '${docMetadata.name}' confirmed. Can read and copy to Shared Drive.`,
-          details: { docMetadata, hasContent: !!docContent.body }
-        };
-      } else {
-        const copyErrorText = await copyResponse.text();
-        console.error('❌ Cannot copy template document to Shared Drive:', copyErrorText);
-        
-        return {
-          success: false,
-          message: `Can access template document '${docMetadata.name}' but cannot copy it to Shared Drive. Check template permissions or Shared Drive access.`,
-          details: { docMetadata, copyError: copyErrorText }
-        };
-      }
-    } else {
-      // If no Shared Drive, just test regular copy
-      const testCopyName = `diagnostic-copy-test-${Date.now()}`;
-      const copyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: testCopyName,
-          supportsAllDrives: true
-        })
-      });
-      
-      if (copyResponse.ok) {
-        const copyDoc = await copyResponse.json();
-        console.log('✅ Can copy template document');
-        
-        // Clean up test copy
-        await fetch(`https://www.googleapis.com/drive/v3/files/${copyDoc.id}?supportsAllDrives=true`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        console.log('✅ Test copy cleaned up');
-        
-        return {
-          success: true,
-          message: `Full access to template document '${docMetadata.name}' confirmed. Can read and copy.`,
-          details: { docMetadata, hasContent: !!docContent.body }
-        };
-      } else {
-        const copyErrorText = await copyResponse.text();
-        console.error('❌ Cannot copy template document:', copyErrorText);
-        
-        return {
-          success: false,
-          message: `Can access template document '${docMetadata.name}' but cannot copy it. Check permissions.`,
-          details: { docMetadata, copyError: copyErrorText }
-        };
-      }
-    }
-    
   } catch (error) {
-    return {
-      success: false,
-      message: `Template document test failed: ${error.message}`
-    };
+    console.warn('Could not parse service account credentials');
   }
+  return {};
 }
 
-export const logDiagnosticResults = (results: ComprehensiveDiagnostic): void => {
+export function logDiagnosticResults(result: SharedDriveDiagnosticResult): void {
   console.log('\n🔍 === COMPREHENSIVE DIAGNOSTIC RESULTS ===');
-  console.log(`📊 Overall Status: ${results.overallStatus.toUpperCase()}`);
   
   console.log('\n🔧 Service Account:');
-  console.log(`   ${results.serviceAccountInfo.success ? '✅' : '❌'} ${results.serviceAccountInfo.message}`);
-  
-  console.log('\n📁 Shared Drive Access:');
-  console.log(`   ${results.sharedDriveAccess.success ? '✅' : '❌'} ${results.sharedDriveAccess.message}`);
+  console.log(`   ✅ Service account authenticated as: ${result.serviceAccount.email}`);
   
   console.log('\n📄 Template Document Access:');
-  console.log(`   ${results.templateDocumentAccess.success ? '✅' : '❌'} ${results.templateDocumentAccess.message}`);
+  if (result.templateDoc.accessible) {
+    console.log(`   ✅ Template document accessible: "${result.templateDoc.name}"`);
+  } else {
+    console.log(`   ❌ Template document issue: ${result.templateDoc.error}`);
+  }
   
-  console.log('\n💡 Recommendations:');
-  results.recommendations.forEach(rec => console.log(`   ${rec}`));
+  console.log('\n📁 Shared Drive Access:');
+  if (result.sharedDrive.accessible) {
+    console.log(`   ✅ Shared Drive accessible: "${result.sharedDrive.name}"`);
+    if (result.sharedDrive.canCreateDocuments) {
+      console.log(`   ✅ Can create documents in Shared Drive`);
+    } else {
+      console.log(`   ❌ Can access Shared Drive but cannot create documents. Service account needs Editor permissions.`);
+    }
+  } else {
+    console.log(`   ❌ Shared Drive issue: ${result.sharedDrive.error}`);
+  }
+  
+  console.log(`\n📊 Overall Status: ${result.status.toUpperCase()}`);
+  
+  if (result.recommendations.length > 0) {
+    console.log('\n💡 Recommendations:');
+    result.recommendations.forEach(rec => console.log(`   ${rec}`));
+  }
   
   console.log('\n===========================================\n');
-};
+  
+  if (result.status !== 'success') {
+    console.error('🔍 Configuration issue detected. Please review diagnostic recommendations above.');
+  }
+}
