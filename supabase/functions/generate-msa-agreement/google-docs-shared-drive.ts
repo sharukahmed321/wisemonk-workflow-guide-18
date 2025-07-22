@@ -33,12 +33,17 @@ export async function generateMSAWithSharedDrive(
 
     console.log('📁 Shared Drive destination ID:', sharedDriveId);
 
+    // Verify we have the correct IDs
+    if (templateDocId === sharedDriveId) {
+      throw new Error(`Template document ID cannot be the same as Shared Drive ID. Template: ${templateDocId}, Drive: ${sharedDriveId}`);
+    }
+
     // Step 1: Create document copy in the Shared Drive
     console.log('🔄 Creating document copy in Shared Drive...');
     tempDocId = await createDocumentInSharedDrive(
       accessToken, 
-      templateDocId,
-      sharedDriveId,
+      templateDocId,  // This should be the Google Docs template ID
+      sharedDriveId,  // This should be the Shared Drive ID
       createTempDocumentName(userData)
     );
     
@@ -76,17 +81,29 @@ export async function generateMSAWithSharedDrive(
 
 async function createDocumentInSharedDrive(
   accessToken: string, 
-  templateDocId: string,
-  sharedDriveId: string,
+  templateDocId: string,   // This MUST be the Google Docs template ID
+  sharedDriveId: string,   // This MUST be the Shared Drive ID
   documentName: string,
   maxRetries: number = 3
 ): Promise<string> {
+  
+  // Double-check we have the right IDs
+  console.log(`🔍 Creating document with parameters:`);
+  console.log(`   📄 Template Document ID: ${templateDocId}`);
+  console.log(`   📁 Shared Drive ID: ${sharedDriveId}`);
+  console.log(`   📝 Document Name: ${documentName}`);
+  
+  if (templateDocId === sharedDriveId) {
+    throw new Error(`Invalid configuration: Template document ID (${templateDocId}) cannot be the same as Shared Drive ID (${sharedDriveId})`);
+  }
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`📄 Creating document in Shared Drive (attempt ${attempt}/${maxRetries}): ${documentName}`);
       console.log(`📋 Copying from template document: ${templateDocId}`);
       console.log(`📁 Copying to Shared Drive: ${sharedDriveId}`);
       
+      // Make sure we're using the templateDocId in the API call, not sharedDriveId
       const response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
         method: 'POST',
         headers: {
@@ -95,14 +112,18 @@ async function createDocumentInSharedDrive(
         },
         body: JSON.stringify({
           name: documentName,
-          parents: [sharedDriveId],
-          driveId: sharedDriveId,
+          parents: [sharedDriveId],  // This is where the copy goes (Shared Drive)
+          driveId: sharedDriveId,    // This identifies the Shared Drive
           supportsAllDrives: true
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`❌ Copy operation failed. Request details:`);
+        console.error(`   📄 Source (template): ${templateDocId}`);
+        console.error(`   📁 Destination (drive): ${sharedDriveId}`);
+        console.error(`   🔗 API URL: https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`);
         
         // Parse specific Google API errors
         try {
@@ -149,6 +170,7 @@ async function createDocumentInSharedDrive(
       }
 
       const copyData = await response.json();
+      console.log(`✅ Successfully created document copy: ${copyData.id}`);
       return copyData.id;
       
     } catch (error) {
