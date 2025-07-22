@@ -84,7 +84,7 @@ async function createDocumentInSharedDrive(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`📄 Creating document in Shared Drive (attempt ${attempt}/${maxRetries}): ${documentName}`);
-      console.log(`📋 Copying from template: ${templateDocId}`);
+      console.log(`📋 Copying from template document: ${templateDocId}`);
       console.log(`📁 Copying to Shared Drive: ${sharedDriveId}`);
       
       const response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
