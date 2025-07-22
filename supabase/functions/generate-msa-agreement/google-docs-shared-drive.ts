@@ -1,4 +1,3 @@
-
 import { getGoogleAccessToken } from './google-auth.ts';
 
 export interface SharedDriveInfo {
@@ -23,6 +22,7 @@ export async function generateMSAWithSharedDrive(
   
   try {
     console.log('🔄 Starting Shared Drive MSA generation workflow');
+    console.log('📄 Template document ID to copy from:', templateDocId);
     
     const accessToken = await getGoogleAccessToken();
     const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
@@ -30,6 +30,8 @@ export async function generateMSAWithSharedDrive(
     if (!sharedDriveId) {
       throw new Error('GOOGLE_SHARED_DRIVE_ID environment variable not configured');
     }
+
+    console.log('📁 Shared Drive destination ID:', sharedDriveId);
 
     // Test Shared Drive access before proceeding
     console.log('🔍 Testing Shared Drive access...');
@@ -40,12 +42,12 @@ export async function generateMSAWithSharedDrive(
     
     console.log('✅ Shared Drive access verified');
 
-    // Step 1: Create document copy in the Shared Drive
+    // Step 1: Create document copy in the Shared Drive using the correct template ID
     console.log('🔄 Creating document copy in Shared Drive...');
     tempDocId = await createDocumentInSharedDrive(
       accessToken, 
-      templateDocId, 
-      sharedDriveId, 
+      templateDocId,  // Use the correct template document ID here
+      sharedDriveId,  // Use Shared Drive ID as destination
       createTempDocumentName(userData)
     );
     
@@ -83,14 +85,16 @@ export async function generateMSAWithSharedDrive(
 
 async function createDocumentInSharedDrive(
   accessToken: string, 
-  templateDocId: string, 
-  sharedDriveId: string,
+  templateDocId: string,  // This should be the DEFAULT_GOOGLE_DOC_ID
+  sharedDriveId: string,  // This should be the GOOGLE_SHARED_DRIVE_ID 
   documentName: string,
   maxRetries: number = 3
 ): Promise<string> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`📄 Creating document in Shared Drive (attempt ${attempt}/${maxRetries}): ${documentName}`);
+      console.log(`📋 Copying from template: ${templateDocId}`);
+      console.log(`📁 Copying to Shared Drive: ${sharedDriveId}`);
       
       const response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
         method: 'POST',
@@ -115,12 +119,18 @@ async function createDocumentInSharedDrive(
           const googleError = errorData.error;
           
           if (googleError?.code === 404) {
-            throw new Error('Template document or Shared Drive not found. Please verify the document ID and Shared Drive ID are correct.');
+            if (errorText.includes(templateDocId)) {
+              throw new Error(`Template document not found: ${templateDocId}. Please verify the DEFAULT_GOOGLE_DOC_ID is correct and the document exists.`);
+            } else if (errorText.includes(sharedDriveId)) {
+              throw new Error(`Shared Drive not found: ${sharedDriveId}. Please verify the GOOGLE_SHARED_DRIVE_ID is correct.`);
+            } else {
+              throw new Error('Template document or Shared Drive not found. Please verify both IDs are correct.');
+            }
           } else if (googleError?.code === 403) {
             if (googleError.message?.includes('drive')) {
-              throw new Error('Access denied to Shared Drive. Please ensure the service account has proper permissions on the Shared Drive.');
+              throw new Error(`Access denied to Shared Drive (${sharedDriveId}). Please ensure the service account has proper permissions on the Shared Drive.`);
             } else {
-              throw new Error('Access denied to template document. Please ensure the service account has proper permissions.');
+              throw new Error(`Access denied to template document (${templateDocId}). Please ensure the service account has proper permissions.`);
             }
           } else if (googleError?.code === 429) {
             // Rate limit - wait and retry

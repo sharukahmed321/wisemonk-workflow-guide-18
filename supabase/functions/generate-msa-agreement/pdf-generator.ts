@@ -12,7 +12,7 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
   }
 
   console.log('🔄 Starting MSA PDF generation for:', msaData.first_name, msaData.last_name);
-  console.log('📋 Template document ID:', templateDocId);
+  console.log('📋 Using template document ID:', templateDocId);
   
   try {
     // Prepare placeholder replacements
@@ -24,6 +24,8 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
     if (sharedDriveId) {
       try {
         console.log('🔄 Attempting Shared Drive workflow...');
+        console.log('📁 Shared Drive ID:', sharedDriveId);
+        console.log('📄 Template Document ID:', templateDocId);
         
         // Validate Shared Drive before operation
         await validateSharedDriveBeforeOperation();
@@ -31,6 +33,7 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
         // Clean up any orphaned documents
         await cleanupSharedDriveOrphanedDocuments();
         
+        // Pass the correct template document ID to the Shared Drive function
         const pdfBuffer = await generateMSAWithSharedDrive(templateDocId, placeholders, msaData);
         
         console.log('✅ MSA PDF generated successfully with Shared Drive workflow, size:', pdfBuffer.byteLength);
@@ -38,6 +41,12 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
         
       } catch (sharedDriveError) {
         console.error('💥 Shared Drive workflow failed:', sharedDriveError.message);
+        
+        // Log specific error details for debugging
+        if (sharedDriveError.message.includes('File not found')) {
+          console.error('🔍 Template document not found. Verify DEFAULT_GOOGLE_DOC_ID:', templateDocId);
+          console.error('🔍 Shared Drive ID used:', sharedDriveId);
+        }
         
         // Continue to next method instead of failing immediately
         console.log('🔄 Falling back to enhanced Google Docs workflow...');
@@ -59,7 +68,9 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
       
       // Check if this is a storage quota issue
       if (googleDocsError.message.includes('storage quota') || 
-          googleDocsError.message.includes('storageQuotaExceeded')) {
+          googleDocsError.message.includes('storageQuotaExceeded') ||
+          googleDocsError.message.includes('Insufficient') ||
+          googleDocsError.message.includes('0.00MB available')) {
         
         console.log('🔄 Falling back to HTML-to-PDF generation due to storage quota issue...');
         
@@ -78,7 +89,7 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
         if (googleDocsError.message.includes('permission') || googleDocsError.message.includes('access')) {
           throw new Error('Google Docs access denied. Please ensure the template document is shared with the service account email with Editor permissions.');
         } else if (googleDocsError.message.includes('not found') || googleDocsError.message.includes('404')) {
-          throw new Error('Google Docs template not found. Please verify the template document ID is correct and the document exists.');
+          throw new Error(`Google Docs template not found. Please verify the template document ID (${templateDocId}) is correct and the document exists.`);
         } else if (googleDocsError.message.includes('authentication') || googleDocsError.message.includes('401')) {
           throw new Error('Google authentication failed. Please check the GOOGLE_SERVICE_ACCOUNT_KEY configuration.');
         } else if (googleDocsError.message.includes('Rate limited') || googleDocsError.message.includes('429')) {
