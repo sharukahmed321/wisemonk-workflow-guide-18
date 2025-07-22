@@ -5,6 +5,7 @@ import { generateFallbackMSAPDF } from './fallback-generator.ts';
 import { createMSAPlaceholders } from './placeholders.ts';
 import { validateSharedDriveBeforeOperation } from './shared-drive-monitor.ts';
 import { cleanupSharedDriveOrphanedDocuments } from './google-docs-shared-drive.ts';
+import { runComprehensiveDiagnostics, logDiagnosticResults } from './shared-drive-diagnostics.ts';
 
 export const generateAgreementPDF = async (msaData: any, templateDocId: string): Promise<ArrayBuffer> => {
   if (!templateDocId) {
@@ -27,13 +28,24 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
         console.log('📁 Shared Drive ID:', sharedDriveId);
         console.log('📄 Template Document ID:', templateDocId);
         
+        // Run comprehensive diagnostics first
+        console.log('🔍 Running pre-flight diagnostics...');
+        const diagnostics = await runComprehensiveDiagnostics();
+        logDiagnosticResults(diagnostics);
+        
+        if (diagnostics.overallStatus !== 'ready') {
+          throw new Error(`Shared Drive pre-flight check failed. Status: ${diagnostics.overallStatus}. Recommendations: ${diagnostics.recommendations.join('; ')}`);
+        }
+        
+        console.log('✅ Pre-flight diagnostics passed, proceeding with Shared Drive workflow...');
+        
         // Validate Shared Drive before operation
         await validateSharedDriveBeforeOperation();
         
         // Clean up any orphaned documents
         await cleanupSharedDriveOrphanedDocuments();
         
-        // Pass the correct template document ID to the Shared Drive function
+        // Generate PDF using Shared Drive workflow
         const pdfBuffer = await generateMSAWithSharedDrive(templateDocId, placeholders, msaData);
         
         console.log('✅ MSA PDF generated successfully with Shared Drive workflow, size:', pdfBuffer.byteLength);
@@ -45,10 +57,14 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
         // Log specific error details for debugging
         if (sharedDriveError.message.includes('File not found')) {
           console.error('🔍 Template document not found. Verify DEFAULT_GOOGLE_DOC_ID:', templateDocId);
-          console.error('🔍 Shared Drive ID used:', sharedDriveId);
+          console.error('🔍 Or Shared Drive not found. Verify GOOGLE_SHARED_DRIVE_ID:', sharedDriveId);
+        } else if (sharedDriveError.message.includes('pre-flight check failed')) {
+          console.error('🔍 Configuration issue detected. Please review diagnostic recommendations above.');
+          // Don't continue to fallback for configuration issues - user needs to fix setup
+          throw new Error(`Shared Drive configuration error: ${sharedDriveError.message}`);
         }
         
-        // Continue to next method instead of failing immediately
+        // Continue to next method for other types of errors
         console.log('🔄 Falling back to enhanced Google Docs workflow...');
       }
     } else {
@@ -81,7 +97,7 @@ export const generateAgreementPDF = async (msaData: any, templateDocId: string):
           
         } catch (fallbackError) {
           console.error('💥 Fallback PDF generation also failed:', fallbackError.message);
-          throw new Error(`All PDF generation methods failed. Shared Drive error: ${sharedDriveId ? 'Failed' : 'Not configured'}. Google Docs error: ${googleDocsError.message}. Fallback error: ${fallbackError.message}`);
+          throw new Error(`All PDF generation methods failed. Shared Drive error: ${sharedDriveId ? 'Failed with configuration issues' : 'Not configured'}. Google Docs error: ${googleDocsError.message}. Fallback error: ${fallbackError.message}`);
         }
         
       } else {

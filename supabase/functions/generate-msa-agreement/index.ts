@@ -122,7 +122,7 @@ serve(async (req) => {
       currentDate: new Date().toISOString(),
     };
 
-    console.log('🔄 Generating PDF with multi-tier workflow (Shared Drive → Enhanced → Fallback)...');
+    console.log('🔄 Generating PDF with enhanced Shared Drive workflow (Diagnostics → Shared Drive → Enhanced → Fallback)...');
     
     // Get template document ID from secrets (required)
     const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
@@ -130,10 +130,10 @@ serve(async (req) => {
       throw new Error('DEFAULT_GOOGLE_DOC_ID environment variable is not configured. Please add the Google Docs template ID to your secrets.');
     }
     
-    // Generate the MSA agreement PDF using multi-tier workflow
+    // Generate the MSA agreement PDF using enhanced multi-tier workflow
     const pdfBuffer = await generateAgreementPDF(msaData, templateDocId);
     
-    console.log('✅ MSA agreement PDF generated successfully with multi-tier workflow, size:', pdfBuffer.byteLength);
+    console.log('✅ MSA agreement PDF generated successfully with enhanced multi-tier workflow, size:', pdfBuffer.byteLength);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -168,7 +168,7 @@ serve(async (req) => {
     let generationMethod = 'unknown';
     const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
     if (sharedDriveId) {
-      generationMethod = 'shared_drive_with_fallbacks';
+      generationMethod = 'shared_drive_with_diagnostics_and_fallbacks';
     } else {
       generationMethod = 'enhanced_google_docs_with_fallback';
     }
@@ -228,9 +228,13 @@ serve(async (req) => {
     
     // Enhanced error messages for common issues
     let errorMessage = error.message;
-    let errorDetails = 'Failed to generate MSA agreement using multi-tier workflow with Shared Drive, enhanced Google Docs, and fallback capabilities.';
+    let errorDetails = 'Failed to generate MSA agreement using enhanced multi-tier workflow with comprehensive diagnostics, Shared Drive, enhanced Google Docs, and fallback capabilities.';
     
-    if (error.message.includes('Shared Drive')) {
+    if (error.message.includes('configuration error')) {
+      errorDetails = 'Shared Drive configuration error detected. Please review the diagnostic recommendations in the function logs and fix the configuration issues before retrying.';
+    } else if (error.message.includes('pre-flight check failed')) {
+      errorDetails = 'Pre-flight diagnostics failed. Please check the function logs for detailed diagnostic information and fix the identified issues.';
+    } else if (error.message.includes('Shared Drive')) {
       errorDetails = 'Shared Drive access issue detected. The system attempted fallback methods. Please check Shared Drive permissions and configuration.';
     } else if (error.message.includes('storage quota')) {
       errorDetails = 'Google Drive storage quota exceeded across all methods. Please contact support to resolve storage limitations or configure Shared Drive access.';

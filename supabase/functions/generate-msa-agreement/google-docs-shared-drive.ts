@@ -33,21 +33,12 @@ export async function generateMSAWithSharedDrive(
 
     console.log('📁 Shared Drive destination ID:', sharedDriveId);
 
-    // Test Shared Drive access before proceeding
-    console.log('🔍 Testing Shared Drive access...');
-    const accessTest = await testSharedDriveAccess(accessToken, sharedDriveId);
-    if (!accessTest.success) {
-      throw new Error(`Shared Drive access failed: ${accessTest.error}`);
-    }
-    
-    console.log('✅ Shared Drive access verified');
-
-    // Step 1: Create document copy in the Shared Drive using the correct template ID
+    // Step 1: Create document copy in the Shared Drive
     console.log('🔄 Creating document copy in Shared Drive...');
     tempDocId = await createDocumentInSharedDrive(
       accessToken, 
-      templateDocId,  // Use the correct template document ID here
-      sharedDriveId,  // Use Shared Drive ID as destination
+      templateDocId,
+      sharedDriveId,
       createTempDocumentName(userData)
     );
     
@@ -85,8 +76,8 @@ export async function generateMSAWithSharedDrive(
 
 async function createDocumentInSharedDrive(
   accessToken: string, 
-  templateDocId: string,  // This should be the DEFAULT_GOOGLE_DOC_ID
-  sharedDriveId: string,  // This should be the GOOGLE_SHARED_DRIVE_ID 
+  templateDocId: string,
+  sharedDriveId: string,
   documentName: string,
   maxRetries: number = 3
 ): Promise<string> {
@@ -119,18 +110,23 @@ async function createDocumentInSharedDrive(
           const googleError = errorData.error;
           
           if (googleError?.code === 404) {
-            if (errorText.includes(templateDocId)) {
-              throw new Error(`Template document not found: ${templateDocId}. Please verify the DEFAULT_GOOGLE_DOC_ID is correct and the document exists.`);
-            } else if (errorText.includes(sharedDriveId)) {
-              throw new Error(`Shared Drive not found: ${sharedDriveId}. Please verify the GOOGLE_SHARED_DRIVE_ID is correct.`);
+            // Check which resource was not found by examining the error message
+            const errorMessage = googleError.message || errorText;
+            
+            if (errorMessage.includes(templateDocId) || errorMessage.includes('source file')) {
+              throw new Error(`Template document not found: ${templateDocId}. Please verify the DEFAULT_GOOGLE_DOC_ID is correct and the document exists. Make sure the service account has access to this document.`);
+            } else if (errorMessage.includes(sharedDriveId) || errorMessage.includes('parent') || errorMessage.includes('drive')) {
+              throw new Error(`Shared Drive not found: ${sharedDriveId}. Please verify the GOOGLE_SHARED_DRIVE_ID is correct and the service account has access to this Shared Drive.`);
             } else {
-              throw new Error('Template document or Shared Drive not found. Please verify both IDs are correct.');
+              throw new Error(`Resource not found (404). This could be the template document (${templateDocId}) or Shared Drive (${sharedDriveId}). Please verify both IDs are correct and accessible.`);
             }
           } else if (googleError?.code === 403) {
-            if (googleError.message?.includes('drive')) {
-              throw new Error(`Access denied to Shared Drive (${sharedDriveId}). Please ensure the service account has proper permissions on the Shared Drive.`);
+            const errorMessage = googleError.message || '';
+            
+            if (errorMessage.toLowerCase().includes('drive') || errorMessage.toLowerCase().includes('shared')) {
+              throw new Error(`Access denied to Shared Drive (${sharedDriveId}). Please ensure the service account has Editor permissions on the Shared Drive. Service account email should be added as a member with Editor access.`);
             } else {
-              throw new Error(`Access denied to template document (${templateDocId}). Please ensure the service account has proper permissions.`);
+              throw new Error(`Access denied to template document (${templateDocId}). Please ensure the service account has Viewer permissions on the template document. Share the document with the service account email.`);
             }
           } else if (googleError?.code === 429) {
             // Rate limit - wait and retry
@@ -140,9 +136,13 @@ async function createDocumentInSharedDrive(
               await new Promise(resolve => setTimeout(resolve, waitTime));
               continue;
             }
+            throw new Error('Google API rate limit exceeded. Please try again in a few moments.');
+          } else if (googleError?.code === 400) {
+            throw new Error(`Invalid request: ${googleError.message}. This may indicate configuration issues with the Shared Drive or template document IDs.`);
           }
         } catch (parseError) {
           // Use original error if parsing fails
+          console.warn('⚠️ Could not parse Google API error response');
         }
         
         throw new Error(`Failed to create document in Shared Drive: ${response.status} - ${errorText}`);
@@ -155,6 +155,12 @@ async function createDocumentInSharedDrive(
       if (attempt === maxRetries) {
         throw error;
       }
+      
+      // Don't retry configuration errors (404, 403)
+      if (error.message.includes('not found') || error.message.includes('Access denied')) {
+        throw error;
+      }
+      
       console.log(`⚠️ Attempt ${attempt} failed, retrying...`);
       await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
@@ -269,7 +275,6 @@ async function deleteDocumentFromSharedDrive(
   }
 }
 
-// Helper function to get Shared Drive information
 export async function getSharedDriveInfo(
   accessToken: string, 
   sharedDriveId: string
@@ -295,7 +300,6 @@ export async function getSharedDriveInfo(
   };
 }
 
-// Function to list available Shared Drives
 export async function listSharedDrives(accessToken: string) {
   const response = await fetch('https://www.googleapis.com/drive/v3/drives', {
     headers: {
@@ -317,7 +321,6 @@ export async function listSharedDrives(accessToken: string) {
   })) || [];
 }
 
-// Diagnostic function to test Shared Drive access
 export async function testSharedDriveAccess(
   accessToken: string, 
   sharedDriveId: string
@@ -379,7 +382,6 @@ export async function testSharedDriveAccess(
   }
 }
 
-// Helper function to create temporary document names
 function createTempDocumentName(userData: any): string {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substr(2, 9);
@@ -388,7 +390,6 @@ function createTempDocumentName(userData: any): string {
   return `MSA_SharedDrive_${safeName}_${timestamp}_${randomId}`;
 }
 
-// Cleanup function for orphaned documents in Shared Drive
 export async function cleanupSharedDriveOrphanedDocuments(): Promise<void> {
   try {
     console.log('🗑️ Starting cleanup of orphaned Shared Drive documents...');
