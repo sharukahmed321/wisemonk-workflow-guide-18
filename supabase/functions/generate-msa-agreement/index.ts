@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
@@ -123,7 +122,7 @@ serve(async (req) => {
       currentDate: new Date().toISOString(),
     };
 
-    console.log('🔄 Generating PDF with MSA data...');
+    console.log('🔄 Generating PDF with simplified workflow...');
     
     // Get template document ID from secrets (required)
     const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
@@ -131,10 +130,10 @@ serve(async (req) => {
       throw new Error('DEFAULT_GOOGLE_DOC_ID environment variable is not configured. Please add the Google Docs template ID to your secrets.');
     }
     
-    // Generate the MSA agreement PDF using Google Docs
+    // Generate the MSA agreement PDF using simplified Google Docs workflow
     const pdfBuffer = await generateAgreementPDF(msaData, templateDocId);
     
-    console.log('✅ MSA agreement PDF generated successfully, size:', pdfBuffer.byteLength);
+    console.log('✅ MSA agreement PDF generated successfully with simplified workflow, size:', pdfBuffer.byteLength);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -218,10 +217,23 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Error in generate-msa-agreement function:', error);
+    
+    // Enhanced error messages for storage quota issues
+    let errorMessage = error.message;
+    let errorDetails = 'Failed to generate MSA agreement using Google Docs.';
+    
+    if (error.message.includes('storage quota')) {
+      errorDetails = 'Google Drive storage quota exceeded. Please free up space in your Google Drive account or contact support to resolve this issue.';
+    } else if (error.message.includes('template not found')) {
+      errorDetails = 'MSA template document not found. Please ensure the template document is configured and accessible.';
+    } else if (error.message.includes('access denied') || error.message.includes('permission')) {
+      errorDetails = 'Access denied to Google Drive. Please check that the service account has proper permissions.';
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        details: 'Failed to generate MSA agreement using Google Docs. Please ensure the template document is configured and accessible.'
+        error: errorMessage,
+        details: errorDetails
       }), 
       {
         status: 500,
