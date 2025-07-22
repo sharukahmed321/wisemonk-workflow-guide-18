@@ -1,4 +1,3 @@
-
 import { getGoogleAccessToken } from './google-auth.ts';
 
 export interface SetupCheckResult {
@@ -52,20 +51,20 @@ export const quickSetupCheck = (): SetupCheckResult => {
     result.recommendations.push('Configure the Google Service Account credentials in your Supabase secrets');
   }
 
-  // Validate ID formats (Google IDs are typically alphanumeric with specific patterns)
+  // Validate ID formats (Google IDs are typically 15+ characters with alphanumeric, underscore, hyphen)
   if (templateDocId) {
-    if (templateDocId.length < 20 || !/^[a-zA-Z0-9_-]+$/.test(templateDocId)) {
+    if (templateDocId.length < 15 || !/^[a-zA-Z0-9_-]+$/.test(templateDocId)) {
       result.valid = false;
       result.issues.push('DEFAULT_GOOGLE_DOC_ID appears to have invalid format');
-      result.recommendations.push('Verify the Google Docs template ID is correct (should be a long alphanumeric string)');
+      result.recommendations.push('Verify the Google Docs template ID is correct (should be 15+ alphanumeric characters, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms")');
     }
   }
 
   if (sharedDriveId) {
-    if (sharedDriveId.length < 20 || !/^[a-zA-Z0-9_-]+$/.test(sharedDriveId)) {
+    if (sharedDriveId.length < 15 || !/^[a-zA-Z0-9_-]+$/.test(sharedDriveId)) {
       result.valid = false;
       result.issues.push('GOOGLE_SHARED_DRIVE_ID appears to have invalid format');
-      result.recommendations.push('Verify the Google Shared Drive ID is correct (should be a long alphanumeric string)');
+      result.recommendations.push('Verify the Google Shared Drive ID is correct (should be 15+ alphanumeric characters, e.g., "0APJvA5EhOt9EUk9PVA")');
     }
   }
 
