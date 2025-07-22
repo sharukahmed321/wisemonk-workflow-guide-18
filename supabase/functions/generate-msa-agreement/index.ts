@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
@@ -121,7 +122,7 @@ serve(async (req) => {
       currentDate: new Date().toISOString(),
     };
 
-    console.log('🔄 Generating PDF with enhanced workflow...');
+    console.log('🔄 Generating PDF with multi-tier workflow (Shared Drive → Enhanced → Fallback)...');
     
     // Get template document ID from secrets (required)
     const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
@@ -129,10 +130,10 @@ serve(async (req) => {
       throw new Error('DEFAULT_GOOGLE_DOC_ID environment variable is not configured. Please add the Google Docs template ID to your secrets.');
     }
     
-    // Generate the MSA agreement PDF using enhanced workflow with fallback
+    // Generate the MSA agreement PDF using multi-tier workflow
     const pdfBuffer = await generateAgreementPDF(msaData, templateDocId);
     
-    console.log('✅ MSA agreement PDF generated successfully with enhanced workflow, size:', pdfBuffer.byteLength);
+    console.log('✅ MSA agreement PDF generated successfully with multi-tier workflow, size:', pdfBuffer.byteLength);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -163,6 +164,15 @@ serve(async (req) => {
 
     console.log('✅ PDF uploaded to storage:', uploadData.path);
 
+    // Determine generation method based on what succeeded
+    let generationMethod = 'unknown';
+    const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+    if (sharedDriveId) {
+      generationMethod = 'shared_drive_with_fallbacks';
+    } else {
+      generationMethod = 'enhanced_google_docs_with_fallback';
+    }
+
     // Create database record with enhanced method tracking
     const { data: documentRecord, error: dbError } = await supabase
       .from('msa_documents')
@@ -174,7 +184,7 @@ serve(async (req) => {
         file_path: filePath,
         file_size: pdfBuffer.byteLength,
         mime_type: 'application/pdf',
-        generation_method: 'enhanced_google_docs_with_fallback',
+        generation_method: generationMethod,
         document_version: 1,
         is_signed: false,
         metadata: msaData
@@ -204,7 +214,7 @@ serve(async (req) => {
         download_url: signedUrl?.signedUrl,
         created_at: documentRecord?.created_at,
         is_signed: false,
-        generation_method: 'enhanced_google_docs_with_fallback'
+        generation_method: generationMethod
       }
     }), {
       headers: {
@@ -218,18 +228,20 @@ serve(async (req) => {
     
     // Enhanced error messages for common issues
     let errorMessage = error.message;
-    let errorDetails = 'Failed to generate MSA agreement using enhanced workflow with fallback capabilities.';
+    let errorDetails = 'Failed to generate MSA agreement using multi-tier workflow with Shared Drive, enhanced Google Docs, and fallback capabilities.';
     
-    if (error.message.includes('storage quota')) {
-      errorDetails = 'Google Drive storage quota exceeded. The system attempted to use a fallback method but encountered issues. Please contact support to resolve storage limitations.';
+    if (error.message.includes('Shared Drive')) {
+      errorDetails = 'Shared Drive access issue detected. The system attempted fallback methods. Please check Shared Drive permissions and configuration.';
+    } else if (error.message.includes('storage quota')) {
+      errorDetails = 'Google Drive storage quota exceeded across all methods. Please contact support to resolve storage limitations or configure Shared Drive access.';
     } else if (error.message.includes('template not found')) {
-      errorDetails = 'MSA template document not found. Please ensure the template document is configured and accessible.';
+      errorDetails = 'MSA template document not found. Please ensure the template document is configured and accessible to the service account.';
     } else if (error.message.includes('access denied') || error.message.includes('permission')) {
-      errorDetails = 'Access denied to Google Drive. Please check that the service account has proper permissions to access the template document.';
+      errorDetails = 'Access denied to Google Drive resources. Please check that the service account has proper permissions to access the template document and Shared Drive (if configured).';
     } else if (error.message.includes('Rate limited')) {
       errorDetails = 'Google API rate limit exceeded. The system will automatically retry. Please try again in a few moments.';
-    } else if (error.message.includes('Both Google Docs and fallback')) {
-      errorDetails = 'Both primary and fallback PDF generation methods failed. This may indicate a temporary service issue. Please try again or contact support.';
+    } else if (error.message.includes('All PDF generation methods failed')) {
+      errorDetails = 'All available PDF generation methods failed (Shared Drive, Enhanced Google Docs, and Fallback). This may indicate a service-wide issue. Please try again or contact support.';
     }
     
     return new Response(
