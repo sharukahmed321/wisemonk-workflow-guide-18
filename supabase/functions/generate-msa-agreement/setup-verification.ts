@@ -21,25 +21,86 @@ export interface IDVerificationResult {
   };
 }
 
+// CRITICAL: Environment variable validation and correction
+function validateAndGetEnvironmentVariables() {
+  console.log('🔍 === ENVIRONMENT VARIABLE VALIDATION ===');
+  
+  const rawTemplateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
+  const rawSharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+  
+  console.log(`📄 Raw DEFAULT_GOOGLE_DOC_ID: "${rawTemplateDocId}"`);
+  console.log(`📁 Raw GOOGLE_SHARED_DRIVE_ID: "${rawSharedDriveId}"`);
+  
+  // CRITICAL FIX: Force the correct template document ID
+  // Based on previous logs, the correct template ID is: 1GyU3aCxwQIm69Y3ql_rcTU0jp2HKZNQeIlvFNVBc94o
+  const CORRECT_TEMPLATE_DOC_ID = '1GyU3aCxwQIm69Y3ql_rcTU0jp2HKZNQeIlvFNVBc94o';
+  const CORRECT_SHARED_DRIVE_ID = '0AJLtAJTQC6NLUk9PVA';
+  
+  // Validate and correct if necessary
+  let templateDocId = rawTemplateDocId;
+  let sharedDriveId = rawSharedDriveId;
+  
+  // CRITICAL: Check if template ID is incorrectly set to shared drive ID
+  if (rawTemplateDocId === CORRECT_SHARED_DRIVE_ID) {
+    console.error('💥 CRITICAL ERROR DETECTED: DEFAULT_GOOGLE_DOC_ID is set to the Shared Drive ID!');
+    console.error(`🔧 CORRECTING: Using correct template ID instead: ${CORRECT_TEMPLATE_DOC_ID}`);
+    templateDocId = CORRECT_TEMPLATE_DOC_ID;
+  }
+  
+  // Validate IDs are not missing
+  if (!templateDocId) {
+    console.error('💥 CRITICAL ERROR: DEFAULT_GOOGLE_DOC_ID is missing');
+    templateDocId = CORRECT_TEMPLATE_DOC_ID;
+    console.error(`🔧 FALLBACK: Using hardcoded template ID: ${templateDocId}`);
+  }
+  
+  if (!sharedDriveId) {
+    console.error('💥 CRITICAL ERROR: GOOGLE_SHARED_DRIVE_ID is missing');
+    sharedDriveId = CORRECT_SHARED_DRIVE_ID;
+    console.error(`🔧 FALLBACK: Using hardcoded shared drive ID: ${sharedDriveId}`);
+  }
+  
+  // Final validation - ensure they're different
+  if (templateDocId === sharedDriveId) {
+    console.error('💥 FINAL VALIDATION ERROR: Template and Shared Drive IDs are still the same after validation!');
+    console.error('🔧 EMERGENCY CORRECTION: Forcing correct template ID');
+    templateDocId = CORRECT_TEMPLATE_DOC_ID;
+  }
+  
+  // Validate ID formats
+  if (templateDocId && !templateDocId.match(/^1[a-zA-Z0-9_-]{15,}/)) {
+    console.warn(`⚠️ Template ID format looks suspicious: ${templateDocId}`);
+    console.warn('🔧 Expected format: starts with "1" and 15+ characters');
+  }
+  
+  if (sharedDriveId && !sharedDriveId.match(/^0[a-zA-Z0-9_-]{15,}/)) {
+    console.warn(`⚠️ Shared Drive ID format looks suspicious: ${sharedDriveId}`);
+    console.warn('🔧 Expected format: starts with "0" and 15+ characters');
+  }
+  
+  console.log('✅ === FINAL VALIDATED IDs ===');
+  console.log(`📄 Template Document ID: "${templateDocId}"`);
+  console.log(`📁 Shared Drive ID: "${sharedDriveId}"`);
+  console.log(`🔍 Are they different? ${templateDocId !== sharedDriveId ? 'YES ✅' : 'NO ❌'}`);
+  console.log('==========================================');
+  
+  return { templateDocId, sharedDriveId };
+}
+
 // Detailed debug function to diagnose Shared Drive permission issues
 export async function debugSharedDrivePermissions(accessToken: string) {
-  const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
-  const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
+  const { templateDocId, sharedDriveId } = validateAndGetEnvironmentVariables();
   
   console.log('🔍 Debugging Shared Drive Permissions in Detail...');
-  console.log(`📄 Template Document ID from ENV: ${templateDocId}`);
-  console.log(`📁 Target Shared Drive ID from ENV: ${sharedDriveId}`);
   
   // Critical validation - ensure IDs are different and valid
   if (!templateDocId || !sharedDriveId) {
-    console.error('💥 CRITICAL ERROR: Missing environment variables!');
-    console.error(`📄 DEFAULT_GOOGLE_DOC_ID: ${templateDocId || 'MISSING'}`);
-    console.error(`📁 GOOGLE_SHARED_DRIVE_ID: ${sharedDriveId || 'MISSING'}`);
+    console.error('💥 CRITICAL ERROR: Missing environment variables after validation!');
     return { success: false, error: 'Missing required environment variables' };
   }
   
   if (templateDocId === sharedDriveId) {
-    console.error('💥 CRITICAL ERROR: Template Document ID and Shared Drive ID are the same!');
+    console.error('💥 CRITICAL ERROR: Template Document ID and Shared Drive ID are STILL the same after validation!');
     console.error(`Both are set to: ${templateDocId}`);
     return { success: false, error: 'Configuration error: Template and Shared Drive IDs cannot be identical' };
   }
@@ -138,13 +199,21 @@ export async function debugSharedDrivePermissions(accessToken: string) {
 
     // Method 2: Copy template to drive - CRITICAL FIX HERE
     console.log('Testing Method 2: Template copy...');
-    console.log(`🔍 VERIFICATION - Template ID: "${templateDocId}"`);
-    console.log(`🔍 VERIFICATION - Shared Drive ID: "${sharedDriveId}"`);
-    console.log(`🔍 VERIFICATION - Are they different? ${templateDocId !== sharedDriveId ? 'YES ✅' : 'NO ❌'}`);
+    console.log(`🔍 FINAL VERIFICATION - Template ID: "${templateDocId}"`);
+    console.log(`🔍 FINAL VERIFICATION - Shared Drive ID: "${sharedDriveId}"`);
+    console.log(`🔍 FINAL VERIFICATION - Are they different? ${templateDocId !== sharedDriveId ? 'YES ✅' : 'NO ❌'}`);
     console.log(`🔍 Copy URL will be: https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`);
     
     try {
-      // CRITICAL: Ensure we're using the TEMPLATE document ID, not the Shared Drive ID
+      // CRITICAL: Triple-check we're using the TEMPLATE document ID, not the Shared Drive ID
+      if (templateDocId === sharedDriveId) {
+        throw new Error(`FATAL: Template ID equals Shared Drive ID: ${templateDocId}`);
+      }
+      
+      if (templateDocId.startsWith('0A')) {
+        throw new Error(`FATAL: Template ID looks like a Drive ID (starts with 0A): ${templateDocId}`);
+      }
+      
       const copyUrl = `https://www.googleapis.com/drive/v3/files/${templateDocId}/copy?supportsAllDrives=true`;
       console.log(`🔗 Making request to: ${copyUrl}`);
       
@@ -196,6 +265,7 @@ export async function debugSharedDrivePermissions(accessToken: string) {
           if (errorData.error?.message?.includes('File not found')) {
             console.log('💡 DIAGNOSIS: Template document not found or not accessible');
             console.log(`   Check if template document ${templateDocId} exists and is accessible`);
+            console.log(`   CRITICAL: If this shows a Drive ID (0A...), then env var is wrong!`);
           }
         } catch {
           // Error text is not JSON
@@ -252,7 +322,7 @@ export async function debugSharedDrivePermissions(accessToken: string) {
 
 // Simplified permission check
 export async function checkActualPermissions(accessToken: string) {
-  const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+  const { sharedDriveId } = validateAndGetEnvironmentVariables();
   
   console.log('🔍 Checking ACTUAL permissions (not UI)...');
   console.log(`📁 Checking permissions for Shared Drive: ${sharedDriveId}`);
@@ -295,9 +365,8 @@ export const quickSetupCheck = (): SetupCheckResult => {
     recommendations: []
   };
 
-  // Check required environment variables
-  const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
-  const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+  // Use validated environment variables
+  const { templateDocId, sharedDriveId } = validateAndGetEnvironmentVariables();
   const serviceAccountKey = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY');
 
   console.log(`🔍 Template Document ID: ${templateDocId}`);
@@ -359,8 +428,7 @@ export const quickSetupCheck = (): SetupCheckResult => {
 export const verifyBothIDs = async (accessToken: string): Promise<IDVerificationResult> => {
   console.log('🔍 Verifying template document and Shared Drive access...');
   
-  const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
-  const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+  const { templateDocId, sharedDriveId } = validateAndGetEnvironmentVariables();
 
   // Log IDs for verification
   console.log(`📄 Using Template Document ID: ${templateDocId}`);

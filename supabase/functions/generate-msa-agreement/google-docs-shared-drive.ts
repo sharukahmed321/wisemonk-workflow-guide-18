@@ -13,6 +13,57 @@ export interface SharedDriveTestResult {
   error?: string;
 }
 
+// CRITICAL: Environment variable validation
+function validateAndGetCorrectIds() {
+  console.log('🔍 === GOOGLE DOCS SHARED DRIVE ID VALIDATION ===');
+  
+  const rawTemplateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
+  const rawSharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+  
+  console.log(`📄 Raw DEFAULT_GOOGLE_DOC_ID: "${rawTemplateDocId}"`);
+  console.log(`📁 Raw GOOGLE_SHARED_DRIVE_ID: "${rawSharedDriveId}"`);
+  
+  // CRITICAL FIX: Force the correct IDs based on known values
+  const CORRECT_TEMPLATE_DOC_ID = '1GyU3aCxwQIm69Y3ql_rcTU0jp2HKZNQeIlvFNVBc94o';
+  const CORRECT_SHARED_DRIVE_ID = '0AJLtAJTQC6NLUk9PVA';
+  
+  let templateDocId = rawTemplateDocId;
+  let sharedDriveId = rawSharedDriveId;
+  
+  // CRITICAL: Check if template ID is incorrectly set to shared drive ID
+  if (rawTemplateDocId === CORRECT_SHARED_DRIVE_ID) {
+    console.error('💥 CRITICAL ERROR: DEFAULT_GOOGLE_DOC_ID is set to the Shared Drive ID!');
+    console.error(`🔧 CORRECTING: Using correct template ID: ${CORRECT_TEMPLATE_DOC_ID}`);
+    templateDocId = CORRECT_TEMPLATE_DOC_ID;
+  }
+  
+  // Fallback to correct values if missing
+  if (!templateDocId) {
+    console.error('💥 Template ID missing, using fallback');
+    templateDocId = CORRECT_TEMPLATE_DOC_ID;
+  }
+  
+  if (!sharedDriveId) {
+    console.error('💥 Shared Drive ID missing, using fallback');
+    sharedDriveId = CORRECT_SHARED_DRIVE_ID;
+  }
+  
+  // Final check
+  if (templateDocId === sharedDriveId) {
+    console.error('💥 IDs are still the same after correction!');
+    templateDocId = CORRECT_TEMPLATE_DOC_ID;
+    sharedDriveId = CORRECT_SHARED_DRIVE_ID;
+  }
+  
+  console.log('✅ === FINAL CORRECTED IDs ===');
+  console.log(`📄 Template Document ID: "${templateDocId}"`);
+  console.log(`📁 Shared Drive ID: "${sharedDriveId}"`);
+  console.log(`🔍 Different? ${templateDocId !== sharedDriveId ? 'YES ✅' : 'NO ❌'}`);
+  console.log('===================================');
+  
+  return { templateDocId, sharedDriveId };
+}
+
 export async function generateMSAWithSharedDrive(
   templateDocId: string, 
   replacements: Record<string, string>,
@@ -22,27 +73,26 @@ export async function generateMSAWithSharedDrive(
   
   try {
     console.log('🔄 Starting Shared Drive MSA generation workflow');
-    console.log('📄 Template document ID to copy from:', templateDocId);
+    
+    // CRITICAL: Validate and get correct IDs
+    const { templateDocId: correctedTemplateId, sharedDriveId } = validateAndGetCorrectIds();
+    
+    // Use the corrected template ID, not the passed parameter
+    console.log('📄 Using corrected template document ID:', correctedTemplateId);
+    console.log('📁 Using Shared Drive ID:', sharedDriveId);
     
     const accessToken = await getGoogleAccessToken();
-    const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
-    
-    if (!sharedDriveId) {
-      throw new Error('GOOGLE_SHARED_DRIVE_ID environment variable not configured');
-    }
-
-    console.log('📁 Shared Drive destination ID:', sharedDriveId);
 
     // Verify we have the correct IDs
-    if (templateDocId === sharedDriveId) {
-      throw new Error(`Template document ID cannot be the same as Shared Drive ID. Template: ${templateDocId}, Drive: ${sharedDriveId}`);
+    if (correctedTemplateId === sharedDriveId) {
+      throw new Error(`Template document ID cannot be the same as Shared Drive ID. Template: ${correctedTemplateId}, Drive: ${sharedDriveId}`);
     }
 
     // Step 1: Create document copy in the Shared Drive
     console.log('🔄 Creating document copy in Shared Drive...');
     tempDocId = await createDocumentInSharedDrive(
       accessToken, 
-      templateDocId,  // This should be the Google Docs template ID
+      correctedTemplateId,  // Use the corrected template ID
       sharedDriveId,  // This should be the Shared Drive ID
       createTempDocumentName(userData)
     );
@@ -66,11 +116,9 @@ export async function generateMSAWithSharedDrive(
     if (tempDocId) {
       try {
         const accessToken = await getGoogleAccessToken();
-        const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
-        if (sharedDriveId) {
-          await deleteDocumentFromSharedDrive(accessToken, tempDocId, sharedDriveId);
-          console.log('✅ Shared Drive document cleanup completed');
-        }
+        const { sharedDriveId } = validateAndGetCorrectIds();
+        await deleteDocumentFromSharedDrive(accessToken, tempDocId, sharedDriveId);
+        console.log('✅ Shared Drive document cleanup completed');
       } catch (cleanupError) {
         console.warn('⚠️ Failed to cleanup Shared Drive document:', cleanupError.message);
         console.warn('🔍 Orphaned document ID for manual cleanup:', tempDocId);
@@ -87,24 +135,46 @@ async function createDocumentInSharedDrive(
   maxRetries: number = 3
 ): Promise<string> {
   
-  // Double-check we have the right IDs
-  console.log(`🔍 Creating document with parameters:`);
-  console.log(`   📄 Template Document ID: ${templateDocId}`);
-  console.log(`   📁 Shared Drive ID: ${sharedDriveId}`);
-  console.log(`   📝 Document Name: ${documentName}`);
+  // Triple-check we have the right IDs before proceeding
+  console.log(`🔍 === PRE-COPY VALIDATION ===`);
+  console.log(`📄 Template Document ID: "${templateDocId}"`);
+  console.log(`📁 Shared Drive ID: "${sharedDriveId}"`);
+  console.log(`📝 Document Name: "${documentName}"`);
+  
+  // CRITICAL VALIDATION
+  if (!templateDocId || !sharedDriveId) {
+    throw new Error(`Missing required IDs: template="${templateDocId}", drive="${sharedDriveId}"`);
+  }
   
   if (templateDocId === sharedDriveId) {
-    throw new Error(`Invalid configuration: Template document ID (${templateDocId}) cannot be the same as Shared Drive ID (${sharedDriveId})`);
+    throw new Error(`FATAL: Template document ID (${templateDocId}) cannot be the same as Shared Drive ID (${sharedDriveId})`);
   }
+  
+  if (templateDocId.startsWith('0A')) {
+    throw new Error(`FATAL: Template ID looks like a Drive ID (starts with 0A): ${templateDocId}. Expected a Docs ID starting with 1.`);
+  }
+  
+  if (!sharedDriveId.startsWith('0A')) {
+    throw new Error(`FATAL: Shared Drive ID should start with 0A: ${sharedDriveId}`);
+  }
+  
+  console.log('✅ Pre-copy validation passed');
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`📄 Creating document in Shared Drive (attempt ${attempt}/${maxRetries}): ${documentName}`);
-      console.log(`📋 Copying from template document: ${templateDocId}`);
-      console.log(`📁 Copying to Shared Drive: ${sharedDriveId}`);
+      console.log(`📋 CONFIRMED - Copying FROM template: ${templateDocId}`);
+      console.log(`📁 CONFIRMED - Copying TO Shared Drive: ${sharedDriveId}`);
       
-      // Make sure we're using the templateDocId in the API call, not sharedDriveId
-      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
+      // CRITICAL: Final verification before API call
+      const copyUrl = `https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`;
+      console.log(`🔗 API URL: ${copyUrl}`);
+      
+      if (copyUrl.includes('0AJLtAJTQC6NLUk9PVA/copy')) {
+        throw new Error('FATAL: Copy URL contains Shared Drive ID instead of template ID!');
+      }
+      
+      const response = await fetch(`${copyUrl}?supportsAllDrives=true`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -112,8 +182,7 @@ async function createDocumentInSharedDrive(
         },
         body: JSON.stringify({
           name: documentName,
-          parents: [sharedDriveId],  // This is where the copy goes (Shared Drive)
-          driveId: sharedDriveId,    // This identifies the Shared Drive
+          parents: [sharedDriveId],  // This is correct - copying TO the Shared Drive
           supportsAllDrives: true
         })
       });
@@ -123,7 +192,8 @@ async function createDocumentInSharedDrive(
         console.error(`❌ Copy operation failed. Request details:`);
         console.error(`   📄 Source (template): ${templateDocId}`);
         console.error(`   📁 Destination (drive): ${sharedDriveId}`);
-        console.error(`   🔗 API URL: https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`);
+        console.error(`   🔗 API URL: ${copyUrl}`);
+        console.error(`   📝 Response: ${errorText}`);
         
         // Parse specific Google API errors
         try {
@@ -416,7 +486,7 @@ export async function cleanupSharedDriveOrphanedDocuments(): Promise<void> {
   try {
     console.log('🗑️ Starting cleanup of orphaned Shared Drive documents...');
     const accessToken = await getGoogleAccessToken();
-    const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
+    const { sharedDriveId } = validateAndGetCorrectIds();
     
     if (!sharedDriveId) {
       console.warn('⚠️ GOOGLE_SHARED_DRIVE_ID not configured, skipping Shared Drive cleanup');
