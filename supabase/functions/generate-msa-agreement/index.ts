@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
@@ -69,7 +70,7 @@ serve(async (req) => {
     console.log('✅ Fetched user data for:', profileData.first_name, profileData.last_name);
     console.log('✅ Organization:', organization.name);
 
-    // Check if a recent MSA document already exists
+    // Check if a recent MSA document already exists (within last 24 hours)
     const { data: existingDoc } = await supabase
       .from('msa_documents')
       .select('*')
@@ -80,9 +81,9 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    // If document exists and is recent (within last 24 hours), return it
+    // If document exists and is recent, return it
     if (existingDoc && new Date(existingDoc.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)) {
-      console.log('📄 Returning existing document:', existingDoc.file_name);
+      console.log('📄 Returning existing recent document:', existingDoc.file_name);
       
       // Get signed URL for download
       const { data: signedUrl } = await supabase.storage
@@ -122,7 +123,7 @@ serve(async (req) => {
       currentDate: new Date().toISOString(),
     };
 
-    console.log('🔄 Generating PDF with simplified workflow...');
+    console.log('🔄 Generating PDF with optimized workflow...');
     
     // Get template document ID from secrets (required)
     const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
@@ -130,10 +131,10 @@ serve(async (req) => {
       throw new Error('DEFAULT_GOOGLE_DOC_ID environment variable is not configured. Please add the Google Docs template ID to your secrets.');
     }
     
-    // Generate the MSA agreement PDF using simplified Google Docs workflow
+    // Generate the MSA agreement PDF using optimized Google Docs workflow
     const pdfBuffer = await generateAgreementPDF(msaData, templateDocId);
     
-    console.log('✅ MSA agreement PDF generated successfully with simplified workflow, size:', pdfBuffer.byteLength);
+    console.log('✅ MSA agreement PDF generated successfully with optimized workflow, size:', pdfBuffer.byteLength);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -175,7 +176,7 @@ serve(async (req) => {
         file_path: filePath,
         file_size: pdfBuffer.byteLength,
         mime_type: 'application/pdf',
-        generation_method: 'google_docs',
+        generation_method: 'google_docs_optimized',
         document_version: 1,
         is_signed: false,
         metadata: msaData
@@ -195,7 +196,7 @@ serve(async (req) => {
       .from('msa-agreements')
       .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
 
-    // Return both document metadata and PDF buffer
+    // Return document metadata and download URL
     return new Response(JSON.stringify({
       success: true,
       document: {
@@ -205,9 +206,8 @@ serve(async (req) => {
         download_url: signedUrl?.signedUrl,
         created_at: documentRecord?.created_at,
         is_signed: false,
-        generation_method: 'google_docs'
-      },
-      pdf_buffer: Array.from(pdfBuffer) // Convert to array for JSON serialization
+        generation_method: 'google_docs_optimized'
+      }
     }), {
       headers: {
         ...corsHeaders,
@@ -218,16 +218,18 @@ serve(async (req) => {
   } catch (error) {
     console.error('💥 Error in generate-msa-agreement function:', error);
     
-    // Enhanced error messages for storage quota issues
+    // Enhanced error messages for common issues
     let errorMessage = error.message;
-    let errorDetails = 'Failed to generate MSA agreement using Google Docs.';
+    let errorDetails = 'Failed to generate MSA agreement using optimized Google Docs workflow.';
     
     if (error.message.includes('storage quota')) {
-      errorDetails = 'Google Drive storage quota exceeded. Please free up space in your Google Drive account or contact support to resolve this issue.';
+      errorDetails = 'Google Drive storage quota exceeded. The service account\'s Google Drive is full. Please contact support to resolve this issue or try again later.';
     } else if (error.message.includes('template not found')) {
       errorDetails = 'MSA template document not found. Please ensure the template document is configured and accessible.';
     } else if (error.message.includes('access denied') || error.message.includes('permission')) {
       errorDetails = 'Access denied to Google Drive. Please check that the service account has proper permissions.';
+    } else if (error.message.includes('Rate limited')) {
+      errorDetails = 'Google API rate limit exceeded. Please try again in a few moments.';
     }
     
     return new Response(
