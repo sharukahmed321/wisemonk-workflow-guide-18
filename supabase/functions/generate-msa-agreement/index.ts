@@ -3,6 +3,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
 import { generateAgreementPDF } from './pdf-generator.ts';
+import { quickSetupCheck, verifyBothIDs } from './setup-verification.ts';
+import { getGoogleAccessToken } from './google-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,6 +71,33 @@ serve(async (req) => {
     console.log('✅ Fetched user data for:', profileData.first_name, profileData.last_name);
     console.log('✅ Organization:', organization.name);
 
+    // STEP 1: Quick setup verification (fast checks without API calls)
+    console.log('🔍 Running complete setup verification...');
+    const setupCheck = quickSetupCheck();
+    
+    if (!setupCheck.valid) {
+      const errorMessage = `Configuration issues detected: ${setupCheck.issues.join('; ')}`;
+      const recommendations = `Recommendations: ${setupCheck.recommendations.join('; ')}`;
+      console.error('❌ Setup verification failed:', errorMessage);
+      console.error('💡', recommendations);
+      throw new Error(`${errorMessage}. ${recommendations}`);
+    }
+
+    // STEP 2: API verification (actual access checks)
+    const accessToken = await getGoogleAccessToken();
+    const verificationResult = await verifyBothIDs(accessToken);
+    console.log('📊 Verification Results:', JSON.stringify(verificationResult, null, 2));
+
+    if (!verificationResult.templateDoc.accessible) {
+      throw new Error(`Template document issue: ${verificationResult.templateDoc.error}`);
+    }
+
+    if (!verificationResult.sharedDrive.accessible) {
+      throw new Error(`Shared Drive issue: ${verificationResult.sharedDrive.error}`);
+    }
+
+    console.log('✅ All verifications passed, proceeding with MSA generation...');
+
     // Check if a recent MSA document already exists (within last 24 hours)
     const { data: existingDoc } = await supabase
       .from('msa_documents')
@@ -122,18 +151,15 @@ serve(async (req) => {
       currentDate: new Date().toISOString(),
     };
 
-    console.log('🔄 Generating PDF with enhanced Shared Drive workflow (Diagnostics → Shared Drive → Enhanced → Fallback)...');
+    console.log('🔄 Generating PDF with verified Shared Drive workflow...');
     
-    // Get template document ID from secrets (required)
+    // Get template document ID from secrets (already verified)
     const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
-    if (!templateDocId) {
-      throw new Error('DEFAULT_GOOGLE_DOC_ID environment variable is not configured. Please add the Google Docs template ID to your secrets.');
-    }
     
-    // Generate the MSA agreement PDF using enhanced multi-tier workflow
+    // Generate the MSA agreement PDF using verified workflow
     const pdfBuffer = await generateAgreementPDF(msaData, templateDocId);
     
-    console.log('✅ MSA agreement PDF generated successfully with enhanced multi-tier workflow, size:', pdfBuffer.byteLength);
+    console.log('✅ MSA agreement PDF generated successfully, size:', pdfBuffer.byteLength);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -164,16 +190,10 @@ serve(async (req) => {
 
     console.log('✅ PDF uploaded to storage:', uploadData.path);
 
-    // Determine generation method based on what succeeded
-    let generationMethod = 'unknown';
-    const sharedDriveId = Deno.env.get('GOOGLE_SHARED_DRIVE_ID');
-    if (sharedDriveId) {
-      generationMethod = 'shared_drive_with_diagnostics_and_fallbacks';
-    } else {
-      generationMethod = 'enhanced_google_docs_with_fallback';
-    }
+    // Determine generation method
+    const generationMethod = 'verified_shared_drive_workflow';
 
-    // Create database record with enhanced method tracking
+    // Create database record
     const { data: documentRecord, error: dbError } = await supabase
       .from('msa_documents')
       .insert({
@@ -226,26 +246,20 @@ serve(async (req) => {
   } catch (error) {
     console.error('💥 Error in generate-msa-agreement function:', error);
     
-    // Enhanced error messages for common issues
+    // Enhanced error messages for common configuration issues
     let errorMessage = error.message;
-    let errorDetails = 'Failed to generate MSA agreement using enhanced multi-tier workflow with comprehensive diagnostics, Shared Drive, enhanced Google Docs, and fallback capabilities.';
+    let errorDetails = 'Failed to generate MSA agreement due to configuration issues.';
     
-    if (error.message.includes('configuration error')) {
-      errorDetails = 'Shared Drive configuration error detected. Please review the diagnostic recommendations in the function logs and fix the configuration issues before retrying.';
-    } else if (error.message.includes('pre-flight check failed')) {
-      errorDetails = 'Pre-flight diagnostics failed. Please check the function logs for detailed diagnostic information and fix the identified issues.';
-    } else if (error.message.includes('Shared Drive')) {
-      errorDetails = 'Shared Drive access issue detected. The system attempted fallback methods. Please check Shared Drive permissions and configuration.';
-    } else if (error.message.includes('storage quota')) {
-      errorDetails = 'Google Drive storage quota exceeded across all methods. Please contact support to resolve storage limitations or configure Shared Drive access.';
-    } else if (error.message.includes('template not found')) {
-      errorDetails = 'MSA template document not found. Please ensure the template document is configured and accessible to the service account.';
+    if (error.message.includes('Configuration issues detected')) {
+      errorDetails = 'Setup verification failed. Please check your environment configuration and ensure all required secrets are properly set.';
+    } else if (error.message.includes('Template document issue')) {
+      errorDetails = 'The configured template document cannot be accessed. Please verify the DEFAULT_GOOGLE_DOC_ID is correct and the service account has proper permissions.';
+    } else if (error.message.includes('Shared Drive issue')) {
+      errorDetails = 'The configured Shared Drive cannot be accessed. Please verify the GOOGLE_SHARED_DRIVE_ID is correct and the service account has Editor permissions on the Shared Drive.';
     } else if (error.message.includes('access denied') || error.message.includes('permission')) {
-      errorDetails = 'Access denied to Google Drive resources. Please check that the service account has proper permissions to access the template document and Shared Drive (if configured).';
+      errorDetails = 'Access denied to Google Drive resources. Please check that the service account has proper permissions.';
     } else if (error.message.includes('Rate limited')) {
-      errorDetails = 'Google API rate limit exceeded. The system will automatically retry. Please try again in a few moments.';
-    } else if (error.message.includes('All PDF generation methods failed')) {
-      errorDetails = 'All available PDF generation methods failed (Shared Drive, Enhanced Google Docs, and Fallback). This may indicate a service-wide issue. Please try again or contact support.';
+      errorDetails = 'Google API rate limit exceeded. Please try again in a few moments.';
     }
     
     return new Response(

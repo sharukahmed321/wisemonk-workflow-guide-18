@@ -177,6 +177,7 @@ async function testSharedDriveAccess(accessToken: string, sharedDriveId: string)
     console.log(`✅ Can list files in Shared Drive (${listData.files?.length || 0} files found)`);
     
     // Test 3: Can we create a test document?
+    // FIXED: Use proper Shared Drive document creation
     const testCreateResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
       method: 'POST',
       headers: {
@@ -185,7 +186,7 @@ async function testSharedDriveAccess(accessToken: string, sharedDriveId: string)
       },
       body: JSON.stringify({
         name: `diagnostic-test-${Date.now()}`,
-        parents: [sharedDriveId],
+        parents: [sharedDriveId],  // This is the correct way to specify the Shared Drive as parent
         mimeType: 'application/vnd.google-apps.document',
         supportsAllDrives: true
       })
@@ -277,54 +278,90 @@ async function testTemplateDocumentAccess(accessToken: string, templateDocId: st
     const docContent = await contentResponse.json();
     console.log('✅ Can read template document content');
     
-    // Test 3: Can we copy the document?
-    const testCopyName = `diagnostic-copy-test-${Date.now()}`;
-    const copyBody: any = {
-      name: testCopyName,
-      supportsAllDrives: true
-    };
-    
-    // If we have a shared drive, test copying to it
+    // Test 3: Can we copy the document to Shared Drive?
     if (sharedDriveId) {
-      copyBody.parents = [sharedDriveId];
-      copyBody.driveId = sharedDriveId;
-    }
-    
-    const copyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(copyBody)
-    });
-    
-    if (copyResponse.ok) {
-      const copyDoc = await copyResponse.json();
-      console.log('✅ Can copy template document');
-      
-      // Clean up test copy
-      await fetch(`https://www.googleapis.com/drive/v3/files/${copyDoc.id}?supportsAllDrives=true`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${accessToken}` }
+      const testCopyName = `diagnostic-copy-test-${Date.now()}`;
+      const copyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: testCopyName,
+          parents: [sharedDriveId],  // Copy to Shared Drive
+          driveId: sharedDriveId,    // Specify the Shared Drive
+          supportsAllDrives: true
+        })
       });
-      console.log('✅ Test copy cleaned up');
       
-      const destination = sharedDriveId ? 'Shared Drive' : 'My Drive';
-      return {
-        success: true,
-        message: `Full access to template document '${docMetadata.name}' confirmed. Can read and copy to ${destination}.`,
-        details: { docMetadata, hasContent: !!docContent.body }
-      };
+      if (copyResponse.ok) {
+        const copyDoc = await copyResponse.json();
+        console.log('✅ Can copy template document to Shared Drive');
+        
+        // Clean up test copy
+        await fetch(`https://www.googleapis.com/drive/v3/files/${copyDoc.id}?supportsAllDrives=true`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        console.log('✅ Test copy cleaned up');
+        
+        return {
+          success: true,
+          message: `Full access to template document '${docMetadata.name}' confirmed. Can read and copy to Shared Drive.`,
+          details: { docMetadata, hasContent: !!docContent.body }
+        };
+      } else {
+        const copyErrorText = await copyResponse.text();
+        console.error('❌ Cannot copy template document to Shared Drive:', copyErrorText);
+        
+        return {
+          success: false,
+          message: `Can access template document '${docMetadata.name}' but cannot copy it to Shared Drive. Check template permissions or Shared Drive access.`,
+          details: { docMetadata, copyError: copyErrorText }
+        };
+      }
     } else {
-      const copyErrorText = await copyResponse.text();
-      console.error('❌ Cannot copy template document:', copyErrorText);
+      // If no Shared Drive, just test regular copy
+      const testCopyName = `diagnostic-copy-test-${Date.now()}`;
+      const copyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: testCopyName,
+          supportsAllDrives: true
+        })
+      });
       
-      return {
-        success: false,
-        message: `Can access template document '${docMetadata.name}' but cannot copy it. Check permissions or try a different copy destination.`,
-        details: { docMetadata, copyError: copyErrorText }
-      };
+      if (copyResponse.ok) {
+        const copyDoc = await copyResponse.json();
+        console.log('✅ Can copy template document');
+        
+        // Clean up test copy
+        await fetch(`https://www.googleapis.com/drive/v3/files/${copyDoc.id}?supportsAllDrives=true`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        console.log('✅ Test copy cleaned up');
+        
+        return {
+          success: true,
+          message: `Full access to template document '${docMetadata.name}' confirmed. Can read and copy.`,
+          details: { docMetadata, hasContent: !!docContent.body }
+        };
+      } else {
+        const copyErrorText = await copyResponse.text();
+        console.error('❌ Cannot copy template document:', copyErrorText);
+        
+        return {
+          success: false,
+          message: `Can access template document '${docMetadata.name}' but cannot copy it. Check permissions.`,
+          details: { docMetadata, copyError: copyErrorText }
+        };
+      }
     }
     
   } catch (error) {
