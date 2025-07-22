@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
@@ -36,7 +35,6 @@ serve(async (req) => {
 
     console.log('🔄 Generating MSA agreement for user:', user.id);
 
-    // Fetch user profile and organization data
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(`
@@ -123,7 +121,7 @@ serve(async (req) => {
       currentDate: new Date().toISOString(),
     };
 
-    console.log('🔄 Generating PDF with optimized workflow...');
+    console.log('🔄 Generating PDF with enhanced workflow...');
     
     // Get template document ID from secrets (required)
     const templateDocId = Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
@@ -131,10 +129,10 @@ serve(async (req) => {
       throw new Error('DEFAULT_GOOGLE_DOC_ID environment variable is not configured. Please add the Google Docs template ID to your secrets.');
     }
     
-    // Generate the MSA agreement PDF using optimized Google Docs workflow
+    // Generate the MSA agreement PDF using enhanced workflow with fallback
     const pdfBuffer = await generateAgreementPDF(msaData, templateDocId);
     
-    console.log('✅ MSA agreement PDF generated successfully with optimized workflow, size:', pdfBuffer.byteLength);
+    console.log('✅ MSA agreement PDF generated successfully with enhanced workflow, size:', pdfBuffer.byteLength);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -165,7 +163,7 @@ serve(async (req) => {
 
     console.log('✅ PDF uploaded to storage:', uploadData.path);
 
-    // Create database record
+    // Create database record with enhanced method tracking
     const { data: documentRecord, error: dbError } = await supabase
       .from('msa_documents')
       .insert({
@@ -176,7 +174,7 @@ serve(async (req) => {
         file_path: filePath,
         file_size: pdfBuffer.byteLength,
         mime_type: 'application/pdf',
-        generation_method: 'google_docs_optimized',
+        generation_method: 'enhanced_google_docs_with_fallback',
         document_version: 1,
         is_signed: false,
         metadata: msaData
@@ -206,7 +204,7 @@ serve(async (req) => {
         download_url: signedUrl?.signedUrl,
         created_at: documentRecord?.created_at,
         is_signed: false,
-        generation_method: 'google_docs_optimized'
+        generation_method: 'enhanced_google_docs_with_fallback'
       }
     }), {
       headers: {
@@ -220,16 +218,18 @@ serve(async (req) => {
     
     // Enhanced error messages for common issues
     let errorMessage = error.message;
-    let errorDetails = 'Failed to generate MSA agreement using optimized Google Docs workflow.';
+    let errorDetails = 'Failed to generate MSA agreement using enhanced workflow with fallback capabilities.';
     
     if (error.message.includes('storage quota')) {
-      errorDetails = 'Google Drive storage quota exceeded. The service account\'s Google Drive is full. Please contact support to resolve this issue or try again later.';
+      errorDetails = 'Google Drive storage quota exceeded. The system attempted to use a fallback method but encountered issues. Please contact support to resolve storage limitations.';
     } else if (error.message.includes('template not found')) {
       errorDetails = 'MSA template document not found. Please ensure the template document is configured and accessible.';
     } else if (error.message.includes('access denied') || error.message.includes('permission')) {
-      errorDetails = 'Access denied to Google Drive. Please check that the service account has proper permissions.';
+      errorDetails = 'Access denied to Google Drive. Please check that the service account has proper permissions to access the template document.';
     } else if (error.message.includes('Rate limited')) {
-      errorDetails = 'Google API rate limit exceeded. Please try again in a few moments.';
+      errorDetails = 'Google API rate limit exceeded. The system will automatically retry. Please try again in a few moments.';
+    } else if (error.message.includes('Both Google Docs and fallback')) {
+      errorDetails = 'Both primary and fallback PDF generation methods failed. This may indicate a temporary service issue. Please try again or contact support.';
     }
     
     return new Response(
