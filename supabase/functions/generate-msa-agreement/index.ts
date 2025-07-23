@@ -3,7 +3,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
 import { generateAgreementPDF } from './pdf-generator.ts';
-import { getGoogleAccessToken } from './google-auth.ts';
+import { validateAndCorrectEnvironmentVariables } from './environment-validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +21,28 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Starting MSA generation request...');
+    
+    // Environment validation first
+    const envValidation = validateAndCorrectEnvironmentVariables();
+    if (!envValidation.valid) {
+      console.error('❌ Environment validation failed:', envValidation.issues);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Environment configuration error',
+          details: envValidation.issues.join('; '),
+          debug: envValidation.debugInfo
+        }), 
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
+      console.error('❌ Authorization header missing');
       throw new Error('Authorization header missing');
     }
 
@@ -32,8 +52,11 @@ serve(async (req) => {
     );
 
     if (userError || !user) {
+      console.error('❌ Invalid authentication:', userError);
       throw new Error('Invalid authentication');
     }
+
+    console.log('✅ User authenticated:', user.id);
 
     // Fetch user profile and organization data
     const { data: profileData, error: profileError } = await supabase
@@ -57,14 +80,17 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profileData) {
+      console.error('❌ Failed to fetch user profile data:', profileError);
       throw new Error('Failed to fetch user profile data');
     }
 
     if (!profileData.organizations) {
+      console.error('❌ No organization found for user');
       throw new Error('No organization found for user');
     }
 
     const organization = profileData.organizations;
+    console.log('✅ User profile and organization loaded');
 
     // Check if a recent MSA document already exists (within last 24 hours)
     const { data: existingDoc } = await supabase
@@ -79,6 +105,7 @@ serve(async (req) => {
 
     // If document exists and is recent, return it
     if (existingDoc && new Date(existingDoc.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)) {
+      console.log('✅ Recent MSA document found, returning existing');
       const { data: signedUrl } = await supabase.storage
         .from('msa-agreements')
         .createSignedUrl(existingDoc.file_path, 60 * 60);
@@ -116,8 +143,12 @@ serve(async (req) => {
       currentDate: new Date().toISOString(),
     };
 
+    console.log('📋 MSA data prepared for generation');
+
     // Generate the MSA agreement PDF
+    console.log('🔄 Starting PDF generation...');
     const pdfBuffer = await generateAgreementPDF(msaData);
+    console.log('✅ PDF generation completed, size:', pdfBuffer.byteLength);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -125,6 +156,7 @@ serve(async (req) => {
     const filePath = `${profileData.organization_id}/${user.id}/${fileName}`;
 
     // Upload to Supabase storage
+    console.log('📤 Uploading to Supabase storage...');
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('msa-agreements')
       .upload(filePath, pdfBuffer, {
@@ -134,6 +166,7 @@ serve(async (req) => {
       });
 
     if (uploadError) {
+      console.warn('⚠️ Storage upload failed, falling back to direct download:', uploadError);
       // Fallback to direct download if storage fails
       return new Response(pdfBuffer, {
         headers: {
@@ -143,6 +176,8 @@ serve(async (req) => {
         },
       });
     }
+
+    console.log('✅ File uploaded to storage');
 
     // Create database record
     const { data: documentRecord, error: dbError } = await supabase
@@ -155,7 +190,7 @@ serve(async (req) => {
         file_path: filePath,
         file_size: pdfBuffer.byteLength,
         mime_type: 'application/pdf',
-        generation_method: 'shared_drive_workflow',
+        generation_method: 'enhanced_shared_drive_workflow',
         document_version: 1,
         is_signed: false,
         metadata: msaData
@@ -164,13 +199,17 @@ serve(async (req) => {
       .single();
 
     if (dbError) {
-      console.error('Database insertion error:', dbError);
+      console.error('❌ Database insertion error:', dbError);
+    } else {
+      console.log('✅ Database record created');
     }
 
     // Get signed URL for download
     const { data: signedUrl } = await supabase.storage
       .from('msa-agreements')
       .createSignedUrl(filePath, 60 * 60);
+
+    console.log('✅ MSA generation completed successfully');
 
     // Return document metadata and download URL
     return new Response(JSON.stringify({
@@ -182,7 +221,7 @@ serve(async (req) => {
         download_url: signedUrl?.signedUrl,
         created_at: documentRecord?.created_at,
         is_signed: false,
-        generation_method: 'shared_drive_workflow'
+        generation_method: 'enhanced_shared_drive_workflow'
       }
     }), {
       headers: {
@@ -192,12 +231,14 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in generate-msa-agreement function:', error);
+    console.error('❌ Error in generate-msa-agreement function:', error);
     
     let errorMessage = error.message;
     let errorDetails = 'Failed to generate MSA agreement.';
     
-    if (error.message.includes('access denied') || error.message.includes('permission')) {
+    if (error.message.includes('File not found')) {
+      errorDetails = 'Template document not found. Please check the DEFAULT_GOOGLE_DOC_ID configuration.';
+    } else if (error.message.includes('access denied') || error.message.includes('permission')) {
       errorDetails = 'Access denied to Google Drive resources. Please check service account permissions.';
     } else if (error.message.includes('Rate limited')) {
       errorDetails = 'Google API rate limit exceeded. Please try again in a few moments.';
@@ -206,7 +247,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: errorMessage,
-        details: errorDetails
+        details: errorDetails,
+        debug: {
+          timestamp: new Date().toISOString(),
+          errorStack: error.stack
+        }
       }), 
       {
         status: 500,
