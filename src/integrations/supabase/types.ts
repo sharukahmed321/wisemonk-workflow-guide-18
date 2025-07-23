@@ -141,14 +141,8 @@ export type Database = {
           organization_id: string
           signed_at: string | null
           signed_by: string | null
-          signing_completed_at: string | null
-          signing_sent_at: string | null
           updated_at: string | null
           user_id: string
-          zoho_sign_document_id: string | null
-          zoho_sign_error: string | null
-          zoho_sign_request_id: string | null
-          zoho_sign_status: string | null
         }
         Insert: {
           created_at?: string | null
@@ -165,14 +159,8 @@ export type Database = {
           organization_id: string
           signed_at?: string | null
           signed_by?: string | null
-          signing_completed_at?: string | null
-          signing_sent_at?: string | null
           updated_at?: string | null
           user_id: string
-          zoho_sign_document_id?: string | null
-          zoho_sign_error?: string | null
-          zoho_sign_request_id?: string | null
-          zoho_sign_status?: string | null
         }
         Update: {
           created_at?: string | null
@@ -189,14 +177,8 @@ export type Database = {
           organization_id?: string
           signed_at?: string | null
           signed_by?: string | null
-          signing_completed_at?: string | null
-          signing_sent_at?: string | null
           updated_at?: string | null
           user_id?: string
-          zoho_sign_document_id?: string | null
-          zoho_sign_error?: string | null
-          zoho_sign_request_id?: string | null
-          zoho_sign_status?: string | null
         }
         Relationships: [
           {

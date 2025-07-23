@@ -1,155 +1,128 @@
 
 import { getGoogleAccessToken } from './google-auth.ts';
-import { validateAndCorrectEnvironmentVariables } from './environment-validation.ts';
+import { createMSAPlaceholders } from './placeholders.ts';
 
-export interface OptimizedGenerationMetrics {
-  startTime: number;
-  endTime: number;
-  duration: number;
-  steps: {
-    authentication: number;
-    documentCreation: number;
-    placeholderReplacement: number;
-    pdfExport: number;
-    cleanup: number;
-  };
-  success: boolean;
-  error?: string;
-}
-
-export async function generateMSAWithOptimizedPerformance(
-  templateDocId: string,
-  placeholders: Record<string, string>,
-  userData: any
-): Promise<{ pdfBuffer: Uint8Array; metrics: OptimizedGenerationMetrics }> {
-  const metrics: OptimizedGenerationMetrics = {
-    startTime: Date.now(),
-    endTime: 0,
-    duration: 0,
-    steps: {
-      authentication: 0,
-      documentCreation: 0,
-      placeholderReplacement: 0,
-      pdfExport: 0,
-      cleanup: 0
-    },
-    success: false
-  };
-
+// Enhanced Google Docs workflow with token caching and better error handling
+export async function generateMSAPDFOptimized(
+  templateDocId: string, 
+  replacements: Record<string, string>
+): Promise<Uint8Array> {
   let tempDocId: string | null = null;
-
-  try {
-    console.log('🚀 Starting optimized MSA generation...');
-    
-    // Environment validation (cached)
-    const envValidation = validateAndCorrectEnvironmentVariables();
-    if (!envValidation.valid || !envValidation.correctedVars) {
-      throw new Error('Environment validation failed');
-    }
-
-    const { sharedDriveId } = envValidation.correctedVars;
-
-    // Step 1: Authentication (with caching)
-    const authStart = Date.now();
-    const accessToken = await getGoogleAccessToken();
-    metrics.steps.authentication = Date.now() - authStart;
-    console.log(`⚡ Authentication completed in ${metrics.steps.authentication}ms`);
-
-    // Step 2: Optimized document creation
-    const docStart = Date.now();
-    tempDocId = await createDocumentOptimized(accessToken, templateDocId, sharedDriveId, userData);
-    metrics.steps.documentCreation = Date.now() - docStart;
-    console.log(`⚡ Document creation completed in ${metrics.steps.documentCreation}ms`);
-
-    // Step 3: Batch placeholder replacement
-    const placeholderStart = Date.now();
-    await replaceDocumentPlaceholdersOptimized(accessToken, tempDocId, placeholders);
-    metrics.steps.placeholderReplacement = Date.now() - placeholderStart;
-    console.log(`⚡ Placeholder replacement completed in ${metrics.steps.placeholderReplacement}ms`);
-
-    // Step 4: Optimized PDF export
-    const pdfStart = Date.now();
-    const pdfBuffer = await exportDocumentToPDFOptimized(accessToken, tempDocId);
-    metrics.steps.pdfExport = Date.now() - pdfStart;
-    console.log(`⚡ PDF export completed in ${metrics.steps.pdfExport}ms`);
-
-    // Step 5: Cleanup
-    const cleanupStart = Date.now();
-    await deleteDocumentOptimized(accessToken, tempDocId);
-    metrics.steps.cleanup = Date.now() - cleanupStart;
-    console.log(`⚡ Cleanup completed in ${metrics.steps.cleanup}ms`);
-
-    metrics.endTime = Date.now();
-    metrics.duration = metrics.endTime - metrics.startTime;
-    metrics.success = true;
-
-    console.log(`🚀 Optimized generation completed in ${metrics.duration}ms`);
-    console.log('📊 Performance breakdown:', metrics.steps);
-
-    return { pdfBuffer, metrics };
-
-  } catch (error) {
-    console.error('❌ Optimized generation failed:', error);
-    metrics.error = error.message;
-    metrics.endTime = Date.now();
-    metrics.duration = metrics.endTime - metrics.startTime;
-
-    // Cleanup on error
-    if (tempDocId) {
-      const cleanupStart = Date.now();
-      try {
-        await deleteDocumentOptimized(await getGoogleAccessToken(), tempDocId);
-        metrics.steps.cleanup = Date.now() - cleanupStart;
-      } catch (cleanupError) {
-        console.error('❌ Cleanup failed:', cleanupError);
-      }
-    }
-
-    throw error;
-  }
-}
-
-async function createDocumentOptimized(
-  accessToken: string,
-  templateDocId: string,
-  sharedDriveId: string,
-  userData: any
-): Promise<string> {
-  const tempDocTitle = `MSA_Optimized_${userData.first_name}_${userData.last_name}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  console.log('📄 Creating optimized document:', tempDocTitle);
-
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: tempDocTitle,
-      parents: [sharedDriveId]
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Optimized document creation failed: ${response.status} - ${errorText}`);
+  try {
+    console.log('🔄 Starting optimized MSA PDF generation workflow');
+    console.log('📋 Template document ID:', templateDocId);
+    
+    // Get cached access token
+    const accessToken = await getGoogleAccessToken();
+    
+    // Create temp document with retry logic
+    tempDocId = await createDocumentCopyWithRetry(accessToken, templateDocId);
+    console.log('✅ Created temporary document:', tempDocId);
+    
+    // Replace placeholders with batch processing
+    await replaceDocumentPlaceholdersBatch(accessToken, tempDocId, replacements);
+    console.log('✅ Replaced placeholders in document');
+    
+    // Export to PDF
+    const pdfBuffer = await exportDocumentToPDFWithRetry(accessToken, tempDocId);
+    console.log('✅ Exported document to PDF, size:', pdfBuffer.length);
+    
+    return pdfBuffer;
+    
+  } finally {
+    // Enhanced cleanup with retry logic
+    if (tempDocId) {
+      await cleanupTemporaryDocumentWithRetry(tempDocId).catch(err => {
+        console.warn('⚠️ Failed to delete temporary document:', err.message);
+        // Log the orphaned document ID for manual cleanup if needed
+        console.warn('🔍 Orphaned document ID for manual cleanup:', tempDocId);
+      });
+    }
   }
-
-  const result = await response.json();
-  console.log('✅ Optimized document created:', result.id);
-  return result.id;
 }
 
-async function replaceDocumentPlaceholdersOptimized(
-  accessToken: string,
-  documentId: string,
-  placeholders: Record<string, string>
+async function createDocumentCopyWithRetry(
+  accessToken: string, 
+  templateDocId: string, 
+  maxRetries: number = 2
+): Promise<string> {
+  const tempDocTitle = `MSA_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`📄 Creating document copy (attempt ${attempt}/${maxRetries})`);
+      
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: tempDocTitle,
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        // Enhanced error parsing for Google API errors
+        try {
+          const errorData = JSON.parse(errorText);
+          const googleError = errorData.error;
+          
+          if (googleError?.code === 403) {
+            if (googleError.message?.includes('storage quota') || googleError.message?.includes('storageQuotaExceeded')) {
+              throw new Error('Google Drive storage quota exceeded. Please free up space in your Google Drive or create a new service account.');
+            } else if (googleError.message?.includes('permission') || googleError.message?.includes('access')) {
+              throw new Error('Access denied to Google Drive. Please ensure the service account has proper permissions.');
+            }
+          } else if (googleError?.code === 404) {
+            throw new Error('Template document not found. Please verify the document ID is correct.');
+          } else if (googleError?.code === 429) {
+            // Rate limit - wait and retry
+            if (attempt < maxRetries) {
+              const waitTime = Math.pow(2, attempt) * 1000; // Exponential backoff
+              console.log(`⏳ Rate limited, waiting ${waitTime}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              continue;
+            }
+          }
+        } catch (parseError) {
+          // If we can't parse the error, use the original
+        }
+        
+        throw new Error(`Failed to copy template document: ${response.status} - ${errorText}`);
+      }
+
+      const copyResult = await response.json();
+      return copyResult.id;
+      
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.log(`⚠️ Attempt ${attempt} failed, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  
+  throw new Error('Failed to create document copy after all retries');
+}
+
+async function replaceDocumentPlaceholdersBatch(
+  accessToken: string, 
+  documentId: string, 
+  replacements: Record<string, string>
 ): Promise<void> {
-  console.log('🔄 Replacing placeholders (optimized batch)...');
+  console.log('🔄 Replacing placeholders in document:', documentId);
+  console.log('📝 Placeholders to replace:', Object.keys(replacements));
 
   const requests = [];
-  for (const [placeholder, value] of Object.entries(placeholders)) {
+
+  // Create replace requests for each placeholder
+  for (const [placeholder, value] of Object.entries(replacements)) {
     if (value && value.trim()) {
       requests.push({
         replaceAllText: {
@@ -164,11 +137,9 @@ async function replaceDocumentPlaceholdersOptimized(
   }
 
   if (requests.length === 0) {
-    console.log('⚠️ No placeholders to replace');
+    console.log('⏭️ No valid placeholders to replace');
     return;
   }
-
-  console.log(`🔄 Processing ${requests.length} placeholder replacements...`);
 
   const response = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
     method: 'POST',
@@ -181,138 +152,100 @@ async function replaceDocumentPlaceholdersOptimized(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Optimized placeholder replacement failed: ${response.status} - ${errorText}`);
+    console.error('❌ Failed to replace placeholders:', response.status, errorText);
+    throw new Error(`Failed to replace placeholders: ${response.status} - ${errorText}`);
   }
 
-  console.log('✅ Optimized placeholders replaced successfully');
+  console.log(`✅ Successfully replaced ${requests.length} placeholders`);
 }
 
-async function exportDocumentToPDFOptimized(
-  accessToken: string,
-  documentId: string
+async function exportDocumentToPDFWithRetry(
+  accessToken: string, 
+  documentId: string, 
+  maxRetries: number = 2
 ): Promise<Uint8Array> {
-  console.log('📄 Exporting PDF (optimized)...');
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`📄 Exporting document to PDF (attempt ${attempt}/${maxRetries})`);
 
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}/export?mimeType=application/pdf`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}/export?mimeType=application/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        if (response.status === 429 && attempt < maxRetries) {
+          const waitTime = Math.pow(2, attempt) * 1000;
+          console.log(`⏳ Rate limited, waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        throw new Error(`Failed to export document as PDF: ${response.status} - ${errorText}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      return new Uint8Array(arrayBuffer);
+      
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.log(`⚠️ PDF export attempt ${attempt} failed, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Optimized PDF export failed: ${response.status} - ${errorText}`);
   }
-
-  const arrayBuffer = await response.arrayBuffer();
-  const pdfBuffer = new Uint8Array(arrayBuffer);
   
-  console.log('✅ Optimized PDF export successful, size:', pdfBuffer.byteLength);
-  return pdfBuffer;
+  throw new Error('Failed to export PDF after all retries');
 }
 
-async function deleteDocumentOptimized(accessToken: string, documentId: string): Promise<void> {
-  console.log('🗑️ Deleting document (optimized):', documentId);
+async function cleanupTemporaryDocumentWithRetry(
+  documentId: string, 
+  maxRetries: number = 3
+): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🗑️ Deleting temporary document (attempt ${attempt}/${maxRetries}):`, documentId);
+      
+      const accessToken = await getGoogleAccessToken();
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        }
+      });
 
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}`, {
-    method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${accessToken}` }
-  });
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('📄 Document already deleted or not found');
+          return;
+        }
+        
+        const errorText = await response.text();
+        
+        if (response.status === 429 && attempt < maxRetries) {
+          const waitTime = Math.pow(2, attempt) * 1000;
+          console.log(`⏳ Rate limited, waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        throw new Error(`Failed to delete document: ${response.status} - ${errorText}`);
+      }
 
-  if (!response.ok && response.status !== 404) {
-    console.warn('⚠️ Optimized document deletion failed:', response.status);
-  } else {
-    console.log('✅ Optimized document deleted successfully');
-  }
-}
-
-export async function benchmarkOptimizedGeneration(): Promise<OptimizedGenerationMetrics[]> {
-  const benchmarks: OptimizedGenerationMetrics[] = [];
-  
-  try {
-    console.log('🧪 Running optimized generation benchmark...');
-    
-    const testPlaceholders = {
-      '{{Client}}': 'Benchmark Client',
-      '{{Name}}': 'Benchmark User',
-      '{{Agreement_date}}': new Date().toLocaleDateString()
-    };
-
-    const testUserData = {
-      first_name: 'Benchmark',
-      last_name: 'User'
-    };
-
-    const envValidation = validateAndCorrectEnvironmentVariables();
-    if (!envValidation.valid || !envValidation.correctedVars) {
-      throw new Error('Environment validation failed');
+      console.log('✅ Document deleted successfully');
+      return;
+      
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.log(`⚠️ Cleanup attempt ${attempt} failed, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
-
-    const { templateDocId } = envValidation.correctedVars;
-    
-    // Run multiple benchmarks
-    for (let i = 0; i < 3; i++) {
-      console.log(`🏁 Benchmark run ${i + 1}/3`);
-      
-      const { metrics } = await generateMSAWithOptimizedPerformance(
-        templateDocId,
-        testPlaceholders,
-        { ...testUserData, iteration: i }
-      );
-      
-      benchmarks.push(metrics);
-      
-      // Wait between runs
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    // Calculate averages
-    const avgMetrics = {
-      duration: benchmarks.reduce((sum, m) => sum + m.duration, 0) / benchmarks.length,
-      authentication: benchmarks.reduce((sum, m) => sum + m.steps.authentication, 0) / benchmarks.length,
-      documentCreation: benchmarks.reduce((sum, m) => sum + m.steps.documentCreation, 0) / benchmarks.length,
-      placeholderReplacement: benchmarks.reduce((sum, m) => sum + m.steps.placeholderReplacement, 0) / benchmarks.length,
-      pdfExport: benchmarks.reduce((sum, m) => sum + m.steps.pdfExport, 0) / benchmarks.length,
-      cleanup: benchmarks.reduce((sum, m) => sum + m.steps.cleanup, 0) / benchmarks.length
-    };
-
-    console.log('📊 Benchmark results (averages):');
-    console.log(`  Total duration: ${avgMetrics.duration.toFixed(2)}ms`);
-    console.log(`  Authentication: ${avgMetrics.authentication.toFixed(2)}ms`);
-    console.log(`  Document creation: ${avgMetrics.documentCreation.toFixed(2)}ms`);
-    console.log(`  Placeholder replacement: ${avgMetrics.placeholderReplacement.toFixed(2)}ms`);
-    console.log(`  PDF export: ${avgMetrics.pdfExport.toFixed(2)}ms`);
-    console.log(`  Cleanup: ${avgMetrics.cleanup.toFixed(2)}ms`);
-
-    return benchmarks;
-
-  } catch (error) {
-    console.error('❌ Benchmark failed:', error);
-    throw error;
-  }
-}
-
-export async function performanceTest(): Promise<any> {
-  try {
-    console.log('🧪 Running performance test...');
-    
-    const benchmarks = await benchmarkOptimizedGeneration();
-    
-    const successfulRuns = benchmarks.filter(b => b.success);
-    const failedRuns = benchmarks.filter(b => !b.success);
-    
-    return {
-      success: true,
-      totalRuns: benchmarks.length,
-      successfulRuns: successfulRuns.length,
-      failedRuns: failedRuns.length,
-      averageDuration: successfulRuns.reduce((sum, b) => sum + b.duration, 0) / successfulRuns.length,
-      benchmarks: benchmarks
-    };
-
-  } catch (error) {
-    console.error('❌ Performance test failed:', error);
-    return { success: false, error: error.message };
   }
 }

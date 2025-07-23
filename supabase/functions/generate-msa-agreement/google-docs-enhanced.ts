@@ -1,292 +1,173 @@
-
 import { getGoogleAccessToken } from './google-auth.ts';
-import { validateAndCorrectEnvironmentVariables } from './environment-validation.ts';
+import { validateStorageBeforeOperation } from './storage-monitor.ts';
+import { cleanupOrphanedDocuments, createTempDocumentName, deleteDocumentById } from './cleanup-manager.ts';
 
-export interface EnhancedGenerationOptions {
-  useRetry: boolean;
-  retryAttempts: number;
-  validateSteps: boolean;
-  cleanupOnError: boolean;
-  verboseLogging: boolean;
-}
-
-export async function generateMSAWithEnhancedErrorHandling(
-  templateDocId: string,
-  placeholders: Record<string, string>,
-  userData: any,
-  options: EnhancedGenerationOptions = {
-    useRetry: true,
-    retryAttempts: 3,
-    validateSteps: true,
-    cleanupOnError: true,
-    verboseLogging: true
-  }
+export async function generateMSAPDFEnhanced(
+  templateDocId: string, 
+  replacements: Record<string, string>,
+  userData: any
 ): Promise<Uint8Array> {
   let tempDocId: string | null = null;
-  let attempt = 0;
-
-  while (attempt < options.retryAttempts) {
-    try {
-      attempt++;
-      if (options.verboseLogging) {
-        console.log(`🔄 Enhanced generation attempt ${attempt}/${options.retryAttempts}`);
+  
+  try {
+    console.log('🔄 Starting enhanced MSA PDF generation workflow');
+    
+    // Step 1: Validate storage before starting
+    await validateStorageBeforeOperation(15); // Estimate 15MB needed
+    
+    // Step 2: Clean up any orphaned documents from previous runs
+    await cleanupOrphanedDocuments();
+    
+    // Step 3: Get access token
+    const accessToken = await getGoogleAccessToken();
+    
+    // Step 4: Create document copy with enhanced naming
+    const tempDocTitle = createTempDocumentName(userData);
+    tempDocId = await createDocumentCopyEnhanced(accessToken, templateDocId, tempDocTitle);
+    console.log('✅ Created temporary document:', tempDocId);
+    
+    // Step 5: Replace placeholders
+    await replaceDocumentPlaceholdersBatch(accessToken, tempDocId, replacements);
+    console.log('✅ Replaced placeholders in document');
+    
+    // Step 6: Export to PDF
+    const pdfBuffer = await exportDocumentToPDFEnhanced(accessToken, tempDocId);
+    console.log('✅ Exported document to PDF, size:', pdfBuffer.length);
+    
+    return pdfBuffer;
+    
+  } finally {
+    // Step 7: Always cleanup, even on failure
+    if (tempDocId) {
+      try {
+        await deleteDocumentById(tempDocId);
+        console.log('✅ Temporary document cleaned up successfully');
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to cleanup temporary document:', cleanupError.message);
+        console.warn('🔍 Orphaned document ID for manual cleanup:', tempDocId);
       }
-
-      // Environment validation
-      const envValidation = validateAndCorrectEnvironmentVariables();
-      if (!envValidation.valid || !envValidation.correctedVars) {
-        throw new Error(`Environment validation failed: ${envValidation.issues.join('; ')}`);
-      }
-
-      const { sharedDriveId } = envValidation.correctedVars;
-      const accessToken = await getGoogleAccessToken();
-
-      // Step 1: Create document with enhanced error handling
-      tempDocId = await createDocumentWithRetry(accessToken, templateDocId, sharedDriveId, userData, options);
-      
-      if (options.validateSteps) {
-        await validateDocumentCreation(accessToken, tempDocId, options);
-      }
-
-      // Step 2: Replace placeholders with validation
-      await replaceDocumentPlaceholdersWithValidation(accessToken, tempDocId, placeholders, options);
-      
-      if (options.validateSteps) {
-        await validatePlaceholderReplacement(accessToken, tempDocId, placeholders, options);
-      }
-
-      // Step 3: Export to PDF with retry
-      const pdfBuffer = await exportDocumentToPDFWithRetry(accessToken, tempDocId, options);
-      
-      if (options.verboseLogging) {
-        console.log('✅ Enhanced generation completed successfully');
-      }
-
-      return pdfBuffer;
-
-    } catch (error) {
-      if (options.verboseLogging) {
-        console.error(`❌ Enhanced generation attempt ${attempt} failed:`, error.message);
-      }
-
-      if (options.cleanupOnError && tempDocId) {
-        await safeCleanupDocument(tempDocId, options);
-        tempDocId = null;
-      }
-
-      if (attempt >= options.retryAttempts) {
-        throw error;
-      }
-
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
   }
-
-  throw new Error('Enhanced generation failed after all retry attempts');
 }
 
-async function createDocumentWithRetry(
-  accessToken: string,
-  templateDocId: string,
-  sharedDriveId: string,
-  userData: any,
-  options: EnhancedGenerationOptions
+async function createDocumentCopyEnhanced(
+  accessToken: string, 
+  templateDocId: string, 
+  title: string,
+  maxRetries: number = 3
 ): Promise<string> {
-  const tempDocTitle = `MSA_Enhanced_${userData.first_name}_${userData.last_name}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  let retryCount = 0;
-  while (retryCount < 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      if (options.verboseLogging) {
-        console.log(`📄 Creating document (attempt ${retryCount + 1}): ${tempDocTitle}`);
-      }
-
+      console.log(`📄 Creating document copy (attempt ${attempt}/${maxRetries}): ${title}`);
+      
       const response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: tempDocTitle,
-          parents: [sharedDriveId]
-        })
+        body: JSON.stringify({ name: title })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Document creation failed: ${response.status} - ${errorText}`);
+        
+        // Parse specific Google API errors
+        try {
+          const errorData = JSON.parse(errorText);
+          const googleError = errorData.error;
+          
+          if (googleError?.code === 403 && googleError.message?.includes('storage quota')) {
+            throw new Error('Google Drive storage quota exceeded. Please free up space or create a new service account.');
+          } else if (googleError?.code === 404) {
+            throw new Error('Template document not found. Please verify the document ID is correct.');
+          } else if (googleError?.code === 429) {
+            // Rate limit - wait and retry
+            if (attempt < maxRetries) {
+              const waitTime = Math.pow(2, attempt) * 1000;
+              console.log(`⏳ Rate limited, waiting ${waitTime}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              continue;
+            }
+          }
+        } catch (parseError) {
+          // Use original error if parsing fails
+        }
+        
+        throw new Error(`Failed to copy template document: ${response.status} - ${errorText}`);
       }
 
-      const result = await response.json();
-      if (options.verboseLogging) {
-        console.log('✅ Document created successfully:', result.id);
-      }
-      return result.id;
-
-    } catch (error) {
-      retryCount++;
-      if (options.verboseLogging) {
-        console.error(`❌ Document creation attempt ${retryCount} failed:`, error.message);
-      }
+      const copyResult = await response.json();
+      return copyResult.id;
       
-      if (retryCount >= 3) {
+    } catch (error) {
+      if (attempt === maxRetries) {
         throw error;
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      console.log(`⚠️ Attempt ${attempt} failed, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
   }
-
-  throw new Error('Document creation failed after all retries');
-}
-
-async function validateDocumentCreation(
-  accessToken: string,
-  documentId: string,
-  options: EnhancedGenerationOptions
-): Promise<void> {
-  try {
-    if (options.verboseLogging) {
-      console.log('🔍 Validating document creation...');
-    }
-
-    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Document validation failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (options.verboseLogging) {
-      console.log('✅ Document validation passed:', data.name);
-    }
-  } catch (error) {
-    if (options.verboseLogging) {
-      console.error('❌ Document validation failed:', error.message);
-    }
-    throw error;
-  }
-}
-
-async function replaceDocumentPlaceholdersWithValidation(
-  accessToken: string,
-  documentId: string,
-  placeholders: Record<string, string>,
-  options: EnhancedGenerationOptions
-): Promise<void> {
-  try {
-    if (options.verboseLogging) {
-      console.log('🔄 Replacing placeholders with validation...');
-    }
-
-    const requests = [];
-    for (const [placeholder, value] of Object.entries(placeholders)) {
-      if (value && value.trim()) {
-        requests.push({
-          replaceAllText: {
-            containsText: {
-              text: placeholder,
-              matchCase: true
-            },
-            replaceText: value
-          }
-        });
-      }
-    }
-
-    if (requests.length === 0) {
-      if (options.verboseLogging) {
-        console.log('⚠️ No placeholders to replace');
-      }
-      return;
-    }
-
-    const response = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ requests })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Placeholder replacement failed: ${response.status} - ${errorText}`);
-    }
-
-    if (options.verboseLogging) {
-      console.log('✅ Placeholders replaced successfully');
-    }
-  } catch (error) {
-    if (options.verboseLogging) {
-      console.error('❌ Placeholder replacement failed:', error.message);
-    }
-    throw error;
-  }
-}
-
-async function validatePlaceholderReplacement(
-  accessToken: string,
-  documentId: string,
-  placeholders: Record<string, string>,
-  options: EnhancedGenerationOptions
-): Promise<void> {
-  try {
-    if (options.verboseLogging) {
-      console.log('🔍 Validating placeholder replacement...');
-    }
-
-    // Get document content to verify placeholders were replaced
-    const response = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Placeholder validation failed: ${response.status}`);
-    }
-
-    const document = await response.json();
-    const content = JSON.stringify(document.body);
-    
-    // Check if any placeholders remain
-    const remainingPlaceholders = Object.keys(placeholders).filter(placeholder => 
-      content.includes(placeholder)
-    );
-
-    if (remainingPlaceholders.length > 0) {
-      if (options.verboseLogging) {
-        console.warn('⚠️ Some placeholders were not replaced:', remainingPlaceholders);
-      }
-    } else {
-      if (options.verboseLogging) {
-        console.log('✅ All placeholders validated successfully');
-      }
-    }
-  } catch (error) {
-    if (options.verboseLogging) {
-      console.error('❌ Placeholder validation failed:', error.message);
-    }
-    // Don't throw here - validation failure shouldn't stop the process
-  }
-}
-
-async function exportDocumentToPDFWithRetry(
-  accessToken: string,
-  documentId: string,
-  options: EnhancedGenerationOptions
-): Promise<Uint8Array> {
-  let retryCount = 0;
   
-  while (retryCount < 3) {
+  throw new Error('Failed to create document copy after all retries');
+}
+
+async function replaceDocumentPlaceholdersBatch(
+  accessToken: string, 
+  documentId: string, 
+  replacements: Record<string, string>
+): Promise<void> {
+  console.log('🔄 Replacing placeholders in document:', documentId);
+  console.log('📝 Placeholders to replace:', Object.keys(replacements));
+
+  const requests = [];
+
+  // Create replace requests for each placeholder
+  for (const [placeholder, value] of Object.entries(replacements)) {
+    if (value && value.trim()) {
+      requests.push({
+        replaceAllText: {
+          containsText: {
+            text: placeholder,
+            matchCase: true
+          },
+          replaceText: value
+        }
+      });
+    }
+  }
+
+  if (requests.length === 0) {
+    console.log('⏭️ No valid placeholders to replace');
+    return;
+  }
+
+  const response = await fetch(`https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ requests })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ Failed to replace placeholders:', response.status, errorText);
+    throw new Error(`Failed to replace placeholders: ${response.status} - ${errorText}`);
+  }
+
+  console.log(`✅ Successfully replaced ${requests.length} placeholders`);
+}
+
+async function exportDocumentToPDFEnhanced(
+  accessToken: string, 
+  documentId: string, 
+  maxRetries: number = 3
+): Promise<Uint8Array> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      if (options.verboseLogging) {
-        console.log(`📄 Exporting PDF (attempt ${retryCount + 1})...`);
-      }
+      console.log(`📄 Exporting document to PDF (attempt ${attempt}/${maxRetries})`);
 
       const response = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}/export?mimeType=application/pdf`, {
         method: 'GET',
@@ -296,105 +177,28 @@ async function exportDocumentToPDFWithRetry(
       });
 
       if (!response.ok) {
+        if (response.status === 429 && attempt < maxRetries) {
+          const waitTime = Math.pow(2, attempt) * 1000;
+          console.log(`⏳ Rate limited, waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
         const errorText = await response.text();
-        throw new Error(`PDF export failed: ${response.status} - ${errorText}`);
+        throw new Error(`Failed to export document as PDF: ${response.status} - ${errorText}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
-      const pdfBuffer = new Uint8Array(arrayBuffer);
+      return new Uint8Array(arrayBuffer);
       
-      if (options.verboseLogging) {
-        console.log('✅ PDF export successful, size:', pdfBuffer.byteLength);
-      }
-      
-      return pdfBuffer;
-
     } catch (error) {
-      retryCount++;
-      if (options.verboseLogging) {
-        console.error(`❌ PDF export attempt ${retryCount} failed:`, error.message);
-      }
-      
-      if (retryCount >= 3) {
+      if (attempt === maxRetries) {
         throw error;
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      console.log(`⚠️ PDF export attempt ${attempt} failed, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
   }
-
-  throw new Error('PDF export failed after all retries');
-}
-
-async function safeCleanupDocument(documentId: string, options: EnhancedGenerationOptions): Promise<void> {
-  try {
-    if (options.verboseLogging) {
-      console.log('🗑️ Cleaning up document:', documentId);
-    }
-
-    const accessToken = await getGoogleAccessToken();
-    
-    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-
-    if (response.ok) {
-      if (options.verboseLogging) {
-        console.log('✅ Document cleanup successful');
-      }
-    } else {
-      if (options.verboseLogging) {
-        console.warn('⚠️ Document cleanup failed:', response.status);
-      }
-    }
-  } catch (error) {
-    if (options.verboseLogging) {
-      console.error('❌ Document cleanup error:', error.message);
-    }
-  }
-}
-
-export async function testEnhancedGeneration(): Promise<any> {
-  try {
-    console.log('🧪 Testing enhanced generation...');
-    
-    const testPlaceholders = {
-      '{{Client}}': 'Test Client',
-      '{{Name}}': 'Test User',
-      '{{Agreement_date}}': new Date().toLocaleDateString()
-    };
-
-    const testUserData = {
-      first_name: 'Test',
-      last_name: 'User'
-    };
-
-    const envValidation = validateAndCorrectEnvironmentVariables();
-    if (!envValidation.valid || !envValidation.correctedVars) {
-      throw new Error('Environment validation failed');
-    }
-
-    const { templateDocId } = envValidation.correctedVars;
-    
-    const result = await generateMSAWithEnhancedErrorHandling(
-      templateDocId,
-      testPlaceholders,
-      testUserData,
-      {
-        useRetry: true,
-        retryAttempts: 2,
-        validateSteps: true,
-        cleanupOnError: true,
-        verboseLogging: true
-      }
-    );
-
-    console.log('✅ Enhanced generation test successful, PDF size:', result.byteLength);
-    return { success: true, size: result.byteLength };
-
-  } catch (error) {
-    console.error('❌ Enhanced generation test failed:', error);
-    return { success: false, error: error.message };
-  }
+  
+  throw new Error('Failed to export PDF after all retries');
 }

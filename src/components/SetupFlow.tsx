@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,11 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download, RefreshCw, Send } from "lucide-react";
+import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download, RefreshCw } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { sendMSAForSigning, checkMSASigningStatus } from '@/services/zohoSignService';
 
 const addressSchema = z.object({
   address: z.string().min(1, 'Address is required'),
@@ -33,10 +31,6 @@ interface MSADocument {
   created_at: string;
   is_signed: boolean;
   generation_method: string;
-  zoho_sign_status?: string;
-  zoho_sign_request_id?: string;
-  signing_sent_at?: string;
-  zoho_sign_error?: string;
 }
 
 interface AddressStepProps {
@@ -60,7 +54,6 @@ export function AddressStep({ onComplete }: AddressStepProps) {
 
   const onSubmit = async (data: AddressFormData) => {
     setIsSubmitting(true);
-    console.log('🏠 Submitting address data:', data); // Debug logging restored
 
     try {
       // Get the user's current profile to find organization_id
@@ -74,8 +67,6 @@ export function AddressStep({ onComplete }: AddressStepProps) {
       if (!profile?.organization_id) {
         throw new Error('No organization found for user');
       }
-
-      console.log('🏢 Organization ID found:', profile.organization_id); // Debug logging
 
       // Update the organization with address information
       const { error } = await supabase.rpc('upsert_organization', {
@@ -96,14 +87,12 @@ export function AddressStep({ onComplete }: AddressStepProps) {
       });
 
       // Generate MSA agreement after address is saved
-      console.log('🔄 Generating MSA agreement...'); // Debug logging
+      console.log('🔄 Generating MSA agreement...');
       const { data: authData } = await supabase.auth.getSession();
       
       if (!authData.session) {
         throw new Error('No active session');
       }
-
-      console.log('🔑 Session token available, calling MSA generation...'); // Debug logging
 
       const response = await supabase.functions.invoke('generate-msa-agreement', {
         headers: {
@@ -112,11 +101,11 @@ export function AddressStep({ onComplete }: AddressStepProps) {
       });
 
       if (response.error) {
-        console.error('❌ MSA generation error:', response.error); // Debug logging
+        console.error('MSA generation error:', response.error);
         throw new Error(`Failed to generate MSA: ${response.error.message}`);
       }
 
-      console.log('✅ MSA agreement generated successfully:', response.data); // Debug logging
+      console.log('✅ MSA agreement generated successfully');
       
       toast({
         title: "Success",
@@ -126,7 +115,7 @@ export function AddressStep({ onComplete }: AddressStepProps) {
       // Navigate to MSA step for signing
       navigate('/dashboard/setup/msa');
     } catch (error) {
-      console.error('❌ Error saving address or generating MSA:', error); // Debug logging
+      console.error('Error saving address or generating MSA:', error);
       toast({
         title: "Error",
         description: "Failed to save address or generate MSA. Please try again.",
@@ -250,7 +239,6 @@ export function MSAStep({ onComplete }: MSAStepProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [isSendingForSigning, setIsSendingForSigning] = useState(false);
   const [msaDocument, setMsaDocument] = useState<MSADocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -261,20 +249,16 @@ export function MSAStep({ onComplete }: MSAStepProps) {
   });
 
   React.useEffect(() => {
-    console.log('🔄 MSA Step mounted, loading existing document...'); // Debug logging
     loadExistingDocument();
   }, []);
 
   const loadExistingDocument = async () => {
     try {
-      console.log('📄 Loading existing MSA document...'); // Debug logging
       const { data: authData } = await supabase.auth.getSession();
       
       if (!authData.session) {
         throw new Error('No active session');
       }
-
-      console.log('🔑 Session available, calling MSA function...'); // Debug logging
 
       const response = await supabase.functions.invoke('generate-msa-agreement', {
         headers: {
@@ -283,16 +267,14 @@ export function MSAStep({ onComplete }: MSAStepProps) {
       });
 
       if (response.error) {
-        console.error('❌ MSA loading error:', response.error); // Debug logging
         throw new Error(`Failed to load MSA: ${response.error.message}`);
       }
 
       if (response.data?.document) {
-        console.log('✅ MSA document loaded:', response.data.document); // Debug logging
         setMsaDocument(response.data.document);
       }
     } catch (error) {
-      console.error('❌ Error loading MSA document:', error); // Debug logging
+      console.error('Error loading MSA document:', error);
       toast({
         title: "Error",
         description: "Failed to load MSA document. Please try again.",
@@ -307,8 +289,6 @@ export function MSAStep({ onComplete }: MSAStepProps) {
     if (!msaDocument?.download_url) return;
 
     setIsDownloading(true);
-    console.log('📥 Downloading MSA document...'); // Debug logging
-    
     try {
       const response = await fetch(msaDocument.download_url);
       if (!response.ok) throw new Error('Failed to download file');
@@ -323,13 +303,12 @@ export function MSAStep({ onComplete }: MSAStepProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      console.log('✅ MSA document downloaded successfully'); // Debug logging
       toast({
         title: "Success",
         description: "MSA agreement downloaded successfully.",
       });
     } catch (error) {
-      console.error('❌ Error downloading MSA:', error); // Debug logging
+      console.error('Error downloading MSA:', error);
       toast({
         title: "Error",
         description: "Failed to download MSA. Please try again.",
@@ -342,19 +321,16 @@ export function MSAStep({ onComplete }: MSAStepProps) {
 
   const regenerateDocument = async () => {
     setIsRegenerating(true);
-    console.log('🔄 Regenerating MSA document...'); // Debug logging
-    
     try {
       // Force regeneration by clearing cache (this would require backend changes)
       await loadExistingDocument();
       
-      console.log('✅ MSA document regenerated successfully'); // Debug logging
       toast({
         title: "Success",
         description: "MSA agreement regenerated successfully.",
       });
     } catch (error) {
-      console.error('❌ Error regenerating MSA:', error); // Debug logging
+      console.error('Error regenerating MSA:', error);
       toast({
         title: "Error",
         description: "Failed to regenerate MSA. Please try again.",
@@ -365,76 +341,68 @@ export function MSAStep({ onComplete }: MSAStepProps) {
     }
   };
 
-  const sendForSigning = async () => {
-    if (!msaDocument) return;
+  const onSubmit = async (data: MSAFormData) => {
+    setIsSubmitting(true);
 
-    setIsSendingForSigning(true);
-    console.log('📧 Sending MSA for e-signature...', msaDocument.id); // Debug logging
-    
     try {
-      const response = await sendMSAForSigning({
-        msaDocumentId: msaDocument.id
+      const user = (await supabase.auth.getUser()).data.user;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, organization_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      const signedBy = profile 
+        ? `${profile.first_name} ${profile.last_name}`.trim() 
+        : 'Unknown User';
+
+      // Update the MSA document as signed
+      if (msaDocument) {
+        const { error: docError } = await supabase
+          .from('msa_documents')
+          .update({
+            is_signed: true,
+            signed_at: new Date().toISOString(),
+            signed_by: signedBy,
+          })
+          .eq('id', msaDocument.id);
+
+        if (docError) {
+          console.error('Error updating MSA document:', docError);
+        }
+      }
+
+      // Update profile MSA status
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          msa_signed: true,
+          msa_signed_at: new Date().toISOString(),
+          msa_signed_by: signedBy,
+        })
+        .eq('user_id', user?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Master Service Agreement signed successfully.",
       });
 
-      if (response.success) {
-        console.log('✅ MSA sent for e-signature successfully:', response); // Debug logging
-        toast({
-          title: "Success",
-          description: "MSA agreement sent for e-signature successfully!",
-        });
-
-        // Reload document to get updated status
-        await loadExistingDocument();
-      }
+      // Navigate back to dashboard
+      navigate('/dashboard');
     } catch (error) {
-      console.error('❌ Error sending for signing:', error); // Debug logging
+      console.error('Error signing MSA:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send for signing",
+        description: "Failed to sign the agreement. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsSendingForSigning(false);
+      setIsSubmitting(false);
     }
-  };
-
-  const checkSigningStatus = async () => {
-    if (!msaDocument?.zoho_sign_request_id) return;
-
-    try {
-      console.log('🔍 Checking signing status...', msaDocument.zoho_sign_request_id); // Debug logging
-      const status = await checkMSASigningStatus(msaDocument.id);
-      
-      console.log('📊 Signing status:', status); // Debug logging
-      
-      if (status.zoho_sign_status === 'completed') {
-        console.log('✅ Document signing completed!'); // Debug logging
-        toast({
-          title: "Document Signed!",
-          description: "Your MSA has been successfully signed by all parties.",
-        });
-        
-        // Navigate to dashboard with 75% progress
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      console.error('❌ Error checking signing status:', error); // Debug logging
-    }
-  };
-
-  // Check signing status periodically
-  React.useEffect(() => {
-    if (msaDocument?.zoho_sign_status === 'sent') {
-      console.log('⏱️ Setting up periodic status check...'); // Debug logging
-      const interval = setInterval(checkSigningStatus, 30000); // Check every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [msaDocument?.zoho_sign_status]);
-
-  const onSubmit = async (data: MSAFormData) => {
-    console.log('📝 Submitting MSA form for e-signature...'); // Debug logging
-    // For Zoho Sign integration, we don't need the old local signing logic
-    await sendForSigning();
   };
 
   if (isLoading) {
@@ -480,14 +448,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                     Created: {msaDocument?.created_at ? new Date(msaDocument.created_at).toLocaleDateString() : 'N/A'}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Status: {msaDocument?.is_signed ? 'Signed' : 
-                      msaDocument?.zoho_sign_status === 'sent' ? 'Sent for E-Signature' :
-                      msaDocument?.zoho_sign_status === 'processing' ? 'Processing...' :
-                      msaDocument?.zoho_sign_status === 'failed' ? 'E-Signature Failed' :
-                      'Ready for E-Signature'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Generation Method: {msaDocument?.generation_method || 'N/A'} {/* Debug info */}
+                    Status: {msaDocument?.is_signed ? 'Signed' : 'Pending Signature'}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -536,47 +497,17 @@ export function MSAStep({ onComplete }: MSAStepProps) {
               </div>
             </div>
 
-            {/* Debug Information Panel */}
-            <div className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
-              <h4 className="font-semibold text-yellow-800 mb-2">🔧 Debug Information</h4>
-              <div className="text-sm text-yellow-700 space-y-1">
-                <p><strong>Document ID:</strong> {msaDocument?.id || 'N/A'}</p>
-                <p><strong>File Path:</strong> {msaDocument?.file_path || 'N/A'}</p>
-                <p><strong>Zoho Sign Status:</strong> {msaDocument?.zoho_sign_status || 'N/A'}</p>
-                <p><strong>Zoho Sign Request ID:</strong> {msaDocument?.zoho_sign_request_id || 'N/A'}</p>
-                <p><strong>Signing Sent At:</strong> {msaDocument?.signing_sent_at || 'N/A'}</p>
-                {msaDocument?.zoho_sign_error && (
-                  <p><strong>Error:</strong> {msaDocument.zoho_sign_error}</p>
-                )}
-              </div>
-            </div>
-
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
                   <div className="space-y-3">
                     <h4 className="font-semibold text-foreground flex items-center gap-2">
-                      📧 E-Signature Process
+                      🔐 What happens next?
                     </h4>
                     <div className="text-sm text-muted-foreground space-y-2">
-                      {msaDocument?.zoho_sign_status === 'sent' ? (
-                        <>
-                          <p>✅ Document sent for e-signature to all parties.</p>
-                          <p>📧 You and Mithun will receive email notifications to sign.</p>
-                          <p>⏱️ This page will automatically update when signing is complete.</p>
-                        </>
-                      ) : msaDocument?.zoho_sign_status === 'failed' ? (
-                        <>
-                          <p>❌ E-signature process failed. Please try again.</p>
-                          <p>Error: {msaDocument.zoho_sign_error}</p>
-                        </>
-                      ) : (
-                        <>
-                          <p>📄 Review the agreement above, then send it for electronic signature.</p>
-                          <p>📧 Both you and Mithun will receive email invitations to sign.</p>
-                          <p>🔒 The signed document will be stored securely and legally binding.</p>
-                        </>
-                      )}
+                      <p>You can download and review the agreement above, then proceed to sign it electronically.</p>
+                      <p>This is legally binding and a copy will be saved for your records.</p>
+                      <p>The signed document will be stored securely in your organization's document vault.</p>
                     </div>
                   </div>
                 </div>
@@ -585,42 +516,8 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                   <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
                     Review Later
                   </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={
-                      isSendingForSigning || 
-                      msaDocument?.is_signed || 
-                      msaDocument?.zoho_sign_status === 'sent' ||
-                      msaDocument?.zoho_sign_status === 'processing'
-                    } 
-                    className="flex-1"
-                  >
-                    {isSendingForSigning ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Sending for E-Signature...
-                      </>
-                    ) : msaDocument?.is_signed ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Already Signed
-                      </>
-                    ) : msaDocument?.zoho_sign_status === 'sent' ? (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Sent for E-Signature
-                      </>
-                    ) : msaDocument?.zoho_sign_status === 'processing' ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Send for E-Signature
-                      </>
-                    )}
+                  <Button type="submit" disabled={isSubmitting || msaDocument?.is_signed} className="flex-1">
+                    {isSubmitting ? 'Processing...' : msaDocument?.is_signed ? 'Already Signed' : 'Accept & Sign Agreement'}
                   </Button>
                 </div>
               </form>
@@ -637,8 +534,6 @@ interface SetupCompleteProps {
 }
 
 export function SetupComplete({ onContinue }: SetupCompleteProps) {
-  console.log('✅ Setup completed successfully!'); // Debug logging
-  
   return (
     <div className="min-h-screen bg-background p-6 flex items-center justify-center">
       <Card className="w-full max-w-md">
