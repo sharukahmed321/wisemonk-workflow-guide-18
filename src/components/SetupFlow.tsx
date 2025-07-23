@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle } from 'lucide-react';
 
+// Export components for Dashboard usage
+export { AddressStep, MSAStep };
+
 export interface OnboardingData {
   user_id: string;
   basic_info: {
@@ -91,16 +94,17 @@ export function SetupFlow() {
 
       if (error) throw error;
 
-      setOnboardingData(data);
+      const typedData = data as unknown as OnboardingData;
+      setOnboardingData(typedData);
       
       // Determine current step based on completion status
-      if (!data.basic_info.completed) {
+      if (!typedData.basic_info.completed) {
         setCurrentStep(0);
-      } else if (!data.company_info.completed) {
+      } else if (!typedData.company_info.completed) {
         setCurrentStep(1);
-      } else if (!data.address_info.completed) {
+      } else if (!typedData.address_info.completed) {
         setCurrentStep(2);
-      } else if (!data.msa_info.completed) {
+      } else if (!typedData.msa_info.completed) {
         setCurrentStep(3);
       } else {
         // All steps completed
@@ -192,11 +196,18 @@ export function SetupFlow() {
           <p className="text-gray-600">Complete your profile to get started</p>
         </div>
 
-        <SetupProgress 
-          currentStep={currentStep}
-          totalSteps={steps.length}
-          onboardingData={onboardingData}
-        />
+        <div className="mb-4">
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span>Step {currentStep + 1} of {steps.length}</span>
+            <span>{Math.round(((currentStep) / steps.length) * 100)}% Complete</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div 
+              className="bg-primary h-2 rounded-full transition-all duration-300" 
+              style={{ width: `${((currentStep) / steps.length) * 100}%` }}
+            />
+          </div>
+        </div>
 
         <div className="mt-8">
           <Card>
