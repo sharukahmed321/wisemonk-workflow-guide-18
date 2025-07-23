@@ -10,6 +10,7 @@ export async function generateMSAWithSharedDrive(
   let tempDocId: string | null = null;
   
   try {
+    // Get environment variables
     const envValidation = validateAndCorrectEnvironmentVariables();
     if (!envValidation.valid || !envValidation.correctedVars) {
       throw new Error('Environment configuration error');
@@ -35,7 +36,7 @@ export async function generateMSAWithSharedDrive(
       try {
         await deleteDocument(tempDocId);
       } catch (cleanupError) {
-        console.error('Failed to cleanup temporary document:', cleanupError.message);
+        console.warn('Failed to cleanup temporary document:', cleanupError.message);
       }
     }
   }
@@ -47,7 +48,7 @@ async function createDocumentInSharedDrive(
   sharedDriveId: string,
   userData: any
 ): Promise<string> {
-  const tempDocTitle = `MSA_${userData.first_name}_${userData.last_name}_${Date.now()}`;
+  const tempDocTitle = `MSA_SharedDrive_${userData.first_name}_${userData.last_name}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
   const response = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
     method: 'POST',

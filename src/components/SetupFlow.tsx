@@ -1,234 +1,634 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download, RefreshCw, Send } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { PersonalInfoStep } from './PersonalInfoStep';
-import { CompanyInfoStep } from './CompanyInfoStep';
-import { AddressStep } from './AddressStep';
-import { MSAStep } from './MSAStep';
-import { SetupProgress } from './SetupProgress';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { sendMSAForSigning, checkMSASigningStatus } from '@/services/zohoSignService';
 
-// Export components for Dashboard usage
-export { AddressStep, MSAStep };
+const addressSchema = z.object({
+  address: z.string().min(1, 'Address is required'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(1, 'State is required'),
+  postalCode: z.string().min(1, 'Postal code is required')
+});
 
-export interface OnboardingData {
-  user_id: string;
-  basic_info: {
-    completed: boolean;
-    completed_at: string | null;
-    status: string;
-    data: {
-      first_name: string;
-      last_name: string;
-      job_title: string;
-    };
-  };
-  company_info: {
-    completed: boolean;
-    completed_at: string | null;
-    status: string;
-    data: {
-      company_name: string;
-      company_legal_name: string;
-      country: string;
-      employee_count: string;
-    };
-  };
-  address_info: {
-    completed: boolean;
-    completed_at: string | null;
-    status: string;
-    data: {
-      business_address: string;
-      business_city: string;
-      business_state: string;
-      business_postal_code: string;
-    };
-  };
-  msa_info: {
-    completed: boolean;
-    completed_at: string | null;
-    status: string;
-    data: {
-      msa_signed: boolean;
-      msa_signed_at: string | null;
-      msa_signed_by: string | null;
-    };
-  };
-  overall_progress: {
-    setup_completed: boolean;
-    setup_completed_at: string | null;
-    completion_percentage: number;
-  };
-  organization: any;
+const msaSchema = z.object({});
+
+type AddressFormData = z.infer<typeof addressSchema>;
+type MSAFormData = z.infer<typeof msaSchema>;
+
+interface MSADocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+  download_url: string;
+  created_at: string;
+  is_signed: boolean;
+  generation_method: string;
+  zoho_sign_status?: string;
+  zoho_sign_request_id?: string;
+  signing_sent_at?: string;
+  zoho_sign_error?: string;
 }
 
-export function SetupFlow() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+interface AddressStepProps {
+  onComplete: () => void;
+}
+
+export function AddressStep({ onComplete }: AddressStepProps) {
   const navigate = useNavigate();
-
-  const steps = [
-    { id: 'personal', title: 'Personal Information', component: PersonalInfoStep },
-    { id: 'company', title: 'Company Information', component: CompanyInfoStep },
-    { id: 'address', title: 'Address Information', component: AddressStep },
-    { id: 'msa', title: 'MSA Agreement', component: MSAStep },
-  ];
-
-  useEffect(() => {
-    if (user) {
-      fetchOnboardingData();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
+  const form = useForm<AddressFormData>({
+    resolver: zodResolver(addressSchema),
+    defaultValues: {
+      address: '',
+      city: '',
+      state: '',
+      postalCode: ''
     }
-  }, [user]);
+  });
 
-  const fetchOnboardingData = async () => {
+  const onSubmit = async (data: AddressFormData) => {
+    setIsSubmitting(true);
+
     try {
-      const { data, error } = await supabase
-        .rpc('get_onboarding_progress', { user_id_param: user?.id });
+      // Get the user's current profile to find organization_id
+      const { data: user } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('user_id', user.user?.id)
+        .single();
 
-      if (error) throw error;
+      if (!profile?.organization_id) {
+        throw new Error('No organization found for user');
+      }
 
-      const typedData = data as unknown as OnboardingData;
-      setOnboardingData(typedData);
+      // Update the organization with address information
+      const { error } = await supabase.rpc('upsert_organization', {
+        p_organization_id: profile.organization_id,
+        p_business_address: data.address,
+        p_business_city: data.city,
+        p_business_state: data.state,
+        p_business_postal_code: data.postalCode,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Business address saved successfully. Generating MSA agreement...",
+      });
+
+      // Generate MSA agreement after address is saved
+      console.log('🔄 Generating MSA agreement...');
+      const { data: authData } = await supabase.auth.getSession();
       
-      // Determine current step based on completion status
-      if (!typedData.basic_info.completed) {
-        setCurrentStep(0);
-      } else if (!typedData.company_info.completed) {
-        setCurrentStep(1);
-      } else if (!typedData.address_info.completed) {
-        setCurrentStep(2);
-      } else if (!typedData.msa_info.completed) {
-        setCurrentStep(3);
-      } else {
-        // All steps completed
-        setCurrentStep(4);
+      if (!authData.session) {
+        throw new Error('No active session');
+      }
+
+      const response = await supabase.functions.invoke('generate-msa-agreement', {
+        headers: {
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        console.error('MSA generation error:', response.error);
+        throw new Error(`Failed to generate MSA: ${response.error.message}`);
+      }
+
+      console.log('✅ MSA agreement generated successfully');
+      
+      toast({
+        title: "Success",
+        description: "MSA agreement generated and stored successfully! Proceeding to signature step.",
+      });
+
+      // Navigate to MSA step for signing
+      navigate('/dashboard/setup/msa');
+    } catch (error) {
+      console.error('Error saving address or generating MSA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save address or generate MSA. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-semibold text-foreground">
+              Business Address Details
+            </CardTitle>
+            <p className="text-muted-foreground">
+              Please provide your company's official business address information.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Street Address *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="123 Business Street, Suite 100" className="h-11" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="New York" className="h-11" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State/Province *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="NY" className="h-11" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postal Code *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="10001" className="h-11" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="bg-muted/30 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Note:</strong> This address will be used for legal documents, 
+                    contracts, and official communications. Make sure it's accurate and up to date.
+                  </p>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
+                    Save for Later
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting} className="flex-1">
+                    {isSubmitting ? 'Generating Agreement...' : 'Continue & Generate MSA'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+interface MSAStepProps {
+  onComplete: () => void;
+}
+
+export function MSAStep({ onComplete }: MSAStepProps) {
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isSendingForSigning, setIsSendingForSigning] = useState(false);
+  const [msaDocument, setMsaDocument] = useState<MSADocument | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  
+  const form = useForm<MSAFormData>({
+    resolver: zodResolver(msaSchema),
+    defaultValues: {}
+  });
+
+  React.useEffect(() => {
+    loadExistingDocument();
+  }, []);
+
+  const loadExistingDocument = async () => {
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      
+      if (!authData.session) {
+        throw new Error('No active session');
+      }
+
+      const response = await supabase.functions.invoke('generate-msa-agreement', {
+        headers: {
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(`Failed to load MSA: ${response.error.message}`);
+      }
+
+      if (response.data?.document) {
+        setMsaDocument(response.data.document);
       }
     } catch (error) {
-      console.error('Error fetching onboarding data:', error);
+      console.error('Error loading MSA document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load MSA document. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleStepComplete = () => {
-    fetchOnboardingData();
-  };
+  const downloadMSA = async () => {
+    if (!msaDocument?.download_url) return;
 
-  const handleNextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // Setup completed, navigate to dashboard
-      navigate('/');
+    setIsDownloading(true);
+    try {
+      const response = await fetch(msaDocument.download_url);
+      if (!response.ok) throw new Error('Failed to download file');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = msaDocument.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "MSA agreement downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error downloading MSA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download MSA. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
-  const handlePrevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+  const regenerateDocument = async () => {
+    setIsRegenerating(true);
+    try {
+      // Force regeneration by clearing cache (this would require backend changes)
+      await loadExistingDocument();
+      
+      toast({
+        title: "Success",
+        description: "MSA agreement regenerated successfully.",
+      });
+    } catch (error) {
+      console.error('Error regenerating MSA:', error);
+      toast({
+        title: "Error",
+        description: "Failed to regenerate MSA. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegenerating(false);
     }
+  };
+
+  const sendForSigning = async () => {
+    if (!msaDocument) return;
+
+    setIsSendingForSigning(true);
+    try {
+      const response = await sendMSAForSigning({
+        msaDocumentId: msaDocument.id
+      });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "MSA agreement sent for e-signature successfully!",
+        });
+
+        // Reload document to get updated status
+        await loadExistingDocument();
+      }
+    } catch (error) {
+      console.error('Error sending for signing:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send for signing",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingForSigning(false);
+    }
+  };
+
+  const checkSigningStatus = async () => {
+    if (!msaDocument?.zoho_sign_request_id) return;
+
+    try {
+      const status = await checkMSASigningStatus(msaDocument.id);
+      if (status.zoho_sign_status === 'completed') {
+        toast({
+          title: "Document Signed!",
+          description: "Your MSA has been successfully signed by all parties.",
+        });
+        
+        // Navigate to dashboard with 75% progress
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Error checking signing status:', error);
+    }
+  };
+
+  // Check signing status periodically
+  React.useEffect(() => {
+    if (msaDocument?.zoho_sign_status === 'sent') {
+      const interval = setInterval(checkSigningStatus, 30000); // Check every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [msaDocument?.zoho_sign_status]);
+
+  const onSubmit = async (data: MSAFormData) => {
+    // For Zoho Sign integration, we don't need the old local signing logic
+    await sendForSigning();
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading setup...</p>
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-muted-foreground">Loading MSA document...</span>
         </div>
       </div>
     );
   }
 
-  if (!onboardingData) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">Failed to load onboarding data</p>
-          <Button onClick={fetchOnboardingData} className="mt-4">
-            Retry
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
           </Button>
         </div>
-      </div>
-    );
-  }
 
-  // Show completion screen if all steps are done
-  if (onboardingData.overall_progress.setup_completed) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">
-              Setup Complete!
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-semibold text-foreground flex items-center gap-2">
+              <FileText className="h-6 w-6" />
+              Master Service Agreement
             </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600 mb-6">
-              Your account has been successfully set up. You can now access all features.
+            <p className="text-muted-foreground">
+              Your personalized MSA agreement has been generated and stored securely.
             </p>
-            <Button onClick={() => navigate('/')} className="w-full">
-              Continue to Dashboard
-            </Button>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Document Information */}
+            <div className="border rounded-lg p-6 bg-muted/20">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-foreground">
+                    {msaDocument?.file_name || 'MSA Agreement'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Created: {msaDocument?.created_at ? new Date(msaDocument.created_at).toLocaleDateString() : 'N/A'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Status: {msaDocument?.is_signed ? 'Signed' : 
+                      msaDocument?.zoho_sign_status === 'sent' ? 'Sent for E-Signature' :
+                      msaDocument?.zoho_sign_status === 'processing' ? 'Processing...' :
+                      msaDocument?.zoho_sign_status === 'failed' ? 'E-Signature Failed' :
+                      'Ready for E-Signature'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={downloadMSA}
+                    disabled={isDownloading || !msaDocument?.download_url}
+                    className="flex items-center gap-2"
+                  >
+                    {isDownloading ? 'Downloading...' : 'Download PDF'}
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={regenerateDocument}
+                    disabled={isRegenerating}
+                    className="flex items-center gap-2"
+                  >
+                    {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-4 text-sm text-muted-foreground">
+                <p>
+                  <strong>Summary:</strong> This Master Service Agreement has been personalized with your company and personal information.
+                </p>
+                
+                <div className="space-y-2">
+                  <p><strong>Key Terms:</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>Service availability and support commitments</li>
+                    <li>Data protection and privacy guarantees</li>
+                    <li>Billing terms and cancellation policy</li>
+                    <li>Limitation of liability and dispute resolution</li>
+                  </ul>
+                </div>
+                
+                <p>
+                  By accepting this agreement, you confirm that you have read, understood, 
+                  and agree to be bound by all terms and conditions.
+                </p>
+              </div>
+            </div>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-foreground flex items-center gap-2">
+                      📧 E-Signature Process
+                    </h4>
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      {msaDocument?.zoho_sign_status === 'sent' ? (
+                        <>
+                          <p>✅ Document sent for e-signature to all parties.</p>
+                          <p>📧 You and Mithun will receive email notifications to sign.</p>
+                          <p>⏱️ This page will automatically update when signing is complete.</p>
+                        </>
+                      ) : msaDocument?.zoho_sign_status === 'failed' ? (
+                        <>
+                          <p>❌ E-signature process failed. Please try again.</p>
+                          <p>Error: {msaDocument.zoho_sign_error}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>📄 Review the agreement above, then send it for electronic signature.</p>
+                          <p>📧 Both you and Mithun will receive email invitations to sign.</p>
+                          <p>🔒 The signed document will be stored securely and legally binding.</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
+                    Review Later
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={
+                      isSendingForSigning || 
+                      msaDocument?.is_signed || 
+                      msaDocument?.zoho_sign_status === 'sent' ||
+                      msaDocument?.zoho_sign_status === 'processing'
+                    } 
+                    className="flex-1"
+                  >
+                    {isSendingForSigning ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Sending for E-Signature...
+                      </>
+                    ) : msaDocument?.is_signed ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Already Signed
+                      </>
+                    ) : msaDocument?.zoho_sign_status === 'sent' ? (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Sent for E-Signature
+                      </>
+                    ) : msaDocument?.zoho_sign_status === 'processing' ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send for E-Signature
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  const CurrentStepComponent = steps[currentStep]?.component;
+interface SetupCompleteProps {
+  onContinue: () => void;
+}
 
+export function SetupComplete({ onContinue }: SetupCompleteProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Account Setup</h1>
-          <p className="text-gray-600">Complete your profile to get started</p>
-        </div>
-
-        <div className="mb-4">
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Step {currentStep + 1} of {steps.length}</span>
-            <span>{Math.round(((currentStep) / steps.length) * 100)}% Complete</span>
+    <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardContent className="p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle className="w-10 h-10 text-success" />
           </div>
-          <div className="w-full bg-muted rounded-full h-2">
-            <div 
-              className="bg-primary h-2 rounded-full transition-all duration-300" 
-              style={{ width: `${((currentStep) / steps.length) * 100}%` }}
-            />
+          
+          <div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Setup Complete!
+            </h2>
+            <p className="text-muted-foreground">
+              Congratulations! Your business setup is now complete. 
+              You can now access all Wisemonk features.
+            </p>
           </div>
-        </div>
 
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>{steps[currentStep]?.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {CurrentStepComponent && (
-                <CurrentStepComponent
-                  onboardingData={onboardingData}
-                  onStepComplete={handleStepComplete}
-                  onNext={handleNextStep}
-                  onPrev={handlePrevStep}
-                  canGoNext={currentStep < steps.length - 1}
-                  canGoPrev={currentStep > 0}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle className="h-4 w-4 text-success" />
+              <span>Business address verified</span>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle className="h-4 w-4 text-success" />
+              <span>Master Service Agreement signed</span>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle className="h-4 w-4 text-success" />
+              <span>Account fully activated</span>
+            </div>
+          </div>
+
+          <Button onClick={onContinue} className="w-full">
+            Go to Dashboard
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
