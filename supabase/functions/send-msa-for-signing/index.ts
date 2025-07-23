@@ -203,15 +203,15 @@ const createZohoSignRequest = async (accessToken, pdfUrl, fileName, userProfile,
  */
 const submitDocumentForSignature = async (accessToken, requestId, documentId, userProfile) => {
   try {
-    console.log(`Submitting request ${requestId} for signature with Client ID: ${userProfile.user_id}`);
+    console.log(`Submitting request ${requestId} for signature`);
     
-    // Create text fields for the document
+    // Create fields for the signers (you may need to adjust coordinates and page numbers)
     const textFields = [
       {
         document_id: documentId,
-        field_name: `TextField_Client_${userProfile.user_id}`,
+        field_name: `TextField_User_${userProfile.user_id}`,
         field_type_name: "Textfield",
-        field_label: "Client ID",
+        field_label: `User ID`,
         field_category: "Textfield",
         default_value: userProfile.user_id,
         abs_width: "200",
@@ -219,7 +219,7 @@ const submitDocumentForSignature = async (accessToken, requestId, documentId, us
         is_mandatory: true,
         x_coord: "30",
         y_coord: "700",
-        page_no: 8
+        page_no: 1  // Adjust page number as needed
       }
     ];
 
@@ -229,10 +229,19 @@ const submitDocumentForSignature = async (accessToken, requestId, documentId, us
           {
             action_type: "SIGN",
             recipient_name: "Mithun",
-            recipient_email: "mithun@wisemonk.co",
-            signing_order: -1,
+            recipient_email: "mithun@wisemonk.io",
+            signing_order: 1,
             fields: {
               text_fields: textFields
+            }
+          },
+          {
+            action_type: "SIGN",
+            recipient_name: `${userProfile.first_name} ${userProfile.last_name}`,
+            recipient_email: userProfile.email,
+            signing_order: 2,
+            fields: {
+              text_fields: [] // Add fields for second signer if needed
             }
           }
         ]
@@ -249,7 +258,7 @@ const submitDocumentForSignature = async (accessToken, requestId, documentId, us
     });
 
     console.log(`Submit request response status: ${response.status}`);
-
+    
     if (response.status !== 200) {
       const responseText = await response.text();
       throw new Error(`Failed to submit request: ${responseText}`);
@@ -258,7 +267,6 @@ const submitDocumentForSignature = async (accessToken, requestId, documentId, us
     const submitResponse = await response.json();
     console.log('Document submitted for signature successfully');
     return submitResponse;
-
   } catch (error) {
     console.error(`Error submitting document for signature: ${error.message}`);
     throw error;
