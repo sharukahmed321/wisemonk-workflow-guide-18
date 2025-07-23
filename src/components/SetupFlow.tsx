@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download, RefreshCw, Send } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { sendMSAForSigning, checkMSASigningStatus } from '@/services/zohoSignService';
 
 const addressSchema = z.object({
   address: z.string().min(1, 'Address is required'),
@@ -31,6 +32,10 @@ interface MSADocument {
   created_at: string;
   is_signed: boolean;
   generation_method: string;
+  zoho_sign_status?: string;
+  zoho_sign_request_id?: string;
+  signing_sent_at?: string;
+  zoho_sign_error?: string;
 }
 
 interface AddressStepProps {
@@ -239,6 +244,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isSendingForSigning, setIsSendingForSigning] = useState(false);
   const [msaDocument, setMsaDocument] = useState<MSADocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -341,68 +347,66 @@ export function MSAStep({ onComplete }: MSAStepProps) {
     }
   };
 
-  const onSubmit = async (data: MSAFormData) => {
-    setIsSubmitting(true);
+  const sendForSigning = async () => {
+    if (!msaDocument) return;
 
+    setIsSendingForSigning(true);
     try {
-      const user = (await supabase.auth.getUser()).data.user;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, organization_id')
-        .eq('user_id', user?.id)
-        .single();
-
-      const signedBy = profile 
-        ? `${profile.first_name} ${profile.last_name}`.trim() 
-        : 'Unknown User';
-
-      // Update the MSA document as signed
-      if (msaDocument) {
-        const { error: docError } = await supabase
-          .from('msa_documents')
-          .update({
-            is_signed: true,
-            signed_at: new Date().toISOString(),
-            signed_by: signedBy,
-          })
-          .eq('id', msaDocument.id);
-
-        if (docError) {
-          console.error('Error updating MSA document:', docError);
-        }
-      }
-
-      // Update profile MSA status
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          msa_signed: true,
-          msa_signed_at: new Date().toISOString(),
-          msa_signed_by: signedBy,
-        })
-        .eq('user_id', user?.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "Master Service Agreement signed successfully.",
+      const response = await sendMSAForSigning({
+        msaDocumentId: msaDocument.id
       });
 
-      // Navigate back to dashboard
-      navigate('/dashboard');
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "MSA agreement sent for e-signature successfully!",
+        });
+
+        // Reload document to get updated status
+        await loadExistingDocument();
+      }
     } catch (error) {
-      console.error('Error signing MSA:', error);
+      console.error('Error sending for signing:', error);
       toast({
         title: "Error",
-        description: "Failed to sign the agreement. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send for signing",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsSendingForSigning(false);
     }
+  };
+
+  const checkSigningStatus = async () => {
+    if (!msaDocument?.zoho_sign_request_id) return;
+
+    try {
+      const status = await checkMSASigningStatus(msaDocument.id);
+      if (status.zoho_sign_status === 'completed') {
+        toast({
+          title: "Document Signed!",
+          description: "Your MSA has been successfully signed by all parties.",
+        });
+        
+        // Navigate to dashboard with 75% progress
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Error checking signing status:', error);
+    }
+  };
+
+  // Check signing status periodically
+  React.useEffect(() => {
+    if (msaDocument?.zoho_sign_status === 'sent') {
+      const interval = setInterval(checkSigningStatus, 30000); // Check every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [msaDocument?.zoho_sign_status]);
+
+  const onSubmit = async (data: MSAFormData) => {
+    // For Zoho Sign integration, we don't need the old local signing logic
+    await sendForSigning();
   };
 
   if (isLoading) {
@@ -448,7 +452,11 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                     Created: {msaDocument?.created_at ? new Date(msaDocument.created_at).toLocaleDateString() : 'N/A'}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Status: {msaDocument?.is_signed ? 'Signed' : 'Pending Signature'}
+                    Status: {msaDocument?.is_signed ? 'Signed' : 
+                      msaDocument?.zoho_sign_status === 'sent' ? 'Sent for E-Signature' :
+                      msaDocument?.zoho_sign_status === 'processing' ? 'Processing...' :
+                      msaDocument?.zoho_sign_status === 'failed' ? 'E-Signature Failed' :
+                      'Ready for E-Signature'}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -502,12 +510,27 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                 <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
                   <div className="space-y-3">
                     <h4 className="font-semibold text-foreground flex items-center gap-2">
-                      🔐 What happens next?
+                      📧 E-Signature Process
                     </h4>
                     <div className="text-sm text-muted-foreground space-y-2">
-                      <p>You can download and review the agreement above, then proceed to sign it electronically.</p>
-                      <p>This is legally binding and a copy will be saved for your records.</p>
-                      <p>The signed document will be stored securely in your organization's document vault.</p>
+                      {msaDocument?.zoho_sign_status === 'sent' ? (
+                        <>
+                          <p>✅ Document sent for e-signature to all parties.</p>
+                          <p>📧 You and Mithun will receive email notifications to sign.</p>
+                          <p>⏱️ This page will automatically update when signing is complete.</p>
+                        </>
+                      ) : msaDocument?.zoho_sign_status === 'failed' ? (
+                        <>
+                          <p>❌ E-signature process failed. Please try again.</p>
+                          <p>Error: {msaDocument.zoho_sign_error}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>📄 Review the agreement above, then send it for electronic signature.</p>
+                          <p>📧 Both you and Mithun will receive email invitations to sign.</p>
+                          <p>🔒 The signed document will be stored securely and legally binding.</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -516,8 +539,42 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                   <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
                     Review Later
                   </Button>
-                  <Button type="submit" disabled={isSubmitting || msaDocument?.is_signed} className="flex-1">
-                    {isSubmitting ? 'Processing...' : msaDocument?.is_signed ? 'Already Signed' : 'Accept & Sign Agreement'}
+                  <Button 
+                    type="submit" 
+                    disabled={
+                      isSendingForSigning || 
+                      msaDocument?.is_signed || 
+                      msaDocument?.zoho_sign_status === 'sent' ||
+                      msaDocument?.zoho_sign_status === 'processing'
+                    } 
+                    className="flex-1"
+                  >
+                    {isSendingForSigning ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Sending for E-Signature...
+                      </>
+                    ) : msaDocument?.is_signed ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Already Signed
+                      </>
+                    ) : msaDocument?.zoho_sign_status === 'sent' ? (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Sent for E-Signature
+                      </>
+                    ) : msaDocument?.zoho_sign_status === 'processing' ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send for E-Signature
+                      </>
+                    )}
                   </Button>
                 </div>
               </form>
