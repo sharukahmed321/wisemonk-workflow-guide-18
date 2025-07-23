@@ -267,11 +267,13 @@ const submitDocumentForSignature = async (accessToken, requestId, documentId, us
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', {
+      headers: corsHeaders
+    });
   }
 
   let requestBody = null;
-  let msaDocumentId = null;
+  let userId = null;
 
   try {
     console.log('=== Send MSA for Signing Function Started ===');
@@ -279,33 +281,55 @@ serve(async (req) => {
     // Parse and validate request body
     requestBody = await req.json();
 
+    // Enhanced input validation
     if (!requestBody || typeof requestBody !== 'object') {
       console.error('❌ Invalid request body format');
       return new Response(JSON.stringify({
         error: 'Invalid request body format'
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Validate request size (max 50KB for signing requests)
+    const requestSize = JSON.stringify(requestBody).length;
+    if (requestSize > 50 * 1024) {
+      console.error(`❌ Request too large: ${requestSize} bytes`);
+      return new Response(JSON.stringify({
+        error: 'Request payload too large'
+      }), {
+        status: 413,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       });
     }
 
     const { msaDocumentId: reqMsaDocumentId } = requestBody;
-    msaDocumentId = reqMsaDocumentId;
+    userId = reqMsaDocumentId;
 
-    // Validate MSA document ID
+    // Validate User ID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!msaDocumentId || typeof msaDocumentId !== 'string' || !uuidRegex.test(msaDocumentId)) {
-      console.error('❌ Invalid MSA document ID format:', msaDocumentId);
+    if (!userId || typeof userId !== 'string' || !uuidRegex.test(userId)) {
+      console.error('❌ Invalid User ID format:', userId);
       return new Response(JSON.stringify({
-        error: 'Valid MSA document ID is required'
+        error: 'Valid User ID is required'
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       });
     }
 
     console.log('✅ Request validation passed');
-    console.log('Validated MSA document ID:', msaDocumentId);
+    console.log('Validated User ID:', userId);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -322,7 +346,7 @@ serve(async (req) => {
     const { data: msaDoc, error: fetchError } = await supabase
       .from('msa_documents')
       .select('*')
-      .eq('id', msaDocumentId)
+      .eq('id', userId)
       .single();
 
     if (fetchError || !msaDoc) {
@@ -332,7 +356,10 @@ serve(async (req) => {
         details: fetchError?.message
       }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       });
     }
 
@@ -342,7 +369,10 @@ serve(async (req) => {
         error: 'No PDF available for signing. Please generate the agreement first.'
       }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       });
     }
 
@@ -363,7 +393,10 @@ serve(async (req) => {
         details: profileError?.message
       }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       });
     }
 
@@ -387,7 +420,7 @@ serve(async (req) => {
         signing_sent_at: new Date().toISOString(),
         zoho_sign_status: 'processing'
       })
-      .eq('id', msaDocumentId);
+      .eq('id', userId);
 
     // Get Zoho access token
     console.log('Getting Zoho access token...');
@@ -424,7 +457,7 @@ serve(async (req) => {
         zoho_sign_status: 'sent',
         signing_sent_at: new Date().toISOString()
       })
-      .eq('id', msaDocumentId);
+      .eq('id', userId);
 
     if (updateError) {
       console.error('Failed to update MSA document record:', updateError);
@@ -436,7 +469,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       message: `MSA document sent for signing to ${userProfile.first_name} ${userProfile.last_name} and Mithun`,
-      msa_document_id: msaDocumentId,
+      msa_document_id: userId,
       user_name: `${userProfile.first_name} ${userProfile.last_name}`,
       organization_name: userProfile.organizations?.name,
       zoho_sign: {
@@ -446,7 +479,10 @@ serve(async (req) => {
       },
       sent_at: new Date().toISOString()
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
 
   } catch (error) {
@@ -454,8 +490,8 @@ serve(async (req) => {
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
 
-    // Try to update MSA document record with error (only if we have msaDocumentId)
-    if (msaDocumentId) {
+    // Try to update MSA document record with error (only if we have userId)
+    if (userId) {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL');
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -469,7 +505,7 @@ serve(async (req) => {
               zoho_sign_error: error.message,
               updated_at: new Date().toISOString()
             })
-            .eq('id', msaDocumentId);
+            .eq('id', userId);
           console.log('✅ Updated MSA document record with error status');
         }
       } catch (updateError) {
@@ -480,11 +516,14 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: false,
       error: error.message,
-      msa_document_id: msaDocumentId,
+      msa_document_id: userId,
       timestamp: new Date().toISOString()
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
   }
 });
