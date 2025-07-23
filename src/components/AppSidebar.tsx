@@ -1,151 +1,79 @@
 
-import React from 'react';
-import {
-  Home as HomeIcon,
-  Settings as SettingsIcon,
-  LayoutDashboard as LayoutDashboardIcon,
-  ImageIcon,
-  LucideIcon,
-  PackageIcon,
-  Plus,
-  KanbanSquare,
-  Calendar,
-  HelpCircle,
-  LogOut,
-} from 'lucide-react';
-
-import { Users, Settings, Home, Building, FileText, UserPlus } from 'lucide-react';
-import { useLocation, Link } from 'react-router-dom';
+import { Home, Settings, Calendar, Users, FileText, BarChart3, LogOut } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  SidebarRail,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
 } from '@/components/ui/sidebar';
+import { Logo } from './Logo';
 
-interface NavItem {
-  title: string;
-  url: string;
-  icon?: LucideIcon;
-  items?: NavItem[];
-}
-
-interface SidebarProps {
-  data: {
-    navMain: NavItem[];
-  };
-}
+const menuItems = [
+  { title: 'Dashboard', icon: Home, url: '/dashboard' },
+  { title: 'Calendar', icon: Calendar, url: '/dashboard/calendar' },
+  { title: 'Reports', icon: BarChart3, url: '/dashboard/reports' },
+  { title: 'Documents', icon: FileText, url: '/dashboard/documents' },
+  { title: 'Settings', icon: Settings, url: '/dashboard/settings' },
+];
 
 export function AppSidebar() {
   const location = useLocation();
-  
-  const data = {
-    navMain: [
-      {
-        title: 'Dashboard',
-        url: '/dashboard',
-        icon: Home,
-        items: []
-      },
-      {
-        title: 'People',
-        url: '/dashboard/people',
-        icon: Users,
-        items: [
-          {
-            title: 'All People',
-            url: '/dashboard/people',
-          },
-          {
-            title: 'Add Employee',
-            url: '/dashboard/people/add',
-          }
-        ]
-      },
-      {
-        title: 'Organization',
-        url: '/dashboard/organization',
-        icon: Building,
-        items: []
-      },
-      {
-        title: 'Documents',
-        url: '/dashboard/documents',
-        icon: FileText,
-        items: []
-      },
-      {
-        title: 'Settings',
-        url: '/dashboard/settings',
-        icon: Settings,
-        items: []
-      }
-    ]
-  };
+  const { logout } = useAuth();
 
   return (
     <Sidebar>
-      <SidebarRail>
-        <SidebarMenuButton />
-      </SidebarRail>
+      <SidebarHeader>
+        <Logo />
+      </SidebarHeader>
+      
       <SidebarContent>
-        <SidebarHeader>
-          <div className="flex items-center space-x-2">
-            <span className="font-bold">HR App</span>
-          </div>
-        </SidebarHeader>
-        <SidebarMenu>
-          {data.navMain.map((group, i) => (
-            <SidebarGroup key={i}>
-              {group.items && group.items.length > 0 ? (
-                <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === group.url}>
-                      <Link to={group.url} className="flex items-center gap-2">
-                        {group.icon && <group.icon className="h-4 w-4" />}
-                        {group.title}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {group.items.map((item, j) => (
-                    <SidebarMenuSub key={j}>
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton asChild isActive={location.pathname === item.url}>
-                          <Link to={item.url}>{item.title}</Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    </SidebarMenuSub>
-                  ))}
-                </>
-              ) : (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.pathname === group.url}>
-                    <Link to={group.url} className="flex items-center gap-2">
-                      {group.icon && <group.icon className="h-4 w-4" />}
-                      {group.title}
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location.pathname === item.url}
+                  >
+                    <Link to={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
-            </SidebarGroup>
-          ))}
-        </SidebarMenu>
-        <SidebarFooter>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm">© 2023 HR App</span>
-          </div>
-        </SidebarFooter>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
+      
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Button 
+                variant="ghost" 
+                onClick={logout}
+                className="w-full justify-start"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </Button>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
