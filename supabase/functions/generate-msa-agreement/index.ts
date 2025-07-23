@@ -2,8 +2,9 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
-import { generateAgreementPDF } from './pdf-generator.ts';
-import { getGoogleAccessToken } from './google-auth.ts';
+import { createMSAPlaceholders } from './placeholders.ts';
+import { generateMSAWithSharedDrive } from './google-docs-shared-drive.ts';
+import { validateAndCorrectEnvironmentVariables } from './environment-validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -102,7 +103,15 @@ serve(async (req) => {
       });
     }
 
-    // Prepare MSA data for placeholder replacement
+    // Validate environment variables
+    const envValidation = validateAndCorrectEnvironmentVariables();
+    if (!envValidation.valid || !envValidation.correctedVars) {
+      throw new Error(`Environment configuration error: ${envValidation.issues.join('; ')}`);
+    }
+    
+    const { templateDocId } = envValidation.correctedVars;
+
+    // Prepare MSA data
     const msaData = {
       first_name: profileData.first_name,
       last_name: profileData.last_name,
@@ -116,8 +125,11 @@ serve(async (req) => {
       currentDate: new Date().toISOString(),
     };
 
+    // Create placeholders
+    const placeholders = createMSAPlaceholders(msaData);
+
     // Generate the MSA agreement PDF
-    const pdfBuffer = await generateAgreementPDF(msaData);
+    const pdfBuffer = await generateMSAWithSharedDrive(templateDocId, placeholders, msaData);
 
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -172,7 +184,6 @@ serve(async (req) => {
       .from('msa-agreements')
       .createSignedUrl(filePath, 60 * 60);
 
-    // Return document metadata and download URL
     return new Response(JSON.stringify({
       success: true,
       document: {

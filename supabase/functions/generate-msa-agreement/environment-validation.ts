@@ -1,5 +1,5 @@
 
-// Environment variable validation and correction module
+// Simplified environment variable validation for production
 export interface ValidatedEnvironmentVars {
   templateDocId: string;
   sharedDriveId: string;
@@ -32,31 +32,29 @@ export function validateAndCorrectEnvironmentVariables(): ValidationResult {
     result.issues.push('GOOGLE_SERVICE_ACCOUNT_KEY is missing');
   }
   
-  // Fix: Check if DEFAULT_GOOGLE_DOC_ID is incorrectly set to Shared Drive ID
+  // Auto-correct template and shared drive IDs
   let templateDocId = rawTemplateDocId;
   let sharedDriveId = rawSharedDriveId;
   
+  // Fix common configuration errors
   if (rawTemplateDocId === KNOWN_SHARED_DRIVE_ID || rawTemplateDocId === rawSharedDriveId) {
     templateDocId = KNOWN_TEMPLATE_DOC_ID;
-    result.issues.push(`DEFAULT_GOOGLE_DOC_ID was incorrectly set to Shared Drive ID. Auto-corrected to: ${KNOWN_TEMPLATE_DOC_ID}`);
   }
   
   if (!templateDocId) {
     templateDocId = KNOWN_TEMPLATE_DOC_ID;
-    result.issues.push(`DEFAULT_GOOGLE_DOC_ID was missing. Using fallback: ${KNOWN_TEMPLATE_DOC_ID}`);
   }
   
   if (!sharedDriveId) {
     sharedDriveId = KNOWN_SHARED_DRIVE_ID;
-    result.issues.push(`GOOGLE_SHARED_DRIVE_ID was missing. Using fallback: ${KNOWN_SHARED_DRIVE_ID}`);
   }
   
-  // Final validation - ensure they're different
+  // Ensure they're different
   if (templateDocId === sharedDriveId) {
     templateDocId = KNOWN_TEMPLATE_DOC_ID;
     sharedDriveId = KNOWN_SHARED_DRIVE_ID;
     result.valid = false;
-    result.issues.push('Template and Shared Drive IDs cannot be identical. Force-corrected both.');
+    result.issues.push('Template and Shared Drive IDs corrected');
   }
   
   result.correctedVars = {
