@@ -201,19 +201,19 @@ const createZohoSignRequest = async (accessToken, pdfUrl, fileName, userProfile,
 /**
  * Submit document for signature with text fields for MSA
  */
-const submitDocumentForSignature = async (accessToken, requestId, documentId, msaDocumentId) => {
+const submitDocumentForSignature = async (accessToken, requestId, documentId, userProfile) => {
   try {
-    console.log(`Submitting request ${requestId} for signature with MSA document ID: ${msaDocumentId}`);
+    console.log(`Submitting request ${requestId} for signature with user ID: ${userProfile.user_id}`);
     
     // Create text fields for the MSA document (adjust page number and coordinates as needed)
     const textFields = [
       {
         document_id: documentId,
-        field_name: `TextField_MSA_${msaDocumentId}`,
+        field_name: `TextField_User_${userProfile.user_id}`,
         field_type_name: "Textfield",
-        field_label: `MSA Document ID`,
+        field_label: `User ID`,
         field_category: "Textfield",
-        default_value: msaDocumentId,
+        default_value: userProfile.user_id,
         abs_width: "200",
         abs_height: "18",
         is_mandatory: true,
@@ -412,7 +412,7 @@ serve(async (req) => {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Submit document for signature with text fields
-    await submitDocumentForSignature(accessToken, requestId, documentId, msaDocumentId);
+    await submitDocumentForSignature(accessToken, requestId, documentId, userProfile);
 
     // Update MSA document record with Zoho details
     console.log('Updating MSA document record with Zoho details...');
