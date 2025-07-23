@@ -27,7 +27,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
 
   return (
     <Sidebar>
@@ -64,7 +64,7 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <Button 
                 variant="ghost" 
-                onClick={logout}
+                onClick={signOut}
                 className="w-full justify-start"
               >
                 <LogOut className="h-4 w-4" />

@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KPICards } from './KPICards';
-import { Overview } from './Overview';
+import Overview from './Overview';
 import { QuickActions } from './QuickActions';
 import { Birthdays } from './Birthdays';
 import { WorkAnniversaries } from './WorkAnniversaries';

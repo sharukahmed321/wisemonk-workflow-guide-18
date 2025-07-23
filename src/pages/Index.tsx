@@ -11,6 +11,16 @@ import Settings from './Settings';
 export default function Index() {
   const { user, loading } = useAuth();
 
+  const handleSignInComplete = () => {
+    // Auth context will handle the state update
+    console.log('Sign in completed');
+  };
+
+  const handleSignUpComplete = () => {
+    // Auth context will handle the state update
+    console.log('Sign up completed');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -25,7 +35,10 @@ export default function Index() {
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-screen">
             <BrandingSection />
-            <AuthSection />
+            <AuthSection 
+              onSignInComplete={handleSignInComplete}
+              onSignUpComplete={handleSignUpComplete}
+            />
           </div>
         </div>
       </div>
