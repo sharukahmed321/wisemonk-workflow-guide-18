@@ -1,74 +1,140 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
 import {
-  Home, Users, Clock, Settings
+  Home as HomeIcon,
+  Settings as SettingsIcon,
+  LayoutDashboard as LayoutDashboardIcon,
+  ImageIcon,
+  LucideIcon,
+  PackageIcon,
+  Plus,
+  KanbanSquare,
+  Calendar,
+  HelpCircle,
+  LogOut,
 } from 'lucide-react';
+
+import { Users, Settings, Home, Building, FileText, UserPlus } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { Logo } from './Logo';
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarRail,
+} from '@/components/ui/sidebar';
 
-const navigationItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: Home, url: '/dashboard' },
-  { id: 'people', label: 'People', icon: Users, url: '/dashboard/people' }
-];
+interface NavItem {
+  title: string;
+  url: string;
+  icon?: LucideIcon;
+  items?: NavItem[];
+}
+
+interface SidebarProps {
+  data: {
+    navMain: NavItem[];
+  };
+}
 
 export function AppSidebar() {
-  const { state } = useSidebar();
   const location = useLocation();
-  const currentPath = location.pathname;
-
-  const isActive = (path: string) => currentPath === path;
-  const getNavCls = (path: string) =>
-    isActive(path) ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50";
-
+  
+  const data = {
+    navMain: [
+      {
+        title: 'Dashboard',
+        url: '/dashboard',
+        icon: Home,
+        items: []
+      },
+      {
+        title: 'People',
+        url: '/dashboard/people',
+        icon: Users,
+        items: [
+          {
+            title: 'All People',
+            url: '/dashboard/people',
+          },
+          {
+            title: 'Add Employee',
+            url: '/dashboard/people/add',
+          }
+        ]
+      },
+      {
+        title: 'Organization',
+        url: '/dashboard/organization',
+        icon: Building,
+        items: []
+      },
+      {
+        title: 'Documents',
+        url: '/dashboard/documents',
+        icon: FileText,
+        items: []
+      },
+      {
+        title: 'Settings',
+        url: '/dashboard/settings',
+        icon: Settings,
+        items: []
+      }
+    ]
+  };
 
   return (
-    <Sidebar className={state === "collapsed" ? "w-14" : "w-64"} collapsible="icon">
-      <SidebarContent className="border-r">
-        {/* Header */}
-        <div className="p-4 border-b">
-          <div className="flex items-center gap-2">
-            <Logo />
-            {state !== "collapsed" && (
-              <span className="font-bold text-lg text-foreground">Wisemonk</span>
-            )}
+    <Sidebar orientation="left">
+      <SidebarRail>
+        <SidebarMenuButton />
+      </SidebarRail>
+      <SidebarContent>
+        <SidebarHeader>
+          <div className="flex items-center space-x-2">
+            <span className="font-bold">HR App</span>
           </div>
-        </div>
-
-        {/* Main Navigation */}
-        <div className="flex-1 p-2">
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navigationItems.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild>
-                      <NavLink to={item.url} className={getNavCls(item.url)}>
-                        <item.icon className="h-4 w-4" />
-                        {state !== "collapsed" && <span>{item.label}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
+        </SidebarHeader>
+        <SidebarMenu>
+          {data.navMain.map((group, i) => (
+            <SidebarGroup key={i}>
+              {group.items && group.items.length > 0 ? (
+                <>
+                  <SidebarMenuItem href={group.url} isActive={location.pathname === group.url} icon={group.icon}>
+                    {group.title}
                   </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t">
-          <SidebarTrigger className="w-full" />
-        </div>
+                  {group.items.map((item, j) => (
+                    <SidebarMenuSub key={j}>
+                      <SidebarMenuSubButton>{item.title}</SidebarMenuSubButton>
+                      <SidebarGroupContent>
+                        <SidebarMenuSubItem href={item.url} isActive={location.pathname === item.url}>
+                          {item.title}
+                        </SidebarMenuSubItem>
+                      </SidebarGroupContent>
+                    </SidebarMenuSub>
+                  ))}
+                </>
+              ) : (
+                <SidebarMenuItem href={group.url} isActive={location.pathname === group.url} icon={group.icon}>
+                  {group.title}
+                </SidebarMenuItem>
+              )}
+            </SidebarGroup>
+          ))}
+        </SidebarMenu>
+        <SidebarFooter>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm">© 2023 HR App</span>
+          </div>
+        </SidebarFooter>
       </SidebarContent>
     </Sidebar>
   );

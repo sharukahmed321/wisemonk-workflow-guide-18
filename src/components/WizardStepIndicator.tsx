@@ -1,8 +1,8 @@
-import React from 'react';
+
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Step {
+interface WizardStep {
   number: number;
   title: string;
   isCompleted: boolean;
@@ -10,24 +10,22 @@ interface Step {
 }
 
 interface WizardStepIndicatorProps {
-  steps: Step[];
-  className?: string;
+  steps: WizardStep[];
 }
 
-export function WizardStepIndicator({ steps, className }: WizardStepIndicatorProps) {
+export function WizardStepIndicator({ steps }: WizardStepIndicatorProps) {
   return (
-    <div className={cn("w-full", className)}>
-      <div className="flex items-center justify-between">
+    <div className="flex justify-center">
+      <div className="flex items-center space-x-8">
         {steps.map((step, index) => (
-          <React.Fragment key={step.number}>
-            {/* Step Circle and Label */}
+          <div key={step.number} className="flex items-center">
             <div className="flex flex-col items-center">
               <div
                 className={cn(
                   "w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-medium transition-colors",
                   step.isCompleted && "bg-primary border-primary text-primary-foreground",
                   step.isCurrent && !step.isCompleted && "border-primary text-primary bg-background",
-                  !step.isCurrent && !step.isCompleted && "border-muted-foreground text-muted-foreground bg-background"
+                  !step.isCurrent && !step.isCompleted && "border-muted-foreground/30 text-muted-foreground bg-background"
                 )}
               >
                 {step.isCompleted ? (
@@ -49,19 +47,17 @@ export function WizardStepIndicator({ steps, className }: WizardStepIndicatorPro
                 </div>
               </div>
             </div>
-
-            {/* Connecting Line */}
             {index < steps.length - 1 && (
-              <div className="flex-1 mx-4">
+              <div className="w-24 mx-6 mt-[-20px]">
                 <div
                   className={cn(
                     "h-px w-full transition-colors",
-                    step.isCompleted ? "bg-primary" : "bg-muted-foreground/30"
+                    step.isCompleted ? "bg-primary" : "bg-muted-foreground/20"
                   )}
                 />
               </div>
             )}
-          </React.Fragment>
+          </div>
         ))}
       </div>
     </div>

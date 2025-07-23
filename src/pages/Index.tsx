@@ -8,6 +8,7 @@ import { Dashboard } from '../components/Dashboard';
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../integrations/supabase/client';
+import { Toaster } from '@/components/ui/toaster';
 
 const Index = () => {
   const location = useLocation();
@@ -83,41 +84,57 @@ const Index = () => {
   }
   
   if (appState === 'dashboard' && user) {
-    return <Dashboard />;
+    return (
+      <>
+        <Dashboard />
+        <Toaster />
+      </>
+    );
   }
   
   if (appState === 'auth') {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="flex min-h-screen">
-          <BrandingSection />
-          <AuthSection 
-            onSignInComplete={() => {
-              setAppState('dashboard');
-              window.history.pushState({}, '', '/dashboard');
-            }}
-            onSignUpComplete={() => setAppState('onboarding')} 
-          />
+      <>
+        <div className="min-h-screen bg-white">
+          <div className="flex min-h-screen">
+            <BrandingSection />
+            <AuthSection 
+              onSignInComplete={() => {
+                setAppState('dashboard');
+                window.history.pushState({}, '', '/dashboard');
+              }}
+              onSignUpComplete={() => setAppState('onboarding')} 
+            />
+          </div>
         </div>
-      </div>
+        <Toaster />
+      </>
     );
   }
   
   if (appState === 'onboarding') {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="flex min-h-screen">
-          <BrandingSection />
-          <OnboardingFlow onComplete={() => {
-            setAppState('dashboard');
-            window.history.pushState({}, '', '/dashboard');
-          }} />
+      <>
+        <div className="min-h-screen bg-white">
+          <div className="flex min-h-screen">
+            <BrandingSection />
+            <OnboardingFlow onComplete={() => {
+              setAppState('dashboard');
+              window.history.pushState({}, '', '/dashboard');
+            }} />
+          </div>
         </div>
-      </div>
+        <Toaster />
+      </>
     );
   }
   
-  return <Dashboard />;
+  return (
+    <>
+      <Dashboard />
+      <Toaster />
+    </>
+  );
 };
 
 export default Index;
