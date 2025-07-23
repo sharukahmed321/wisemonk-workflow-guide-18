@@ -388,6 +388,24 @@ serve(async (req) => {
       throw new Error('Failed to update MSA document record after sending for signing');
     }
 
+    // Update user profile to mark MSA as completed since it's been sent for signing
+    console.log('Updating user profile MSA completion status...');
+    const { error: profileUpdateError } = await supabase
+      .from('profiles')
+      .update({
+        msa_completed: true,
+        msa_status: 'completed',
+        msa_completed_at: new Date().toISOString()
+      })
+      .eq('user_id', msaDoc.user_id);
+
+    if (profileUpdateError) {
+      console.error('Failed to update user profile MSA status:', profileUpdateError);
+      // Don't throw error here as the main MSA sending was successful
+    } else {
+      console.log('User profile MSA status updated successfully');
+    }
+
     console.log('=== ✅ MSA document sent for signing successfully ===');
 
     return new Response(JSON.stringify({

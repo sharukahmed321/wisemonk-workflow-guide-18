@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Settings from '../pages/Settings';
 import People from '../pages/People';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 function DashboardHome() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [showSetupProgress, setShowSetupProgress] = useState(true);
 
@@ -26,7 +27,7 @@ function DashboardHome() {
     checkOnboardingProgress();
   }, []);
 
-  // Also refresh when returning to this route
+  // Also refresh when returning to this route or when location changes
   useEffect(() => {
     const handleFocus = () => {
       checkOnboardingProgress();
@@ -35,6 +36,13 @@ function DashboardHome() {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
+
+  // Refresh progress when user navigates back to dashboard
+  useEffect(() => {
+    if (location.pathname === '/dashboard') {
+      checkOnboardingProgress();
+    }
+  }, [location.pathname]);
 
   const checkOnboardingProgress = async () => {
     try {

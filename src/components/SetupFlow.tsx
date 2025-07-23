@@ -380,11 +380,13 @@ export function MSAStep({ onComplete }: MSAStepProps) {
       
       toast({
         title: "Success",
-        description: "MSA sent for e-signature! Both you and Mithun will receive email invitations to sign.",
+        description: "MSA sent for e-signature! Redirecting to dashboard...",
       });
 
-      // Refresh the document to get updated status
-      await loadExistingDocument();
+      // Wait a moment for the toast to show, then redirect to dashboard
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
 
     } catch (error) {
       console.error('Error sending MSA for signing:', error);
@@ -499,7 +501,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                   <div className="text-sm text-muted-foreground space-y-2">
                     <p>You can download and review the agreement above, then proceed to send it for e-signature.</p>
                     <p>Both you and Mithun will receive email invitations to sign the document electronically.</p>
-                    <p>The signed document will be stored securely in your organization's document vault.</p>
+                    <p>Once sent, you'll be redirected to the dashboard where you can add your first employee.</p>
                   </div>
                 </div>
               </div>
