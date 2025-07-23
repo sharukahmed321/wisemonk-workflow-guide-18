@@ -20,11 +20,12 @@ const employeeDetailsSchema = z.object({
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   jobTitle: z.string().min(1, 'Job title is required'),
   seniority: z.string().min(1, 'Seniority level is required'),
-  startDate: z.date({
-    errorMap: () => ({ message: 'Start date is required' })
-  }),
+  startDate: z.date(),
   workLocation: z.string().min(1, 'Work location is required'),
   jobDescription: z.string().optional(),
+}).refine((data) => data.startDate, {
+  message: 'Start date is required',
+  path: ['startDate'],
 });
 
 export type EmployeeDetailsData = z.infer<typeof employeeDetailsSchema>;
