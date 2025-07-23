@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -202,39 +201,25 @@ const createZohoSignRequest = async (accessToken, pdfUrl, fileName, userProfile,
 /**
  * Submit document for signature with text fields
  */
-const submitDocumentForSignature = async (accessToken, requestId, documentId, userProfile, msaDocumentId) => {
+const submitDocumentForSignature = async (accessToken, requestId, documentId, userProfile) => {
   try {
-    console.log(`Submitting request ${requestId} for signature with MSA Document ID: ${msaDocumentId}`);
+    console.log(`Submitting request ${requestId} for signature with Client ID: ${userProfile.user_id}`);
     
-    // Create text fields for the MSA document
+    // Create text fields for the document
     const textFields = [
       {
         document_id: documentId,
-        field_name: `TextField_MSA_${msaDocumentId}`,
+        field_name: `TextField_Client_${userProfile.user_id}`,
         field_type_name: "Textfield",
-        field_label: "MSA Document ID",
+        field_label: "Client ID",
         field_category: "Textfield",
-        default_value: msaDocumentId,
+        default_value: userProfile.user_id,
         abs_width: "200",
         abs_height: "18",
         is_mandatory: true,
         x_coord: "30",
         y_coord: "700",
-        page_no: 1
-      },
-      {
-        document_id: documentId,
-        field_name: `TextField_Client_${userProfile.first_name}_${userProfile.last_name}`,
-        field_type_name: "Textfield",
-        field_label: "Client Name",
-        field_category: "Textfield",
-        default_value: `${userProfile.first_name} ${userProfile.last_name}`,
-        abs_width: "200",
-        abs_height: "18",
-        is_mandatory: true,
-        x_coord: "30",
-        y_coord: "650",
-        page_no: 1
+        page_no: 8
       }
     ];
 
@@ -244,19 +229,10 @@ const submitDocumentForSignature = async (accessToken, requestId, documentId, us
           {
             action_type: "SIGN",
             recipient_name: "Mithun",
-            recipient_email: "mithun@wisemonk.io",
-            signing_order: 1,
+            recipient_email: "mithun@wisemonk.co",
+            signing_order: -1,
             fields: {
               text_fields: textFields
-            }
-          },
-          {
-            action_type: "SIGN",
-            recipient_name: `${userProfile.first_name} ${userProfile.last_name}`,
-            recipient_email: userProfile.email,
-            signing_order: 2,
-            fields: {
-              text_fields: []
             }
           }
         ]
@@ -436,7 +412,7 @@ serve(async (req) => {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Submit document for signature with text fields
-    await submitDocumentForSignature(accessToken, requestId, documentId, userProfile, msaDocumentId);
+    await submitDocumentForSignature(accessToken, requestId, documentId, userProfile);
 
     // Update MSA document record with Zoho details
     console.log('Updating MSA document record with Zoho details...');
