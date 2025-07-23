@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Home as HomeIcon,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 
 import { Users, Settings, Home, Building, FileText, UserPlus } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -93,7 +94,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar orientation="left">
+    <Sidebar>
       <SidebarRail>
         <SidebarMenuButton />
       </SidebarRail>
@@ -108,23 +109,32 @@ export function AppSidebar() {
             <SidebarGroup key={i}>
               {group.items && group.items.length > 0 ? (
                 <>
-                  <SidebarMenuItem href={group.url} isActive={location.pathname === group.url} icon={group.icon}>
-                    {group.title}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.pathname === group.url}>
+                      <Link to={group.url} className="flex items-center gap-2">
+                        {group.icon && <group.icon className="h-4 w-4" />}
+                        {group.title}
+                      </Link>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                   {group.items.map((item, j) => (
                     <SidebarMenuSub key={j}>
-                      <SidebarMenuSubButton>{item.title}</SidebarMenuSubButton>
-                      <SidebarGroupContent>
-                        <SidebarMenuSubItem href={item.url} isActive={location.pathname === item.url}>
-                          {item.title}
-                        </SidebarMenuSubItem>
-                      </SidebarGroupContent>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location.pathname === item.url}>
+                          <Link to={item.url}>{item.title}</Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   ))}
                 </>
               ) : (
-                <SidebarMenuItem href={group.url} isActive={location.pathname === group.url} icon={group.icon}>
-                  {group.title}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location.pathname === group.url}>
+                    <Link to={group.url} className="flex items-center gap-2">
+                      {group.icon && <group.icon className="h-4 w-4" />}
+                      {group.title}
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
             </SidebarGroup>

@@ -21,7 +21,7 @@ const employeeDetailsSchema = z.object({
   jobTitle: z.string().min(1, 'Job title is required'),
   seniority: z.string().min(1, 'Seniority level is required'),
   startDate: z.date({
-    required_error: 'Start date is required',
+    errorMap: () => ({ message: 'Start date is required' })
   }),
   workLocation: z.string().min(1, 'Work location is required'),
   jobDescription: z.string().optional(),

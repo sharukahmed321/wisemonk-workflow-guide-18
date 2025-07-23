@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Settings from '../pages/Settings';
@@ -13,7 +12,6 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { CheckCircle, Clock, Users, Building, FileText, Plus } from 'lucide-react';
 import { Progress } from './ui/progress';
-import { SetupFlow } from './SetupFlow';
 
 function DashboardHome() {
   const navigate = useNavigate();
@@ -51,13 +49,13 @@ function DashboardHome() {
         user_id_param: user.id
       });
 
-      if (progress) {
+      if (progress && typeof progress === 'object') {
         const completed = [];
         
-        if (progress.basic_info?.completed) completed.push('basic_info');
-        if (progress.company_info?.completed) completed.push('company_info');
-        if (progress.address_info?.completed) completed.push('address_info');
-        if (progress.msa_info?.completed) completed.push('msa_info');
+        if ((progress as any).basic_info?.completed) completed.push('basic_info');
+        if ((progress as any).company_info?.completed) completed.push('company_info');
+        if ((progress as any).address_info?.completed) completed.push('address_info');
+        if ((progress as any).msa_info?.completed) completed.push('msa_info');
         
         setCompletedSteps(completed);
         
@@ -293,7 +291,6 @@ export function Dashboard() {
           <div className="flex-1 p-6">
             <Routes>
               <Route path="/" element={<DashboardHome />} />
-              <Route path="/setup" element={<SetupFlow />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/people" element={<People />} />
               <Route path="/people/add" element={<AddEmployeeTwoStepForm />} />
