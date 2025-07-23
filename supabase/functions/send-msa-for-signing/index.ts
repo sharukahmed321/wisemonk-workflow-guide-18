@@ -203,15 +203,15 @@ const createZohoSignRequest = async (accessToken, pdfUrl, fileName, userProfile,
  */
 const submitDocumentForSignature = async (accessToken, requestId, documentId, userProfile) => {
   try {
-    console.log(`Submitting request ${requestId} for signature with user ID: ${userProfile.user_id}`);
+    console.log(`Submitting request ${requestId} for signature with MSA document ID: ${userProfile.user_id}`);
     
-    // Create text fields for the MSA document (adjust page number and coordinates as needed)
+    // Create text fields for the document - just like employment agreement does for Deepika
     const textFields = [
       {
         document_id: documentId,
-        field_name: `TextField_User_${userProfile.user_id}`,
+        field_name: `TextField_MSA_${userProfile.user_id}`,
         field_type_name: "Textfield",
-        field_label: `User ID`,
+        field_label: `MSA Document ID`,
         field_category: "Textfield",
         default_value: userProfile.user_id,
         abs_width: "200",
@@ -219,7 +219,7 @@ const submitDocumentForSignature = async (accessToken, requestId, documentId, us
         is_mandatory: true,
         x_coord: "30",
         y_coord: "700",
-        page_no: 1 // Adjust this based on your MSA document structure
+        page_no: 8
       }
     ];
 
