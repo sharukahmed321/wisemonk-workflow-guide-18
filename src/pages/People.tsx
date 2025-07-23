@@ -1,121 +1,229 @@
-
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Plus, LayoutGrid, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus } from 'lucide-react';
+import { Employee, EmployeeStatus, Department, EmploymentType } from '@/types/employee';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { EmployeeTable } from '@/components/EmployeeTable';
+import { EmployeeCard } from '@/components/EmployeeCard';
 import { EmployeeFilters } from '@/components/EmployeeFilters';
-import { SimpleEmployeeTable } from '@/components/SimpleEmployeeTable';
-import { PreboardingTable } from '@/components/PreboardingTable';
-import { mockEmployees } from '@/data/employees';
-import { mockPreboardingEmployees } from '@/data/employees';
+import { Button } from '@/components/ui/button';
+import { Toggle } from '@/components/ui/toggle';
 
 export default function People() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [selectedStatus, setSelectedStatus] = useState<EmployeeStatus | 'All'>('All');
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | 'All'>('All');
+  const [selectedEmploymentType, setSelectedEmploymentType] = useState<EmploymentType | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [progressFilter, setProgressFilter] = useState('All');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter employees by status
-  const activeEmployees = useMemo(() => 
-    mockEmployees.filter(emp => emp.status === 'Active'), []);
-  const onboardingEmployees = useMemo(() => 
-    mockEmployees.filter(emp => emp.status === 'Onboarding'), []);
-  const preboardingEmployees = useMemo(() => 
-    mockPreboardingEmployees.filter(emp => emp.status === 'Preboarding'), []);
+  // Fetch employees from database
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-  // Filter preboarding employees based on search, status, and progress
-  const filteredPreboardingEmployees = useMemo(() => {
-    return preboardingEmployees.filter(employee => {
-      const matchesSearch = searchQuery === '' || 
-        employee.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        employee.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        if (error) throw error;
+
+        // Transform database format to match Employee interface
+        const transformedEmployees: Employee[] = data.map(emp => ({
+          id: emp.id,
+          employeeId: emp.employee_id,
+          firstName: emp.first_name,
+          lastName: emp.last_name,
+          email: emp.email,
+          phone: emp.phone || '',
+          jobTitle: emp.job_title,
+          department: emp.department as Department,
+          employmentType: emp.employment_type as EmploymentType,
+          salary: emp.salary || 0,
+          startDate: emp.start_date,
+          status: emp.status as EmployeeStatus,
+          birthday: emp.birthday ? new Date(emp.birthday).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : '',
+          avatar: emp.avatar_url || '',
+        }));
+
+        setEmployees(transformedEmployees);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch employees. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, [toast]);
+
+  const filteredEmployees = useMemo(() => {
+    let filtered = employees;
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(employee =>
+        `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
         employee.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        employee.jobTitle.toLowerCase().includes(searchQuery.toLowerCase());
+        employee.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.email.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
 
-      const matchesProgress = progressFilter === 'All' || 
-        (progressFilter === 'documents-needed' && (employee.preboarding?.overallProgress || 0) < 50) ||
-        (progressFilter === 'bgv-pending' && employee.preboarding?.bgvStatus === 'pending') ||
-        (progressFilter === 'ready-to-activate' && (employee.preboarding?.overallProgress || 0) >= 90);
+    // Filter by status
+    if (selectedStatus !== 'All') {
+      filtered = filtered.filter(employee => employee.status === selectedStatus);
+    }
 
-      return matchesSearch && matchesProgress;
-    });
-  }, [preboardingEmployees, searchQuery, progressFilter]);
+    // Filter by department
+    if (selectedDepartment !== 'All') {
+      filtered = filtered.filter(employee => employee.department === selectedDepartment);
+    }
 
-  // Calculate statistics
-  const preboardingStats = useMemo(() => ({
-    total: preboardingEmployees.length,
-    documentsNeeded: preboardingEmployees.filter(emp => (emp.preboarding?.overallProgress || 0) < 50).length,
-    bgvPending: preboardingEmployees.filter(emp => emp.preboarding?.bgvStatus === 'pending').length,
-    readyToActivate: preboardingEmployees.filter(emp => (emp.preboarding?.overallProgress || 0) >= 90).length,
-  }), [preboardingEmployees]);
+    // Filter by employment type
+    if (selectedEmploymentType !== 'All') {
+      filtered = filtered.filter(employee => employee.employmentType === selectedEmploymentType);
+    }
+
+    return filtered;
+  }, [employees, searchQuery, selectedStatus, selectedDepartment, selectedEmploymentType]);
+
+  const statusCounts = useMemo(() => {
+    return {
+      Active: employees.filter(emp => emp.status === 'Active').length,
+      Onboarding: employees.filter(emp => emp.status === 'Onboarding').length,
+      Exit: employees.filter(emp => emp.status === 'Exit').length,
+    };
+  }, [employees]);
 
   const handleAddEmployee = () => {
     navigate('/dashboard/people/add');
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full p-6 md:p-8">
+      <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">People</h1>
-          <p className="text-muted-foreground">Manage your team and employee information</p>
+          <h1 className="text-2xl font-bold text-foreground">People</h1>
+          <p className="text-muted-foreground mt-0.5">
+            Manage your team members and their information
+          </p>
         </div>
-        <Button onClick={handleAddEmployee}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Employee
-        </Button>
+        
+        <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center border rounded-lg p-1">
+            <Toggle
+              pressed={viewMode === 'grid'}
+              onPressedChange={() => setViewMode('grid')}
+              size="sm"
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Toggle>
+            <Toggle
+              pressed={viewMode === 'table'}
+              onPressedChange={() => setViewMode('table')}
+              size="sm"
+              aria-label="Table view"
+            >
+              <List className="h-4 w-4" />
+            </Toggle>
+          </div>
+          
+          <Button onClick={handleAddEmployee} className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" />
+            Add Employee
+          </Button>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="active" className="w-full">
-        <TabsList>
-          <TabsTrigger value="active">Active ({activeEmployees.length})</TabsTrigger>
-          <TabsTrigger value="onboarding">Onboarding ({onboardingEmployees.length})</TabsTrigger>
-          <TabsTrigger value="preboarding">Preboarding ({preboardingEmployees.length})</TabsTrigger>
-        </TabsList>
+      {/* Filters */}
+      <EmployeeFilters
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
+        selectedDepartment={selectedDepartment}
+        onDepartmentChange={setSelectedDepartment}
+        selectedEmploymentType={selectedEmploymentType}
+        onEmploymentTypeChange={setSelectedEmploymentType}
+        statusCounts={statusCounts}
+        totalCount={employees.length}
+      />
 
-        {/* Active Employees Tab */}
-        <TabsContent value="active" className="space-y-4">
-          {activeEmployees.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No active employees found</p>
-            </div>
-          ) : (
-            <SimpleEmployeeTable employees={activeEmployees} />
-          )}
-        </TabsContent>
+      {/* Results Count */}
+      {loading ? (
+        <div className="text-sm text-muted-foreground">
+          Loading employees...
+        </div>
+      ) : (
+        <div className="text-sm text-muted-foreground">
+          {filteredEmployees.length === employees.length
+            ? `Showing all ${filteredEmployees.length} employees`
+            : `Showing ${filteredEmployees.length} of ${employees.length} employees`
+          }
+        </div>
+      )}
 
-        {/* Onboarding Employees Tab */}
-        <TabsContent value="onboarding" className="space-y-4">
-          {onboardingEmployees.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No onboarding employees found</p>
+      {/* Employee Grid/Table */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading employees...</p>
+        </div>
+      ) : filteredEmployees.length > 0 ? (
+        viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredEmployees.map((employee) => (
+              <EmployeeCard key={employee.id} employee={employee} />
+            ))}
+          </div>
+        ) : (
+          <div className="hidden sm:block">
+            <EmployeeTable employees={filteredEmployees} />
+          </div>
+        )
+      ) : (
+        /* Empty State */
+        <div className="text-center py-12">
+          <div className="max-w-sm mx-auto">
+            <div className="h-20 w-20 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
+              <Plus className="h-6 w-6 text-muted-foreground" />
             </div>
-          ) : (
-            <SimpleEmployeeTable employees={onboardingEmployees} />
-          )}
-        </TabsContent>
-
-        {/* Preboarding Employees Tab */}
-        <TabsContent value="preboarding" className="space-y-4">
-          <EmployeeFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            progressFilter={progressFilter}
-            onProgressFilterChange={setProgressFilter}
-            stats={preboardingStats}
-          />
-          {filteredPreboardingEmployees.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No preboarding employees found</p>
-            </div>
-          ) : (
-            <PreboardingTable employees={filteredPreboardingEmployees} />
-          )}
-        </TabsContent>
-      </Tabs>
+            <h3 className="text-base font-semibold text-foreground mb-2">
+              {searchQuery || selectedStatus !== 'All' || selectedDepartment !== 'All' || selectedEmploymentType !== 'All'
+                ? 'No employees found'
+                : 'No employees yet'
+              }
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {searchQuery || selectedStatus !== 'All' || selectedDepartment !== 'All' || selectedEmploymentType !== 'All'
+                ? 'Try adjusting your filters or search terms.'
+                : 'Get started by adding your first team member.'
+              }
+            </p>
+            {(!searchQuery && selectedStatus === 'All' && selectedDepartment === 'All' && selectedEmploymentType === 'All') && (
+              <Button onClick={handleAddEmployee} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Your First Employee
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 }

@@ -1,14 +1,13 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, CheckCircle, Save } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle, Save } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { StepOverview } from './StepOverview';
 import { EmployeeDetailsStep, EmployeeDetailsData } from './EmployeeDetailsStep';
 import { CompensationReviewStep, CompensationReviewData } from './CompensationReviewStep';
 import { WizardStepIndicator } from './WizardStepIndicator';
+import { useToast } from "@/hooks/use-toast";
 
 export interface CompleteEmployeeData extends EmployeeDetailsData, CompensationReviewData {}
 
@@ -34,6 +33,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
       try {
         const draft = JSON.parse(savedDraft);
         if (draft.employeeData) {
+          // Parse date if it exists
           const employee = { ...draft.employeeData };
           if (employee.startDate) {
             employee.startDate = new Date(employee.startDate);
@@ -48,6 +48,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
     }
   }, []);
 
+  // Auto-save draft data
   const saveDraft = (step: number, data: any) => {
     const draftData = {
       currentStep: step,
@@ -59,6 +60,10 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_STORAGE_KEY);
+  };
+
+  const handleStartForm = () => {
+    setCurrentStep(1);
   };
 
   const handleEmployeeDetailsComplete = (data: EmployeeDetailsData) => {
@@ -75,26 +80,37 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
     setCompensationData(data);
     setIsSubmitting(true);
 
-    // Simulate API call
+    // Simulate API call with complete employee data
     await new Promise(resolve => setTimeout(resolve, 2000));
-
+    
     setIsSubmitting(false);
     setShowSuccess(true);
     clearDraft();
 
+    // Auto-redirect after success
     setTimeout(() => {
       onSuccess?.();
-      navigate('/dashboard/people');
+      navigate('/dashboard');
     }, 2500);
+  };
+
+  const handleBackToStep = (step: number) => {
+    setCurrentStep(step);
   };
 
   const handleSaveAndExit = () => {
     toast({
       title: "Draft Saved",
-      description: "Your progress has been saved. You can continue later.",
+      description: "Your progress has been saved. You can continue later from where you left off.",
     });
-    navigate('/dashboard/people');
+    navigate('/dashboard');
   };
+
+  const stepTitles = [
+    'Getting Started',
+    'Employee Details',
+    'Compensation & Review'
+  ];
 
   const wizardSteps = [
     {
@@ -111,82 +127,99 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
     }
   ];
 
-  // Success State
   if (showSuccess && employeeData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-success" />
-            </div>
-            <CardTitle className="text-xl">Employee Added Successfully!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              {employeeData.firstName} {employeeData.lastName} has been added to your team.
-            </p>
-            <div className="text-sm text-muted-foreground">
-              Redirecting to dashboard...
-            </div>
-          </CardContent>
-        </Card>
+      <div className="mx-auto max-w-4xl px-4 md:px-6 lg:px-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-8 h-8 text-success" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Employee Added Successfully!</h3>
+                <p className="text-muted-foreground mt-1">
+                  {employeeData.firstName} {employeeData.lastName} has been added to your team.
+                </p>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Redirecting to dashboard...
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
-  // Overview Step
   if (currentStep === 0) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/dashboard/people')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to People
-          </Button>
+      <div className="mx-auto max-w-4xl px-4 md:px-6 lg:px-8">
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/dashboard')} 
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+          </div>
+          <StepOverview onStart={handleStartForm} />
         </div>
-        <StepOverview onStart={() => setCurrentStep(1)} />
       </div>
     );
   }
 
-  // Form Steps
   return (
-    <div className="container mx-auto py-8">
+    <div className="mx-auto max-w-4xl px-4 md:px-6 lg:px-8">
       <div className="space-y-6">
         {/* Navigation Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Button 
               variant="ghost" 
-              onClick={() => navigate('/dashboard/people')}
-              className="flex items-center gap-2"
+              size="sm" 
+              onClick={() => navigate('/dashboard')} 
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
-              People
+              Dashboard
             </Button>
-            /
+            <span>/</span>
             <span>Add Employee</span>
-            /
-            <span>Step {currentStep} of 2</span>
+            <span>/</span>
+            <span className="text-foreground font-medium">Step {currentStep} of 2</span>
           </div>
-          <Button variant="outline" onClick={handleSaveAndExit}>
-            <Save className="mr-2 h-4 w-4" />
-            Save Draft & Exit
-          </Button>
+          
+          {currentStep > 0 && (
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={handleSaveAndExit}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              Save Draft & Exit
+            </Button>
+          )}
         </div>
 
         {/* Wizard Step Indicator */}
-        <WizardStepIndicator steps={wizardSteps} />
+        {currentStep > 0 && (
+          <div className="py-6">
+            <WizardStepIndicator steps={wizardSteps} />
+          </div>
+        )}
 
-        {/* Main Content */}
+        {/* Main Content Card */}
         <Card>
-          <CardHeader>
-            <CardTitle>{currentStep === 1 ? 'Employee Details' : 'Compensation & Review'}</CardTitle>
+          <CardHeader className="pb-6">
+            <CardTitle className="text-2xl font-semibold text-foreground">
+              {stepTitles[currentStep]}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {currentStep === 1 && (
@@ -198,7 +231,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
             {currentStep === 2 && employeeData && (
               <CompensationReviewStep 
                 onNext={handleCompensationComplete}
-                onBack={() => setCurrentStep(1)}
+                onBack={() => handleBackToStep(1)}
                 employeeData={employeeData}
                 isSubmitting={isSubmitting}
                 defaultValues={compensationData || undefined}

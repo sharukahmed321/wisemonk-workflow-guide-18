@@ -1,79 +1,75 @@
-
-import { Home, Settings, Calendar, Users, FileText, BarChart3, LogOut } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import {
+  Home, Users, Clock, Settings
+} from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-} from '@/components/ui/sidebar';
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { Logo } from './Logo';
 
-const menuItems = [
-  { title: 'Dashboard', icon: Home, url: '/dashboard' },
-  { title: 'Calendar', icon: Calendar, url: '/dashboard/calendar' },
-  { title: 'Reports', icon: BarChart3, url: '/dashboard/reports' },
-  { title: 'Documents', icon: FileText, url: '/dashboard/documents' },
-  { title: 'Settings', icon: Settings, url: '/dashboard/settings' },
+const navigationItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: Home, url: '/dashboard' },
+  { id: 'people', label: 'People', icon: Users, url: '/dashboard/people' }
 ];
 
 export function AppSidebar() {
+  const { state } = useSidebar();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const currentPath = location.pathname;
+
+  const isActive = (path: string) => currentPath === path;
+  const getNavCls = (path: string) =>
+    isActive(path) ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50";
+
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <Logo />
-      </SidebarHeader>
-      
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={location.pathname === item.url}
-                  >
-                    <Link to={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+    <Sidebar className={state === "collapsed" ? "w-14" : "w-64"} collapsible="icon">
+      <SidebarContent className="border-r">
+        {/* Header */}
+        <div className="p-4 border-b">
+          <div className="flex items-center gap-2">
+            <Logo />
+            {state !== "collapsed" && (
+              <span className="font-bold text-lg text-foreground">Wisemonk</span>
+            )}
+          </div>
+        </div>
+
+        {/* Main Navigation */}
+        <div className="flex-1 p-2">
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navigationItems.map((item) => (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} className={getNavCls(item.url)}>
+                        <item.icon className="h-4 w-4" />
+                        {state !== "collapsed" && <span>{item.label}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t">
+          <SidebarTrigger className="w-full" />
+        </div>
       </SidebarContent>
-      
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Button 
-                variant="ghost" 
-                onClick={signOut}
-                className="w-full justify-start"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </Button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }
