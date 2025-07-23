@@ -341,63 +341,56 @@ export function MSAStep({ onComplete }: MSAStepProps) {
     }
   };
 
-  const onSubmit = async (data: MSAFormData) => {
+  const sendForSigning = async () => {
+    if (!msaDocument) {
+      toast({
+        title: "Error", 
+        description: "No MSA document found to send for signing.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const user = (await supabase.auth.getUser()).data.user;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, organization_id')
-        .eq('user_id', user?.id)
-        .single();
-
-      const signedBy = profile 
-        ? `${profile.first_name} ${profile.last_name}`.trim() 
-        : 'Unknown User';
-
-      // Update the MSA document as signed
-      if (msaDocument) {
-        const { error: docError } = await supabase
-          .from('msa_documents')
-          .update({
-            is_signed: true,
-            signed_at: new Date().toISOString(),
-            signed_by: signedBy,
-          })
-          .eq('id', msaDocument.id);
-
-        if (docError) {
-          console.error('Error updating MSA document:', docError);
-        }
+      console.log('🔄 Sending MSA for e-signature via Zoho Sign...');
+      
+      const { data: authData } = await supabase.auth.getSession();
+      
+      if (!authData.session) {
+        throw new Error('No active session');
       }
 
-      // Update profile MSA status
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          msa_signed: true,
-          msa_signed_at: new Date().toISOString(),
-          msa_signed_by: signedBy,
-        })
-        .eq('user_id', user?.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "Master Service Agreement signed successfully.",
+      const response = await supabase.functions.invoke('send-msa-for-signing', {
+        body: {
+          msa_document_id: msaDocument.id
+        },
+        headers: {
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
       });
 
-      // Navigate back to dashboard
-      navigate('/dashboard');
+      if (response.error) {
+        console.error('Zoho Sign error:', response.error);
+        throw new Error(`Failed to send for signing: ${response.error.message}`);
+      }
+
+      console.log('✅ MSA sent for e-signature successfully');
+      
+      toast({
+        title: "Success",
+        description: "MSA sent for e-signature! Both you and Mithun will receive email invitations to sign.",
+      });
+
+      // Refresh the document to get updated status
+      await loadExistingDocument();
+
     } catch (error) {
-      console.error('Error signing MSA:', error);
+      console.error('Error sending MSA for signing:', error);
       toast({
         title: "Error",
-        description: "Failed to sign the agreement. Please try again.",
+        description: "Failed to send MSA for signing. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -497,31 +490,33 @@ export function MSAStep({ onComplete }: MSAStepProps) {
               </div>
             </div>
 
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-foreground flex items-center gap-2">
-                      🔐 What happens next?
-                    </h4>
-                    <div className="text-sm text-muted-foreground space-y-2">
-                      <p>You can download and review the agreement above, then proceed to sign it electronically.</p>
-                      <p>This is legally binding and a copy will be saved for your records.</p>
-                      <p>The signed document will be stored securely in your organization's document vault.</p>
-                    </div>
+            <div className="space-y-6">
+              <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-foreground flex items-center gap-2">
+                    🔐 What happens next?
+                  </h4>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p>You can download and review the agreement above, then proceed to send it for e-signature.</p>
+                    <p>Both you and Mithun will receive email invitations to sign the document electronically.</p>
+                    <p>The signed document will be stored securely in your organization's document vault.</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex gap-4 pt-4">
-                  <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
-                    Review Later
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting || msaDocument?.is_signed} className="flex-1">
-                    {isSubmitting ? 'Processing...' : msaDocument?.is_signed ? 'Already Signed' : 'Accept & Sign Agreement'}
-                  </Button>
-                </div>
-              </form>
-            </Form>
+              <div className="flex gap-4 pt-4">
+                <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
+                  Review Later
+                </Button>
+                <Button 
+                  onClick={sendForSigning} 
+                  disabled={isSubmitting || msaDocument?.is_signed} 
+                  className="flex-1"
+                >
+                  {isSubmitting ? 'Sending for Signature...' : msaDocument?.is_signed ? 'Already Signed' : 'Send for E-Signature'}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
