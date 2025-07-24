@@ -34,7 +34,7 @@ const statusFilters: Array<{ value: EmployeeStatus | 'All'; label: string }> = [
   { value: 'All', label: 'All' },
   { value: 'Active', label: 'Active' },
   { value: 'Onboarding', label: 'Onboarding' },
-  { value: 'Exit', label: 'Exit' },
+  { value: 'Preboarding', label: 'Preboarding' },
 ];
 
 const departments: Array<{ value: Department | 'All'; label: string }> = [
