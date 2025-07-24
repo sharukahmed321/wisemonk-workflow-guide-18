@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "./ui/input-otp";
 import { ArrowLeft, CheckCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface OTPVerificationProps {
   email: string;
@@ -27,17 +29,51 @@ export function OTPVerification({ email, onBack, onVerified }: OTPVerificationPr
   const handleVerify = async () => {
     if (otp.length === 6) {
       setIsVerifying(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setIsVerifying(false);
-      onVerified();
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('verify-otp', {
+          body: { email, code: otp }
+        });
+
+        if (error) throw error;
+
+        if (data.valid) {
+          toast.success("Email verified successfully!");
+          onVerified();
+        } else {
+          toast.error(data.error || "Invalid verification code");
+          setOtp('');
+        }
+      } catch (error: any) {
+        console.error('OTP verification error:', error);
+        toast.error(error.message || "Verification failed. Please try again.");
+        setOtp('');
+      } finally {
+        setIsVerifying(false);
+      }
     }
   };
 
-  const handleResend = () => {
-    setCountdown(60);
-    setCanResend(false);
-    setOtp('');
+  const handleResend = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp', {
+        body: { email }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setCountdown(60);
+        setCanResend(false);
+        setOtp('');
+        toast.success("Verification code sent!");
+      } else {
+        toast.error(data.error || "Failed to send code");
+      }
+    } catch (error: any) {
+      console.error('Resend OTP error:', error);
+      toast.error(error.message || "Failed to send verification code");
+    }
   };
 
   return (

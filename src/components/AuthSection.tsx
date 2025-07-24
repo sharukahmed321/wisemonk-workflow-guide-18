@@ -274,16 +274,30 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         
         setUserEmail(data.email);
         
-        toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account before accessing the dashboard.",
-        });
-        
-        // Check if email confirmation is required
-        if (!authData.session) {
+        // Send OTP for email verification
+        try {
+          const { data: otpData, error: otpError } = await supabase.functions.invoke('send-otp', {
+            body: { email: data.email }
+          });
+
+          if (otpError) throw otpError;
+
+          if (otpData.success) {
+            toast({
+              title: "Account created!",
+              description: "Please check your email for a verification code.",
+            });
+            setAuthState('otp');
+          } else {
+            throw new Error(otpData.error || "Failed to send verification code");
+          }
+        } catch (otpError: any) {
+          console.error('OTP sending error:', otpError);
+          toast({
+            title: "Account created!",
+            description: "There was an issue sending the verification code. Please try signing in.",
+          });
           setAuthState('otp');
-        } else {
-          onSignUpComplete();
         }
       }
     } catch (error: any) {
