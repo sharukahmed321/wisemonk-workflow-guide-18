@@ -50,6 +50,40 @@ const mockEmployees: Employee[] = [
     salary: 60000,
     startDate: '2024-01-15',
     status: 'Preboarding',
+    joiningDate: '2024-02-01',
+    preboardingStatus: 'Documents Pending',
+  },
+  {
+    id: '4',
+    employeeId: 'EMP004',
+    firstName: 'Emma',
+    lastName: 'Wilson',
+    email: 'emma.wilson@company.com',
+    phone: '+1 (555) 456-7890',
+    jobTitle: 'UX Designer',
+    department: 'Design',
+    employmentType: 'Full-time',
+    salary: 70000,
+    startDate: '2024-02-15',
+    status: 'Preboarding',
+    joiningDate: '2024-03-01',
+    preboardingStatus: 'Agreement Sent',
+  },
+  {
+    id: '5',
+    employeeId: 'EMP005',
+    firstName: 'James',
+    lastName: 'Brown',
+    email: 'james.brown@company.com',
+    phone: '+1 (555) 567-8901',
+    jobTitle: 'Data Analyst',
+    department: 'Engineering',
+    employmentType: 'Full-time',
+    salary: 65000,
+    startDate: '2024-03-15',
+    status: 'Preboarding',
+    joiningDate: '2024-04-01',
+    preboardingStatus: 'Agreement Signed',
   },
 ];
 
@@ -95,7 +129,7 @@ export default function People() {
         />
 
         {/* Employee Table */}
-        <EmployeeTable employees={filteredEmployees} />
+        <EmployeeTable employees={filteredEmployees} selectedStatus={selectedStatus} />
       </div>
     </div>
   );

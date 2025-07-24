@@ -2,6 +2,7 @@
 export type EmployeeStatus = 'Active' | 'Onboarding' | 'Preboarding';
 export type EmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Intern';
 export type Department = 'Engineering' | 'Marketing' | 'Sales' | 'HR' | 'Finance' | 'Operations' | 'Design';
+export type PreboardingStatus = 'Documents Pending' | 'Agreement Sent' | 'Agreement Signed';
 
 export interface Employee {
   id: string;
@@ -18,4 +19,7 @@ export interface Employee {
   status: EmployeeStatus;
   avatar?: string;
   birthday?: string; // MM-DD format
+  // Preboarding-specific fields
+  joiningDate?: string;
+  preboardingStatus?: PreboardingStatus;
 }
