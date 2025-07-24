@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +13,7 @@ import { CalendarIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+
 const employeeDetailsSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
@@ -23,6 +25,7 @@ const employeeDetailsSchema = z.object({
   workLocation: z.enum(['remote', 'office', 'hybrid']),
   jobDescription: z.string().optional()
 });
+
 export interface EmployeeDetailsData {
   firstName: string;
   lastName: string;
@@ -34,10 +37,12 @@ export interface EmployeeDetailsData {
   workLocation: 'remote' | 'office' | 'hybrid';
   jobDescription?: string;
 }
+
 interface EmployeeDetailsStepProps {
   onNext: (data: EmployeeDetailsData) => void;
   defaultValues?: Partial<EmployeeDetailsData>;
 }
+
 export function EmployeeDetailsStep({
   onNext,
   defaultValues
@@ -56,6 +61,7 @@ export function EmployeeDetailsStep({
       jobDescription: defaultValues?.jobDescription || ''
     }
   });
+
   const seniorityLevels = [{
     value: 'junior',
     label: 'Junior'
@@ -66,6 +72,7 @@ export function EmployeeDetailsStep({
     value: 'senior',
     label: 'Senior'
   }];
+
   const workLocationOptions = [{
     value: 'remote',
     label: 'Remote'
@@ -76,12 +83,14 @@ export function EmployeeDetailsStep({
     value: 'hybrid',
     label: 'Hybrid'
   }];
+
   const onSubmit = (data: EmployeeDetailsData) => {
     onNext(data);
   };
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
       <div>
-        
         <p className="text-sm text-muted-foreground">
           Provide the new team member's personal information and job details.
         </p>
@@ -93,45 +102,61 @@ export function EmployeeDetailsStep({
           <div>
             <h4 className="font-medium text-foreground mb-4">Personal Information</h4>
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField control={form.control} name="firstName" render={({
-              field
-            }) => <FormItem>
-                    <FormLabel>First Name </FormLabel>
+              <FormField 
+                control={form.control} 
+                name="firstName" 
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter first name" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="lastName" render={({
-              field
-            }) => <FormItem>
-                    <FormLabel>Last Name </FormLabel>
+              <FormField 
+                control={form.control} 
+                name="lastName" 
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter last name" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="email" render={({
-              field
-            }) => <FormItem>
+              <FormField 
+                control={form.control} 
+                name="email" 
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel>Email Address *</FormLabel>
                     <FormControl>
                       <Input placeholder="employee@company.com" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="phone" render={({
-              field
-            }) => <FormItem>
-                    <FormLabel>Phone Number </FormLabel>
+              <FormField 
+                control={form.control} 
+                name="phone" 
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input placeholder="+1 (555) 123-4567" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
             </div>
           </div>
 
@@ -139,53 +164,131 @@ export function EmployeeDetailsStep({
           <div>
             <h4 className="font-medium text-foreground mb-4">Job Information</h4>
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField control={form.control} name="jobTitle" render={({
-              field
-            }) => <FormItem>
-                    <FormLabel>Job Title </FormLabel>
+              <FormField 
+                control={form.control} 
+                name="jobTitle" 
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Title</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., Software Engineer" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="seniority" render={({
-              field
-            }) => {}} />
+              <FormField 
+                control={form.control} 
+                name="seniority" 
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Seniority Level</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select seniority level" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {seniorityLevels.map((level) => (
+                          <SelectItem key={level.value} value={level.value}>
+                            {level.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="startDate" render={({
-              field
-            }) => <FormItem className="flex flex-col">
+              <FormField 
+                control={form.control} 
+                name="startDate" 
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
                     <FormLabel>Start Date</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
-                          
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "h-11 justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={date => date < new Date()} initialFocus />
+                        <Calendar 
+                          mode="single" 
+                          selected={field.value} 
+                          onSelect={field.onChange} 
+                          disabled={date => date < new Date()} 
+                          initialFocus 
+                          className="pointer-events-auto"
+                        />
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="workLocation" render={({
-              field
-            }) => {}} />
+              <FormField 
+                control={form.control} 
+                name="workLocation" 
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Work Location</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select work location" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {workLocationOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} 
+              />
             </div>
           </div>
 
           {/* Job Description */}
-          <FormField control={form.control} name="jobDescription" render={({
-          field
-        }) => <FormItem>
-                <FormLabel>Job Description </FormLabel>
+          <FormField 
+            control={form.control} 
+            name="jobDescription" 
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Job Description</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Describe the role, responsibilities, and requirements..." className="min-h-[150px] resize-y" {...field} />
+                  <Textarea 
+                    placeholder="Describe the role, responsibilities, and requirements..." 
+                    className="min-h-[150px] resize-y" 
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
-              </FormItem>} />
+              </FormItem>
+            )} 
+          />
 
           <div className="flex justify-end pt-4">
             <Button type="submit" className="px-8">
@@ -194,5 +297,6 @@ export function EmployeeDetailsStep({
           </div>
         </form>
       </Form>
-    </div>;
+    </div>
+  );
 }
