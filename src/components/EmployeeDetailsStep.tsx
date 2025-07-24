@@ -12,6 +12,7 @@ import { CalendarIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+
 const employeeDetailsSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
@@ -23,6 +24,7 @@ const employeeDetailsSchema = z.object({
   workLocation: z.enum(['remote', 'office', 'hybrid']),
   jobDescription: z.string().optional()
 });
+
 export interface EmployeeDetailsData {
   firstName: string;
   lastName: string;
@@ -34,10 +36,12 @@ export interface EmployeeDetailsData {
   workLocation: 'remote' | 'office' | 'hybrid';
   jobDescription?: string;
 }
+
 interface EmployeeDetailsStepProps {
   onNext: (data: EmployeeDetailsData) => void;
   defaultValues?: Partial<EmployeeDetailsData>;
 }
+
 export function EmployeeDetailsStep({
   onNext,
   defaultValues
@@ -56,6 +60,7 @@ export function EmployeeDetailsStep({
       jobDescription: defaultValues?.jobDescription || ''
     }
   });
+
   const seniorityLevels = [{
     value: 'junior',
     label: 'Junior'
@@ -66,6 +71,7 @@ export function EmployeeDetailsStep({
     value: 'senior',
     label: 'Senior'
   }];
+
   const workLocationOptions = [{
     value: 'remote',
     label: 'Remote'
@@ -76,9 +82,11 @@ export function EmployeeDetailsStep({
     value: 'hybrid',
     label: 'Hybrid'
   }];
+
   const onSubmit = (data: EmployeeDetailsData) => {
     onNext(data);
   };
+
   return <div className="space-y-6">
       <div>
         
@@ -96,7 +104,7 @@ export function EmployeeDetailsStep({
               <FormField control={form.control} name="firstName" render={({
               field
             }) => <FormItem>
-                    <FormLabel>First Name </FormLabel>
+                    <FormLabel>First Name </FormLabel>
                     <FormControl>
                       <Input placeholder="Enter first name" className="h-11" {...field} />
                     </FormControl>
@@ -106,7 +114,7 @@ export function EmployeeDetailsStep({
               <FormField control={form.control} name="lastName" render={({
               field
             }) => <FormItem>
-                    <FormLabel>Last Name </FormLabel>
+                    <FormLabel>Last Name </FormLabel>
                     <FormControl>
                       <Input placeholder="Enter last name" className="h-11" {...field} />
                     </FormControl>
@@ -126,7 +134,7 @@ export function EmployeeDetailsStep({
               <FormField control={form.control} name="phone" render={({
               field
             }) => <FormItem>
-                    <FormLabel>Phone Number </FormLabel>
+                    <FormLabel>Phone Number </FormLabel>
                     <FormControl>
                       <Input placeholder="+1 (555) 123-4567" className="h-11" {...field} />
                     </FormControl>
@@ -142,7 +150,7 @@ export function EmployeeDetailsStep({
               <FormField control={form.control} name="jobTitle" render={({
               field
             }) => <FormItem>
-                    <FormLabel>Job Title </FormLabel>
+                    <FormLabel>Job Title </FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., Software Engineer" className="h-11" {...field} />
                     </FormControl>
@@ -151,7 +159,26 @@ export function EmployeeDetailsStep({
 
               <FormField control={form.control} name="seniority" render={({
               field
-            }) => {}} />
+            }) => (
+                <FormItem>
+                  <FormLabel>Seniority Level *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select seniority level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {seniorityLevels.map(level => (
+                        <SelectItem key={level.value} value={level.value}>
+                          {level.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
               <FormField control={form.control} name="startDate" render={({
               field
@@ -175,7 +202,26 @@ export function EmployeeDetailsStep({
 
               <FormField control={form.control} name="workLocation" render={({
               field
-            }) => {}} />
+            }) => (
+                <FormItem>
+                  <FormLabel>Work Location *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select work location" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {workLocationOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
             </div>
           </div>
 
@@ -183,7 +229,7 @@ export function EmployeeDetailsStep({
           <FormField control={form.control} name="jobDescription" render={({
           field
         }) => <FormItem>
-                <FormLabel>Job Description </FormLabel>
+                <FormLabel>Job Description </FormLabel>
                 <FormControl>
                   <Textarea placeholder="Describe the role, responsibilities, and requirements..." className="min-h-[150px] resize-y" {...field} />
                 </FormControl>
