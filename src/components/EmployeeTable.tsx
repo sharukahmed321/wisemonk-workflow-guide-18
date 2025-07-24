@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { MoreHorizontal, Edit, Trash2, Eye, FileText, Send, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Eye, FileText, Send, CheckCircle, Info } from 'lucide-react';
+import { format } from 'date-fns';
 import { Employee } from '@/types/employee';
 import {
   Table,
@@ -55,6 +56,18 @@ const getStatusIcon = (status: string) => {
   }
 };
 
+const formatJoiningDate = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    return format(date, 'MMM d, yyyy');
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+};
+
 export function EmployeeTable({ employees, selectedStatus }: EmployeeTableProps) {
   const isPreboarding = selectedStatus === 'Preboarding';
 
@@ -74,7 +87,23 @@ export function EmployeeTable({ employees, selectedStatus }: EmployeeTableProps)
               {isPreboarding ? (
                 <>
                   <TableHead>Joining Date</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-2">
+                      <span>Status</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-1">
+                            <div><strong>Documents Pending:</strong> Documents not submitted</div>
+                            <div><strong>Agreement Sent:</strong> Documents submitted, agreement awaiting signature</div>
+                            <div><strong>Agreement Signed:</strong> Completed</div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TableHead>
                 </>
               ) : (
                 <TableHead>Contact</TableHead>
@@ -113,7 +142,7 @@ export function EmployeeTable({ employees, selectedStatus }: EmployeeTableProps)
                   {isPreboarding ? (
                     <>
                       <TableCell className="text-muted-foreground">
-                        {employee.joiningDate}
+                        {formatJoiningDate(employee.joiningDate || '')}
                       </TableCell>
                       <TableCell>
                         <Tooltip>
