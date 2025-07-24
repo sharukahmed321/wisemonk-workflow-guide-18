@@ -83,7 +83,7 @@ const mockEmployees: Employee[] = [
     startDate: '2024-03-15',
     status: 'Preboarding',
     joiningDate: '2024-04-01',
-    preboardingStatus: 'Agreement Signed',
+    preboardingStatus: 'Completed',
   },
 ];
 

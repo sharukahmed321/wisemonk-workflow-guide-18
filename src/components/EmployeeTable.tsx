@@ -35,7 +35,7 @@ const getStatusIcon = (status: string) => {
       return FileText;
     case 'Agreement Sent':
       return Send;
-    case 'Agreement Signed':
+    case 'Completed':
       return CheckCircle;
     default:
       return FileText;
@@ -80,10 +80,10 @@ export function EmployeeTable({ employees, selectedStatus }: EmployeeTableProps)
                         <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <div className="space-y-1">
-                          <div><strong>Documents Pending:</strong> Documents not submitted</div>
-                          <div><strong>Agreement Sent:</strong> Documents submitted, agreement awaiting signature</div>
-                          <div><strong>Agreement Signed:</strong> Completed</div>
+                        <div className="text-sm">
+                          <div>Documents Pending: Documents not submitted</div>
+                          <div>Agreement Sent: Agreement sent</div>
+                          <div>Completed: Agreement signed and documents submitted</div>
                         </div>
                       </TooltipContent>
                     </Tooltip>

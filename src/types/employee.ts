@@ -1,8 +1,7 @@
-
 export type EmployeeStatus = 'Active' | 'Onboarding' | 'Preboarding';
 export type EmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Intern';
 export type Department = 'Engineering' | 'Marketing' | 'Sales' | 'HR' | 'Finance' | 'Operations' | 'Design';
-export type PreboardingStatus = 'Documents Pending' | 'Agreement Sent' | 'Agreement Signed';
+export type PreboardingStatus = 'Documents Pending' | 'Agreement Sent' | 'Completed';
 
 export interface Employee {
   id: string;
