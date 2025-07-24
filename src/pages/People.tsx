@@ -55,11 +55,9 @@ const mockEmployees: Employee[] = [
 
 export default function People() {
   const navigate = useNavigate();
-  const [selectedStatus, setSelectedStatus] = useState<EmployeeStatus | 'All'>('All');
+  const [selectedStatus, setSelectedStatus] = useState<EmployeeStatus>('Active');
 
-  const filteredEmployees = selectedStatus === 'All' 
-    ? mockEmployees 
-    : mockEmployees.filter(emp => emp.status === selectedStatus);
+  const filteredEmployees = mockEmployees.filter(emp => emp.status === selectedStatus);
 
   const statusCounts = {
     Active: mockEmployees.filter(emp => emp.status === 'Active').length,
@@ -94,7 +92,6 @@ export default function People() {
           selectedStatus={selectedStatus}
           onStatusChange={setSelectedStatus}
           statusCounts={statusCounts}
-          totalCount={mockEmployees.length}
         />
 
         {/* Employee Table */}
