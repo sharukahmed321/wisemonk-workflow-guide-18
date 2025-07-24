@@ -1,4 +1,5 @@
-export type EmployeeStatus = 'Active' | 'Onboarding' | 'Exit';
+
+export type EmployeeStatus = 'Active' | 'Onboarding' | 'Preboarding';
 export type EmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Intern';
 export type Department = 'Engineering' | 'Marketing' | 'Sales' | 'HR' | 'Finance' | 'Operations' | 'Design';
 
