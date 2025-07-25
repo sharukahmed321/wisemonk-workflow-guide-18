@@ -95,25 +95,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // Log sign out event
-      if (user) {
-        await supabase.from('auth_audit_logs').insert({
-          user_id: user.id,
-          event_type: 'sign_out',
-          success: true,
-          details: { method: 'manual' },
-          user_agent: navigator.userAgent,
-        });
+      // Immediately clear local state for instant UI feedback
+      const currentUser = user;
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      setLoading(false);
+
+      // Log sign out event (before actual signout to avoid RLS issues)
+      if (currentUser) {
+        try {
+          await supabase.from('auth_audit_logs').insert({
+            user_id: currentUser.id,
+            event_type: 'sign_out',
+            success: true,
+            details: { method: 'manual' },
+            user_agent: navigator.userAgent,
+          });
+        } catch (auditError) {
+          // Don't fail signout if audit logging fails
+          console.warn('Failed to log sign out event:', auditError);
+        }
       }
 
-      const { error } = await supabase.auth.signOut();
+      // Sign out from all sessions globally
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) {
         console.error('Error signing out:', error);
-        throw error;
+        // Don't throw here since we already cleared local state
       }
     } catch (error) {
       console.error('Sign out error:', error);
-      throw error;
+      // Ensure state is cleared even if signout fails
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      setLoading(false);
     }
   };
 
