@@ -291,8 +291,8 @@ export function EmployeeDetailsStep({
           />
 
           <div className="flex justify-end pt-4">
-            <Button type="submit" className="px-8">
-              Next: Compensation & Review
+            <Button type="submit" size="default">
+              Next
             </Button>
           </div>
         </form>
