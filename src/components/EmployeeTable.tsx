@@ -49,6 +49,14 @@ export function EmployeeTable({
     navigate(`/dashboard/people/${employeeId}`);
   };
 
+  const handleRowClick = (employeeId: string) => {
+    handleViewDetails(employeeId);
+  };
+
+  const handleDropdownClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+  };
+
   return (
     <div className="rounded-lg border bg-card">
       <Table>
@@ -90,7 +98,11 @@ export function EmployeeTable({
           {employees.map((employee) => {
             const StatusIcon = getStatusIcon(employee.preboardingStatus || '');
             return (
-              <TableRow key={employee.id} className="group">
+              <TableRow 
+                key={employee.id} 
+                className="group cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleRowClick(employee.id)}
+              >
                 {!isPreboarding && (
                   <TableCell className="font-mono text-sm font-medium">
                     {employee.employeeId}
@@ -135,7 +147,12 @@ export function EmployeeTable({
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0"
+                        onClick={handleDropdownClick}
+                      >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
