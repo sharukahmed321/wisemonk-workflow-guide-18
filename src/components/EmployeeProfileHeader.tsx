@@ -1,20 +1,12 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Employee } from '@/types/employee';
 import { Download, Edit, MessageSquare, MoreHorizontal } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 interface EmployeeProfileHeaderProps {
   employee: Employee;
 }
-
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'Active':
@@ -27,10 +19,10 @@ const getStatusColor = (status: string) => {
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
-
-export function EmployeeProfileHeader({ employee }: EmployeeProfileHeaderProps) {
-  return (
-    <div className="bg-white border-b border-gray-100 mb-8">
+export function EmployeeProfileHeader({
+  employee
+}: EmployeeProfileHeaderProps) {
+  return <div className="bg-white border-b border-gray-100 mb-8">
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-6">
@@ -62,41 +54,7 @@ export function EmployeeProfileHeader({ employee }: EmployeeProfileHeaderProps) 
         </div>
         
         {/* Action Buttons - Clean row */}
-        <div className="mt-6 flex items-center gap-3">
-          <Button variant="default" size="sm" className="flex items-center gap-2">
-            <Edit className="w-4 h-4" />
-            Edit Profile
-          </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                Download Documents
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>
-                <Download className="w-4 h-4 mr-2" />
-                All Documents
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Download className="w-4 h-4 mr-2" />
-                Identity Documents
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Download className="w-4 h-4 mr-2" />
-                Employment Documents
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <Button variant="outline" size="sm" className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Send Message
-          </Button>
-        </div>
+        
       </div>
-    </div>
-  );
+    </div>;
 }
