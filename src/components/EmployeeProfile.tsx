@@ -1,10 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Mail, Phone, Calendar, Briefcase, User, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Employee } from '@/types/employee';
+import { cn } from '@/lib/utils';
 
 interface EmployeeProfileProps {
   employee: Employee;
@@ -37,7 +37,18 @@ const getStatusColor = (status: string) => {
   }
 };
 
+type TabValue = 'overview' | 'documents' | 'leaves' | 'finance';
+
 export function EmployeeProfile({ employee }: EmployeeProfileProps) {
+  const [activeTab, setActiveTab] = useState<TabValue>('overview');
+
+  const tabs = [
+    { value: 'overview', label: 'Overview' },
+    { value: 'documents', label: 'Documents' },
+    { value: 'leaves', label: 'Leaves' },
+    { value: 'finance', label: 'Finance' },
+  ] as const;
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header Section */}
@@ -94,24 +105,30 @@ export function EmployeeProfile({ employee }: EmployeeProfileProps) {
         </div>
       </div>
 
-      {/* Tabs Section */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-50 p-1 rounded-lg">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="documents" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Documents
-          </TabsTrigger>
-          <TabsTrigger value="leaves" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Leaves
-          </TabsTrigger>
-          <TabsTrigger value="finance" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Finance
-          </TabsTrigger>
-        </TabsList>
+      {/* Custom Tabs Section */}
+      <div className="w-full">
+        {/* Tab Navigation */}
+        <div className="border-b border-border mb-6">
+          <div className="flex space-x-8">
+            {tabs.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={cn(
+                  "pb-4 px-1 text-sm font-medium border-b-2 transition-colors",
+                  activeTab === tab.value
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <TabsContent value="overview" className="mt-6">
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Employee Overview Card */}
             <Card>
@@ -178,35 +195,35 @@ export function EmployeeProfile({ employee }: EmployeeProfileProps) {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="documents" className="mt-6">
+        {activeTab === 'documents' && (
           <Card>
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Documents</h3>
               <p className="text-gray-600">Document management functionality coming soon...</p>
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
-        <TabsContent value="leaves" className="mt-6">
+        {activeTab === 'leaves' && (
           <Card>
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Leaves</h3>
               <p className="text-gray-600">Leave management functionality coming soon...</p>
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
-        <TabsContent value="finance" className="mt-6">
+        {activeTab === 'finance' && (
           <Card>
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Finance</h3>
               <p className="text-gray-600">Financial information functionality coming soon...</p>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 }
