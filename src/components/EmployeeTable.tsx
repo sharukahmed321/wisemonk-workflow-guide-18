@@ -1,15 +1,19 @@
+
 import React from 'react';
 import { MoreHorizontal, Edit, Trash2, Eye, FileText, Send, CheckCircle, Info } from 'lucide-react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { Employee } from '@/types/employee';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+
 interface EmployeeTableProps {
   employees: Employee[];
   selectedStatus: string;
 }
+
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'Documents Pending':
@@ -22,6 +26,7 @@ const getStatusIcon = (status: string) => {
       return FileText;
   }
 };
+
 const formatJoiningDate = (dateString: string): string => {
   if (!dateString) return '';
   try {
@@ -32,12 +37,20 @@ const formatJoiningDate = (dateString: string): string => {
     return dateString;
   }
 };
+
 export function EmployeeTable({
   employees,
   selectedStatus
 }: EmployeeTableProps) {
+  const navigate = useNavigate();
   const isPreboarding = selectedStatus === 'Preboarding';
-  return <div className="rounded-lg border bg-card">
+
+  const handleViewDetails = (employeeId: string) => {
+    navigate(`/dashboard/people/${employeeId}`);
+  };
+
+  return (
+    <div className="rounded-lg border bg-card">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
@@ -46,7 +59,8 @@ export function EmployeeTable({
               {isPreboarding ? 'Candidate Name' : 'Employee Name'}
             </TableHead>
             <TableHead>Job Title</TableHead>
-            {isPreboarding ? <>
+            {isPreboarding ? (
+              <>
                 <TableHead>Joining Date</TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
@@ -65,17 +79,23 @@ export function EmployeeTable({
                     </Tooltip>
                   </div>
                 </TableHead>
-              </> : <TableHead>Contact</TableHead>}
+              </>
+            ) : (
+              <TableHead>Contact</TableHead>
+            )}
             <TableHead className="w-[60px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {employees.map(employee => {
-          const StatusIcon = getStatusIcon(employee.preboardingStatus || '');
-          return <TableRow key={employee.id} className="group">
-                {!isPreboarding && <TableCell className="font-mono text-sm font-medium">
+          {employees.map((employee) => {
+            const StatusIcon = getStatusIcon(employee.preboardingStatus || '');
+            return (
+              <TableRow key={employee.id} className="group">
+                {!isPreboarding && (
+                  <TableCell className="font-mono text-sm font-medium">
                     {employee.employeeId}
-                  </TableCell>}
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -93,22 +113,25 @@ export function EmployeeTable({
                 <TableCell className="text-muted-foreground">
                   {employee.jobTitle}
                 </TableCell>
-                {isPreboarding ? <>
+                {isPreboarding ? (
+                  <>
                     <TableCell className="text-muted-foreground">
                       {formatJoiningDate(employee.joiningDate || '')}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        
                         <span>{employee.preboardingStatus}</span>
                       </div>
                     </TableCell>
-                  </> : <TableCell>
+                  </>
+                ) : (
+                  <TableCell>
                     <div className="space-y-1">
                       <div className="text-sm text-foreground">{employee.email}</div>
                       <div className="text-sm text-muted-foreground">{employee.phone}</div>
                     </div>
-                  </TableCell>}
+                  </TableCell>
+                )}
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -117,7 +140,7 @@ export function EmployeeTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewDetails(employee.id)}>
                         <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
@@ -125,13 +148,14 @@ export function EmployeeTable({
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
-              </TableRow>;
-        })}
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
-    </div>;
+    </div>
+  );
 }
