@@ -7,6 +7,7 @@ import Overview from './components/Overview';
 import People from './pages/People';
 import Settings from './pages/Settings';
 import { AddEmployeeTwoStepForm } from './components/AddEmployeeTwoStepForm';
+import { PreboardingFlow } from './components/PreboardingFlow';
 import NotFound from './pages/NotFound';
 import EmployeeProfilePage from './pages/EmployeeProfile';
 
@@ -20,6 +21,13 @@ function App() {
           <Route path="people" element={<People />} />
           <Route path="people/:id" element={<EmployeeProfilePage />} />
           <Route path="people/add" element={<AddEmployeeTwoStepForm />} />
+          <Route path="preboarding/:employeeId" element={
+            <PreboardingFlow 
+              employeeId="temp-id" 
+              employeeName="John Doe" 
+              onComplete={() => console.log('Preboarding completed')}
+            />
+          } />
           <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<NotFound />} />

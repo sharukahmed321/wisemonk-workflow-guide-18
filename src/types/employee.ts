@@ -1,3 +1,4 @@
+
 export type EmployeeStatus = 'Active' | 'Onboarding' | 'Preboarding';
 export type EmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Intern';
 export type Department = 'Engineering' | 'Marketing' | 'Sales' | 'HR' | 'Finance' | 'Operations' | 'Design';
@@ -21,4 +22,37 @@ export interface Employee {
   // Preboarding-specific fields
   joiningDate?: string;
   preboardingStatus?: PreboardingStatus;
+}
+
+export interface PreboardingData {
+  personalDetails: {
+    phoneNumber: string;
+    alternateEmail?: string;
+    currentAddress: string;
+    permanentAddress: string;
+    fatherName: string;
+    aadhaarNumber: string;
+  };
+  backgroundVerification: {
+    documents: {
+      panCard?: File;
+      previousPayslips?: File;
+      previousOfferLetter?: File;
+    };
+    uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
+  };
+  employmentAgreement: {
+    agreedToTerms: boolean;
+    digitalSignature?: string;
+    signatureDate?: Date;
+    completedAt?: Date;
+  };
+}
+
+export interface PreboardingStep {
+  number: number;
+  title: string;
+  description: string;
+  isCompleted: boolean;
+  isCurrent: boolean;
 }
