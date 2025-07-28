@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Settings from '../pages/Settings';
 import People from '../pages/People';
+import EmployeeProfilePage from '../pages/EmployeeProfile';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from './AppSidebar';
 import { SetupProgress } from './SetupProgress';
@@ -178,6 +179,7 @@ export function Dashboard() {
                   }} />
                 } />
                 <Route path="people" element={<People />} />
+                <Route path="people/:id" element={<EmployeeProfilePage />} />
                 <Route path="people/add" element={<AddEmployeeTwoStepForm onSuccess={() => navigate('/dashboard/people')} />} />
                 <Route path="teams" element={<PlaceholderPage title="Teams" />} />
                 <Route path="time" element={<PlaceholderPage title="Time & Attendance" />} />
