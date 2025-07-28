@@ -1,9 +1,8 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Employee } from '@/types/employee';
-import { Mail, Phone, Calendar, Briefcase, MapPin, User } from 'lucide-react';
+import { Mail, Phone, Calendar, MapPin, User, Briefcase, Calendar as CalendarIcon, Building } from 'lucide-react';
 
 interface OverviewTabProps {
   employee: Employee;
@@ -36,114 +35,81 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const InfoRow = ({ icon: Icon, label, value }: { icon: any, label: string, value: string | React.ReactNode }) => (
+  <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-b-0">
+    <div className="flex items-center gap-3">
+      <Icon className="w-4 h-4 text-gray-400" />
+      <span className="text-sm font-medium text-gray-600">{label}</span>
+    </div>
+    <div className="text-sm text-gray-900">{value}</div>
+  </div>
+);
+
 export function OverviewTab({ employee }: OverviewTabProps) {
   return (
     <div className="space-y-8">
       {/* Personal Details Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">Personal Details</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-white rounded-lg border border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">Personal Details</h3>
+        </div>
+        <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Email:</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900">{employee.email}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Phone:</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900">{employee.phone}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Birthday:</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900">
-                  {employee.birthday ? formatDate(employee.birthday) : '15 Aug 1990'}
-                </span>
-              </div>
+            <div className="space-y-0">
+              <InfoRow icon={Mail} label="Email" value={employee.email} />
+              <InfoRow icon={Phone} label="Phone" value={employee.phone} />
+              <InfoRow 
+                icon={Calendar} 
+                label="Birthday" 
+                value={employee.birthday ? formatDate(employee.birthday) : '15 Aug 1990'} 
+              />
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Address:</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900">
-                  123 Tech Street, Bangalore, 560001
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Emergency Contact:</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900">
-                  John Doe (+91 98765 43210)
-                </span>
-              </div>
+            <div className="space-y-0">
+              <InfoRow 
+                icon={MapPin} 
+                label="Address" 
+                value="123 Tech Street, Bangalore, 560001" 
+              />
+              <InfoRow 
+                icon={User} 
+                label="Emergency Contact" 
+                value="John Doe (+91 98765 43210)" 
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Basic Employment Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">Employment Information</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Employment Information */}
+      <div className="bg-white rounded-lg border border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">Employment Information</h3>
+        </div>
+        <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Employee ID:</span>
-                <span className="text-sm font-medium text-gray-900">{employee.employeeId}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Job Title:</span>
-                <span className="text-sm font-medium text-gray-900">{employee.jobTitle}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Department:</span>
-                <span className="text-sm font-medium text-gray-900">{employee.department}</span>
-              </div>
+            <div className="space-y-0">
+              <InfoRow icon={Briefcase} label="Employee ID" value={employee.employeeId} />
+              <InfoRow icon={Building} label="Job Title" value={employee.jobTitle} />
+              <InfoRow icon={Building} label="Department" value={employee.department} />
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Employment Type:</span>
-                <span className="text-sm font-medium text-gray-900">{employee.employmentType}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Start Date:</span>
-                <span className="text-sm font-medium text-gray-900">{formatDate(employee.startDate)}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Status:</span>
-                <Badge className={getStatusColor(employee.status)}>
-                  {employee.status}
-                </Badge>
-              </div>
+            <div className="space-y-0">
+              <InfoRow icon={Briefcase} label="Employment Type" value={employee.employmentType} />
+              <InfoRow icon={CalendarIcon} label="Start Date" value={formatDate(employee.startDate)} />
+              <InfoRow 
+                icon={User} 
+                label="Status" 
+                value={
+                  <Badge className={getStatusColor(employee.status)}>
+                    {employee.status}
+                  </Badge>
+                } 
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

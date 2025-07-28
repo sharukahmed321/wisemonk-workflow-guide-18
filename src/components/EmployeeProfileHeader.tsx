@@ -30,41 +30,39 @@ const getStatusColor = (status: string) => {
 
 export function EmployeeProfileHeader({ employee }: EmployeeProfileHeaderProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-      <div className="p-8">
+    <div className="bg-white border-b border-gray-100 mb-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-6">
-            {/* Avatar - Larger and more prominent */}
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center shadow-sm">
-              <span className="text-2xl font-bold text-indigo-700">
+            {/* Avatar - Clean and prominent */}
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-full flex items-center justify-center border border-gray-100">
+              <span className="text-xl font-semibold text-indigo-600">
                 {employee.firstName[0]}{employee.lastName[0]}
               </span>
             </div>
             
-            {/* Employee Info - Streamlined */}
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900">
+            {/* Employee Info - Clean hierarchy */}
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold text-gray-900">
                 {employee.firstName} {employee.lastName}
               </h1>
-              <p className="text-xl text-gray-600">{employee.jobTitle}</p>
-              <div className="flex items-center gap-3 text-base text-gray-500">
+              <p className="text-lg text-gray-600">{employee.jobTitle}</p>
+              <div className="flex items-center gap-4 text-sm text-gray-500">
                 <span>{employee.department}</span>
-                <span>•</span>
+                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                 <span>{employee.employeeId}</span>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            {/* Status Badge */}
-            <Badge className={getStatusColor(employee.status)}>
-              {employee.status}
-            </Badge>
-          </div>
+          {/* Status Badge - Clean positioning */}
+          <Badge className={getStatusColor(employee.status)}>
+            {employee.status}
+          </Badge>
         </div>
         
-        {/* Action Buttons Row */}
-        <div className="mt-8 flex items-center gap-3">
+        {/* Action Buttons - Clean row */}
+        <div className="mt-6 flex items-center gap-3">
           <Button variant="default" size="sm" className="flex items-center gap-2">
             <Edit className="w-4 h-4" />
             Edit Profile

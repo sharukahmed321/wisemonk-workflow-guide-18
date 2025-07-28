@@ -1,9 +1,8 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Download, Eye, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Upload, Download, Eye, AlertCircle, CheckCircle, Clock, FileText } from 'lucide-react';
 
 interface DocumentCardProps {
   title: string;
@@ -23,7 +22,7 @@ const getStatusIcon = (status: string) => {
     case 'pending':
       return <Clock className="w-4 h-4 text-yellow-600" />;
     default:
-      return null;
+      return <FileText className="w-4 h-4 text-gray-400" />;
   }
 };
 
@@ -59,58 +58,56 @@ export function DocumentCard({
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-900">{title}</h3>
-            {getStatusIcon(status)}
-          </div>
-          <Badge className={getStatusColor(status)}>
-            {status.replace('_', ' ')}
-          </Badge>
+    <div className="bg-white border border-gray-100 rounded-lg p-4 hover:border-gray-200 transition-colors">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          {getStatusIcon(status)}
+          <h4 className="font-medium text-gray-900 text-sm">{title}</h4>
         </div>
+        <Badge className={`${getStatusColor(status)} text-xs`}>
+          {status.replace('_', ' ')}
+        </Badge>
+      </div>
+      
+      <div className="space-y-2 mb-4">
+        {uploadedDate && (
+          <p className="text-xs text-gray-500">
+            Uploaded: {uploadedDate}
+          </p>
+        )}
         
-        <div className="space-y-3">
-          {uploadedDate && (
-            <p className="text-sm text-gray-600">
-              Uploaded: {uploadedDate}
-            </p>
-          )}
-          
-          {expiryDate && (
-            <p className="text-sm text-gray-600">
-              Expires: {expiryDate}
-            </p>
-          )}
-          
-          <div className="flex items-center gap-2 pt-2">
-            {hasFile ? (
-              <>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                  <Eye className="w-4 h-4" />
-                  View
-                </Button>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                  <Download className="w-4 h-4" />
-                  Download
-                </Button>
-              </>
-            ) : (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleUpload}
-                disabled={isUploading}
-                className="flex items-center gap-1"
-              >
-                <Upload className="w-4 h-4" />
-                {isUploading ? 'Uploading...' : 'Upload'}
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        {expiryDate && (
+          <p className="text-xs text-gray-500">
+            Expires: {expiryDate}
+          </p>
+        )}
+      </div>
+      
+      <div className="flex items-center gap-2">
+        {hasFile ? (
+          <>
+            <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs h-8">
+              <Eye className="w-3 h-3" />
+              View
+            </Button>
+            <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs h-8">
+              <Download className="w-3 h-3" />
+              Download
+            </Button>
+          </>
+        ) : (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleUpload}
+            disabled={isUploading}
+            className="flex items-center gap-1 text-xs h-8"
+          >
+            <Upload className="w-3 h-3" />
+            {isUploading ? 'Uploading...' : 'Upload'}
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
