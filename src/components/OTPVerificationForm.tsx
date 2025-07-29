@@ -155,7 +155,7 @@ export function OTPVerificationForm({ email, onVerify, onResend, onBack }: OTPVe
 
   return (
     <div className="min-h-screen flex items-center justify-center px-6 md:px-8">
-      <div className="w-full max-w-sm mx-auto space-y-6">
+      <div className="max-w-sm space-y-6 text-center">
         {/* Back Button */}
         <div className="relative">
           <button
