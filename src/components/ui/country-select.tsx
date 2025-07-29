@@ -25,6 +25,9 @@ export function CountrySelect({
   const [searchTerm, setSearchTerm] = useState('');
   const { countries, loading, error } = useCountrySearch(searchTerm);
 
+  // Add defensive check to ensure countries is always an array
+  const safeCountries = Array.isArray(countries) ? countries : [];
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -40,51 +43,59 @@ export function CountrySelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput 
-            placeholder="Search countries..." 
-            className="h-9"
-            value={searchTerm}
-            onValueChange={setSearchTerm}
-          />
-          {loading && (
-            <div className="flex items-center justify-center p-4">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
-            </div>
-          )}
-          {error && (
-            <div className="p-4 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-          {!loading && !error && (!countries || countries.length === 0) && (
-            <CommandEmpty>No country found.</CommandEmpty>
-          )}
-          {!loading && !error && countries && countries.length > 0 && (
-            <CommandGroup className="max-h-64 overflow-auto">
-              {countries.map((country) => (
-                <CommandItem
-                  key={country.id}
-                  value={country.name}
-                  onSelect={() => {
-                    onValueChange(country.name);
-                    setOpen(false);
-                    setSearchTerm('');
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === country.name ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {country.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-        </Command>
+        {/* Only render Command when we have initialized data */}
+        {safeCountries !== undefined ? (
+          <Command>
+            <CommandInput 
+              placeholder="Search countries..." 
+              className="h-9"
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+            />
+            {loading && (
+              <div className="flex items-center justify-center p-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
+              </div>
+            )}
+            {error && (
+              <div className="p-4 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            {!loading && !error && safeCountries.length === 0 && (
+              <CommandEmpty>No country found.</CommandEmpty>
+            )}
+            {!loading && !error && safeCountries.length > 0 && (
+              <CommandGroup className="max-h-64 overflow-auto">
+                {safeCountries.map((country) => (
+                  <CommandItem
+                    key={country.id}
+                    value={country.name}
+                    onSelect={() => {
+                      onValueChange(country.name);
+                      setOpen(false);
+                      setSearchTerm('');
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === country.name ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {country.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </Command>
+        ) : (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="ml-2 text-sm text-muted-foreground">Loading...</span>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
