@@ -154,78 +154,80 @@ export function OTPVerificationForm({ email, onVerify, onResend, onBack }: OTPVe
   };
 
   return (
-    <div className="space-y-6">
-      {/* Back Button */}
-      <div className="relative">
-        <button
-          onClick={onBack}
-          className="absolute -top-2 left-0 p-2 text-gray-600 hover:text-gray-900 transition-colors"
-          aria-label="Go back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-      </div>
-      
-      {/* Header Section */}
-      <div className="text-center space-y-2 pt-8">
-        <h2 className="text-2xl font-bold text-gray-900">Verify your email</h2>
-        <p className="text-gray-600">
-          We've sent a verification code to
-        </p>
-        <p className="font-medium text-gray-900 break-all">{email}</p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md space-y-6">
+        {/* Back Button */}
+        <div className="relative">
+          <button
+            onClick={onBack}
+            className="absolute -top-2 left-0 p-2 text-gray-600 hover:text-gray-900 transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* Header Section */}
+        <div className="text-center space-y-2 pt-8">
+          <h2 className="text-2xl font-bold text-gray-900">Verify your email</h2>
+          <p className="text-gray-600">
+            We've sent a verification code to
+          </p>
+          <p className="font-medium text-gray-900 break-all">{email}</p>
+        </div>
 
-      {/* OTP Input Section */}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="otp">Verification Code</Label>
-          <div className="flex justify-center">
-            <InputOTP
-              maxLength={6}
-              value={otp}
-              onChange={(value) => setOtp(value)}
-            >
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
-              </InputOTPGroup>
-            </InputOTP>
+        {/* OTP Input Section */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="otp">Verification Code</Label>
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={otp}
+                onChange={(value) => setOtp(value)}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+          </div>
+
+          {/* Resend Section */}
+          <div className="text-center space-y-2">
+            <p className="text-sm text-gray-500">
+              Didn't receive the code?{' '}
+              {canResend ? (
+                <button
+                  onClick={handleResend}
+                  disabled={isResending}
+                  className="text-indigo-600 hover:text-indigo-500 font-medium"
+                >
+                  {isResending ? 'Sending...' : 'Resend code'}
+                </button>
+              ) : (
+                <span className="text-gray-400">
+                  Resend in {countdown}s
+                </span>
+              )}
+            </p>
           </div>
         </div>
 
-        {/* Resend Section */}
-        <div className="text-center space-y-2">
-          <p className="text-sm text-gray-500">
-            Didn't receive the code?{' '}
-            {canResend ? (
-              <button
-                onClick={handleResend}
-                disabled={isResending}
-                className="text-indigo-600 hover:text-indigo-500 font-medium"
-              >
-                {isResending ? 'Sending...' : 'Resend code'}
-              </button>
-            ) : (
-              <span className="text-gray-400">
-                Resend in {countdown}s
-              </span>
-            )}
-          </p>
-        </div>
+        {/* Verify Button */}
+        <Button
+          onClick={handleVerify}
+          disabled={otp.length !== 6 || isVerifying}
+          className="w-full h-11 bg-indigo-600 hover:bg-indigo-700"
+        >
+          {isVerifying ? 'Verifying...' : 'Verify Email'}
+        </Button>
       </div>
-
-      {/* Verify Button */}
-      <Button
-        onClick={handleVerify}
-        disabled={otp.length !== 6 || isVerifying}
-        className="w-full h-11 bg-indigo-600 hover:bg-indigo-700"
-      >
-        {isVerifying ? 'Verifying...' : 'Verify Email'}
-      </Button>
     </div>
   );
 }
