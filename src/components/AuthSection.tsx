@@ -58,7 +58,7 @@ type SignInFormData = z.infer<typeof signInSchema>;
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
 export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionProps) {
-  const [authState, setAuthState] = useState<'auth' | 'otp' | 'verified'>('auth');
+  const [authState, setAuthState] = useState<'auth' | 'email-check' | 'verified'>('auth');
   const [userEmail, setUserEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -274,35 +274,14 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         
         setUserEmail(data.email);
         
-        // Send OTP for email verification
-        try {
-          const { data: otpData, error: otpError } = await supabase.functions.invoke('send-otp', {
-            body: { email: data.email }
-          });
-
-          if (otpError) throw otpError;
-
-          if (otpData?.success) {
-            toast({
-              title: "Account created!",
-              description: "Please check your email for a verification code.",
-            });
-            setAuthState('otp');
-          } else {
-            throw new Error(otpData?.error || "Failed to send verification code");
-          }
-        } catch (otpError: any) {
-          console.error('OTP sending error:', otpError);
-          // Don't redirect to OTP screen if email sending fails
-          toast({
-            title: "Account Created Successfully!",
-            description: "However, we couldn't send the verification email. You can sign in and verify your email later.",
-            variant: "destructive",
-          });
-          
-          // Stay on auth screen and show additional options
-          setError("Email verification couldn't be sent. You can sign in with your credentials or try requesting verification again later.");
-        }
+        // User was created but needs email verification - Supabase handles this automatically
+        console.log('User created successfully, email verification sent automatically');
+        
+        toast({
+          title: "Account created!",
+          description: "Please check your email and click the verification link to activate your account.",
+        });
+        setAuthState('email-check');
       }
     } catch (error: any) {
       await logAuthEvent('sign_up_error', false, { 
@@ -347,7 +326,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     }
   };
 
-  if (authState === 'otp') {
+  if (authState === 'email-check') {
     return (
       <OTPVerification
         email={userEmail}

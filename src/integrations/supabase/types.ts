@@ -268,39 +268,6 @@ export type Database = {
         }
         Relationships: []
       }
-      otp_codes: {
-        Row: {
-          attempts: number
-          code: string
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          updated_at: string
-          used: boolean
-        }
-        Insert: {
-          attempts?: number
-          code: string
-          created_at?: string
-          email: string
-          expires_at: string
-          id?: string
-          updated_at?: string
-          used?: boolean
-        }
-        Update: {
-          attempts?: number
-          code?: string
-          created_at?: string
-          email?: string
-          expires_at?: string
-          id?: string
-          updated_at?: string
-          used?: boolean
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           account_locked_reason: string | null
@@ -324,8 +291,6 @@ export type Database = {
           created_at: string
           department: string | null
           email: string
-          email_verification_attempts: number | null
-          email_verification_sent_at: string | null
           email_verified: boolean
           failed_login_attempts: number
           first_name: string | null
@@ -372,8 +337,6 @@ export type Database = {
           created_at?: string
           department?: string | null
           email: string
-          email_verification_attempts?: number | null
-          email_verification_sent_at?: string | null
           email_verified?: boolean
           failed_login_attempts?: number
           first_name?: string | null
@@ -420,8 +383,6 @@ export type Database = {
           created_at?: string
           department?: string | null
           email?: string
-          email_verification_attempts?: number | null
-          email_verification_sent_at?: string | null
           email_verified?: boolean
           failed_login_attempts?: number
           first_name?: string | null
@@ -534,14 +495,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      can_send_verification_email: {
-        Args: { user_email: string }
-        Returns: boolean
-      }
-      cleanup_expired_otp_codes: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       get_account_security_status: {
         Args: { user_email: string }
         Returns: Json
@@ -586,10 +539,6 @@ export type Database = {
       should_lock_account: {
         Args: { user_email: string }
         Returns: boolean
-      }
-      track_email_verification_attempt: {
-        Args: { user_email: string }
-        Returns: undefined
       }
       upsert_organization: {
         Args: {

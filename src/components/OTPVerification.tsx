@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "./ui/input-otp";
-import { ArrowLeft, CheckCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { CheckCircle, Mail } from 'lucide-react';
 
 interface OTPVerificationProps {
   email: string;
@@ -11,139 +11,105 @@ interface OTPVerificationProps {
   onVerified: () => void;
 }
 
-export function OTPVerification({ email, onBack, onVerified }: OTPVerificationProps) {
-  const [otp, setOtp] = useState('');
-  const [countdown, setCountdown] = useState(60);
-  const [canResend, setCanResend] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+export const OTPVerification: React.FC<OTPVerificationProps> = ({ 
+  email, 
+  onBack, 
+  onVerified 
+}) => {
+  const [isResending, setIsResending] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [canResend, setCanResend] = useState(true);
 
   useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     } else {
       setCanResend(true);
     }
+    return () => clearTimeout(timer);
   }, [countdown]);
 
-  const handleVerify = async () => {
-    if (otp.length === 6) {
-      setIsVerifying(true);
-      
-      try {
-        const { data, error } = await supabase.functions.invoke('verify-otp', {
-          body: { email, code: otp }
-        });
-
-        if (error) throw error;
-
-        if (data.valid) {
-          toast.success("Email verified successfully!");
-          onVerified();
-        } else {
-          toast.error(data.error || "Invalid verification code");
-          setOtp('');
-        }
-      } catch (error: any) {
-        console.error('OTP verification error:', error);
-        toast.error(error.message || "Verification failed. Please try again.");
-        setOtp('');
-      } finally {
-        setIsVerifying(false);
-      }
-    }
-  };
-
   const handleResend = async () => {
+    setIsResending(true);
+    setCanResend(false);
+    setCountdown(60); // 60 second cooldown
+
     try {
-      const { data, error } = await supabase.functions.invoke('send-otp', {
-        body: { email }
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email
       });
 
-      if (error) throw error;
-
-      if (data.success) {
-        setCountdown(60);
-        setCanResend(false);
-        setOtp('');
-        toast.success("Verification code sent!");
-      } else {
-        toast.error(data.error || "Failed to send code");
+      if (error) {
+        console.error('Resend error:', error);
+        toast({
+          title: "Failed to resend",
+          description: error.message || "Please try again later.",
+          variant: "destructive",
+        });
+        setCanResend(true);
+        setCountdown(0);
+        return;
       }
+
+      toast({
+        title: "Verification email sent!",
+        description: "A new verification link has been sent to your email.",
+      });
     } catch (error: any) {
-      console.error('Resend OTP error:', error);
-      toast.error(error.message || "Failed to send verification code");
+      console.error('Resend error:', error);
+      toast({
+        title: "Failed to resend",
+        description: "An error occurred. Please try again later.",
+        variant: "destructive",
+      });
+      setCanResend(true);
+      setCountdown(0);
+    } finally {
+      setIsResending(false);
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-center px-6 py-8 lg:px-8 lg:w-1/2">
-      <div className="mx-auto w-full max-w-sm">
-        <div className="space-y-6">
-          <button 
-            onClick={onBack}
-            className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </button>
-
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-foreground">Check your email</h2>
-            <p className="text-muted-foreground">
-              We sent a verification code to <span className="font-medium text-foreground">{email}</span>
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="otp" className="text-sm font-medium text-foreground">
-                Enter 6-digit code
-              </label>
-              <div className="flex justify-center">
-                <InputOTP
-                  maxLength={6}
-                  value={otp}
-                  onChange={setOtp}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              {canResend ? (
-                <button 
-                  onClick={handleResend}
-                  className="text-primary hover:text-primary/80 font-medium"
-                >
-                  Resend code
-                </button>
-              ) : (
-                `Resend code in ${countdown}s`
-              )}
-            </div>
-
-            <Button 
-              onClick={handleVerify}
-              disabled={otp.length !== 6 || isVerifying}
-              className="w-full h-11"
-            >
-              {isVerifying ? 'Verifying...' : 'Verify Email'}
-            </Button>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader className="text-center">
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+            <Mail className="w-8 h-8 text-primary" />
           </div>
         </div>
-      </div>
-    </div>
+        <CardTitle>Check your email</CardTitle>
+        <CardDescription>
+          We've sent a verification link to <strong>{email}</strong>. 
+          Click the link in your email to verify your account.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="text-center text-sm text-muted-foreground">
+          Didn't receive the email?{' '}
+          {canResend ? (
+            <Button
+              variant="link"
+              className="p-0 h-auto"
+              onClick={handleResend}
+              disabled={isResending}
+            >
+              {isResending ? 'Sending...' : 'Resend verification email'}
+            </Button>
+          ) : (
+            <span>Resend in {countdown}s</span>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter className="flex flex-col space-y-2">
+        <Button variant="outline" onClick={onBack} className="w-full">
+          Back to Sign In
+        </Button>
+      </CardFooter>
+    </Card>
   );
-}
+};
 
 interface EmailVerifiedProps {
   onContinue: () => void;

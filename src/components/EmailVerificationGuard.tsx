@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,12 +18,10 @@ export function EmailVerificationGuard({ children }: EmailVerificationGuardProps
   const [canResend, setCanResend] = useState(true);
   const [cooldownTime, setCooldownTime] = useState(0);
   const [isResending, setIsResending] = useState(false);
-  const [verificationAttempts, setVerificationAttempts] = useState(0);
 
   useEffect(() => {
     if (user) {
       checkVerificationStatus();
-      fetchVerificationAttempts();
     }
   }, [user]);
 
@@ -57,94 +54,42 @@ export function EmailVerificationGuard({ children }: EmailVerificationGuardProps
     }
   };
 
-  const fetchVerificationAttempts = async () => {
-    if (!user?.email) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('email_verification_attempts, email_verification_sent_at')
-        .eq('email', user.email)
-        .single();
-
-      if (!error && data) {
-        setVerificationAttempts(data.email_verification_attempts || 0);
-        
-        // Check if we're in cooldown
-        if (data.email_verification_sent_at) {
-          const lastSent = new Date(data.email_verification_sent_at);
-          const now = new Date();
-          const timeDiff = Math.floor((now.getTime() - lastSent.getTime()) / 1000);
-          const cooldownRemaining = Math.max(0, 60 - timeDiff); // 1 minute cooldown
-          
-          if (cooldownRemaining > 0) {
-            setCooldownTime(cooldownRemaining);
-            setCanResend(false);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching verification attempts:', error);
-    }
-  };
-
   const handleResendVerification = async () => {
     if (!user?.email || !canResend) return;
 
     setIsResending(true);
 
     try {
-      // Check if user can send verification email
-      const { data: canSend, error: canSendError } = await supabase.rpc('can_send_verification_email', {
-        user_email: user.email
+      // Resend verification email using Supabase auth
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email
       });
 
-      if (canSendError) {
-        throw canSendError;
-      }
-
-      if (!canSend) {
+      if (error) {
+        console.error('Resend verification error:', error);
         toast({
-          title: "Rate limit exceeded",
-          description: "You've reached the daily limit for verification emails. Please try again tomorrow.",
+          title: "Failed to resend verification",
+          description: error.message || "Please try again later.",
           variant: "destructive",
         });
         return;
       }
 
-      // Resend verification email
-      const { error: resendError } = await supabase.auth.resend({
-        type: 'signup',
-        email: user.email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`
-        }
+      toast({
+        title: "Verification email sent",
+        description: "Please check your email and click the verification link.",
       });
 
-      if (resendError) {
-        throw resendError;
-      }
-
-      // Track the verification attempt
-      await supabase.rpc('track_email_verification_attempt', {
-        user_email: user.email
-      });
-
-      // Update local state
-      setVerificationAttempts(prev => prev + 1);
+      // Set cooldown
       setCooldownTime(60); // 1 minute cooldown
       setCanResend(false);
-
-      toast({
-        title: "Verification email sent!",
-        description: "Please check your email for the verification link.",
-      });
 
     } catch (error: any) {
       console.error('Error resending verification:', error);
       toast({
-        title: "Failed to send verification email",
-        description: error.message || "Please try again later.",
+        title: "Error",
+        description: "Failed to resend verification email. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -192,19 +137,16 @@ export function EmailVerificationGuard({ children }: EmailVerificationGuardProps
             </AlertDescription>
           </Alert>
 
-          {verificationAttempts >= 3 && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Multiple verification emails sent. Check your spam folder or contact support if needed.
-              </AlertDescription>
-            </Alert>
-          )}
+          <Alert className="mb-4">
+            <AlertDescription>
+              If you don't see the email, check your spam folder.
+            </AlertDescription>
+          </Alert>
 
           <div className="space-y-3">
             <Button 
               onClick={handleResendVerification}
-              disabled={!canResend || isResending || verificationAttempts >= 5}
+              disabled={!canResend || isResending}
               className="w-full"
               variant={canResend ? "default" : "secondary"}
             >
@@ -218,8 +160,6 @@ export function EmailVerificationGuard({ children }: EmailVerificationGuardProps
                   <Clock className="mr-2 h-4 w-4" />
                   Resend in {cooldownTime}s
                 </>
-              ) : verificationAttempts >= 5 ? (
-                "Daily limit reached"
               ) : (
                 <>
                   <Mail className="mr-2 h-4 w-4" />
@@ -227,10 +167,6 @@ export function EmailVerificationGuard({ children }: EmailVerificationGuardProps
                 </>
               )}
             </Button>
-
-            <div className="text-center text-sm text-muted-foreground">
-              Verification attempts: {verificationAttempts}/5 today
-            </div>
           </div>
 
           <div className="pt-4 border-t text-center text-sm text-muted-foreground">
