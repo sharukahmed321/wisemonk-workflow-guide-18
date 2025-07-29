@@ -66,12 +66,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (!otpRecord) {
-      // Increment attempts for this email/code combination
-      await supabase
-        .from("otp_codes")
-        .update({ attempts: supabase.sql`attempts + 1` })
-        .eq("email", email)
-        .eq("code", otp);
+    // Log the failed attempt (simplified - no attempts increment for now)
+    console.log(`Invalid OTP attempt for: ${email}`);
 
       return new Response(
         JSON.stringify({ 
@@ -105,13 +101,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Mark user as email verified in auth.users
-    const { data: user, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    // Look up user by email from profiles table instead
+    const { data: profile, error: profileLookupError } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .eq("email", email)
+      .single();
     
-    if (userError || !user.user) {
-      console.error("User lookup error:", userError);
+    if (profileLookupError || !profile) {
+      console.error("Profile lookup error:", profileLookupError);
       return new Response(
-        JSON.stringify({ error: "User not found" }),
+        JSON.stringify({ error: "User profile not found" }),
         {
           status: 404,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -119,18 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Update the user's email_confirmed_at field
-    const { error: confirmError } = await supabase.auth.admin.updateUserById(
-      user.user.id,
-      {
-        email_confirm: true,
-      }
-    );
-
-    if (confirmError) {
-      console.error("Email confirmation error:", confirmError);
-      // Don't fail the verification if this step fails
-    }
+    console.log(`Found user profile for: ${email}, user_id: ${profile.user_id}`);
 
     // Update user profile to mark email as verified
     const { error: profileError } = await supabase
