@@ -68,9 +68,32 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Check for rate limiting (max 3 OTPs per email per hour)
+    const { data: recentOTPs, error: rateLimitError } = await supabase
+      .from("otp_codes")
+      .select("id")
+      .eq("email", email)
+      .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
+      .limit(3);
+
+    if (rateLimitError) {
+      console.error("Rate limit check error:", rateLimitError);
+    } else if (recentOTPs && recentOTPs.length >= 3) {
+      console.log(`Rate limit exceeded for email: ${email}`);
+      return new Response(
+        JSON.stringify({ 
+          error: "Too many OTP requests. Please wait an hour before requesting again." 
+        }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     // Send OTP via email
     const emailResponse = await resend.emails.send({
-      from: "Wisemonk <onboarding@resend.dev>",
+      from: "Wisemonk <noreply@wisemonk.co>",
       to: [email],
       subject: "Your Verification Code - Wisemonk",
       html: `
@@ -104,8 +127,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (emailResponse.error) {
       console.error("Email error:", emailResponse.error);
+      
+      // Provide specific error message based on Resend error
+      let errorMessage = "Failed to send email";
+      if (emailResponse.error.message?.includes("domain")) {
+        errorMessage = "Email sending is currently under configuration. Please contact support.";
+      }
+      
       return new Response(
-        JSON.stringify({ error: "Failed to send email" }),
+        JSON.stringify({ 
+          error: errorMessage,
+          details: emailResponse.error.message 
+        }),
         {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },

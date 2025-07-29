@@ -66,13 +66,34 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (!otpRecord) {
-    // Log the failed attempt (simplified - no attempts increment for now)
-    console.log(`Invalid OTP attempt for: ${email}`);
+      // Check if there are any OTP records for this email to provide better error messaging
+      const { data: anyOTPRecord } = await supabase
+        .from("otp_codes")
+        .select("id, used, expires_at")
+        .eq("email", email)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let errorMessage = "Invalid OTP code";
+      if (anyOTPRecord) {
+        if (anyOTPRecord.used) {
+          errorMessage = "This OTP code has already been used. Please request a new one.";
+        } else if (new Date(anyOTPRecord.expires_at) < new Date()) {
+          errorMessage = "This OTP code has expired. Please request a new one.";
+        } else {
+          errorMessage = "Invalid OTP code. Please check and try again.";
+        }
+      } else {
+        errorMessage = "No OTP code found for this email. Please request a new one.";
+      }
+
+      console.log(`Invalid OTP attempt for: ${email} - ${errorMessage}`);
 
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Invalid or expired OTP code" 
+          error: errorMessage
         }),
         {
           status: 400,
