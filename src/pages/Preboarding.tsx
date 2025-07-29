@@ -76,7 +76,7 @@ const mockEmployees: Employee[] = [
     email: 'james.brown@company.com',
     phone: '+1 (555) 567-8901',
     jobTitle: 'Product Manager',
-    department: 'Product',
+    department: 'Operations',
     employmentType: 'Full-time',
     salary: 90000,
     startDate: '2024-03-15',
