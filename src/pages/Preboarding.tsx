@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -79,9 +80,9 @@ const mockEmployees: Employee[] = [
     employmentType: 'Full-time',
     salary: 90000,
     startDate: '2024-03-15',
-    status: 'Preboarding',
+    status: 'Invited',
     joiningDate: '2024-04-01',
-    preboardingStatus: 'Completed',
+    preboardingStatus: 'Documents Pending',
   },
 ];
 

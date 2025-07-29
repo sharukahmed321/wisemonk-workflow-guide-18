@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Employee } from '@/types/employee';
-import { CheckCircle, Clock, FileText, AlertCircle } from 'lucide-react';
+import { CheckCircle, Clock, FileText, AlertCircle, Mail } from 'lucide-react';
 
 interface PreboardingStatusCardProps {
   employee: Employee;
@@ -13,11 +13,20 @@ interface PreboardingStatusCardProps {
 }
 
 export function PreboardingStatusCard({ employee, onStartPreboarding }: PreboardingStatusCardProps) {
-  if (employee.status !== 'Preboarding') {
+  if (employee.status !== 'Preboarding' && employee.status !== 'Invited') {
     return null;
   }
 
   const getStatusInfo = () => {
+    if (employee.status === 'Invited') {
+      return {
+        icon: <Mail className="w-5 h-5 text-blue-500" />,
+        color: 'blue',
+        progress: 0,
+        message: 'Invitation sent - waiting for employee to accept'
+      };
+    }
+
     switch (employee.preboardingStatus) {
       case 'Documents Pending':
         return {
@@ -52,19 +61,26 @@ export function PreboardingStatusCard({ employee, onStartPreboarding }: Preboard
 
   const statusInfo = getStatusInfo();
 
+  const getDisplayStatus = () => {
+    if (employee.status === 'Invited') {
+      return 'Invitation Sent';
+    }
+    return employee.preboardingStatus || 'Not Started';
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {statusInfo.icon}
-          Preboarding Status
+          {employee.status === 'Invited' ? 'Invitation Status' : 'Preboarding Status'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Current Status:</span>
           <Badge variant={statusInfo.color === 'green' ? 'default' : 'secondary'}>
-            {employee.preboardingStatus}
+            {getDisplayStatus()}
           </Badge>
         </div>
 
@@ -89,7 +105,17 @@ export function PreboardingStatusCard({ employee, onStartPreboarding }: Preboard
           </div>
         )}
 
-        {employee.preboardingStatus !== 'Completed' && (
+        {employee.status === 'Invited' && (
+          <Button 
+            onClick={onStartPreboarding}
+            className="w-full"
+            variant="outline"
+          >
+            Resend Invitation
+          </Button>
+        )}
+
+        {employee.status === 'Preboarding' && employee.preboardingStatus !== 'Completed' && (
           <Button 
             onClick={onStartPreboarding}
             className="w-full"
