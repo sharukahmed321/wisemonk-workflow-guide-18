@@ -97,6 +97,7 @@ export default function People() {
     Active: mockEmployees.filter(emp => emp.status === 'Active').length,
     Onboarding: mockEmployees.filter(emp => emp.status === 'Onboarding').length,
     Preboarding: mockEmployees.filter(emp => emp.status === 'Preboarding').length,
+    Invited: mockEmployees.filter(emp => emp.status === 'Invited').length,
   };
 
   const handleAddEmployee = () => {

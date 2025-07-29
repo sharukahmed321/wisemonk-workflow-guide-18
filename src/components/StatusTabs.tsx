@@ -18,6 +18,7 @@ export function StatusTabs({
     { value: 'Active', label: 'Active', count: statusCounts.Active },
     { value: 'Onboarding', label: 'Onboarding', count: statusCounts.Onboarding },
     { value: 'Preboarding', label: 'Preboarding', count: statusCounts.Preboarding },
+    { value: 'Invited', label: 'Invited', count: statusCounts.Invited },
   ] as const;
 
   return (
