@@ -11,14 +11,23 @@ import { supabase } from '../integrations/supabase/client';
 
 const Index = () => {
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const { user, loading, isEmailVerified } = useAuth();
   const [appState, setAppState] = useState<'auth' | 'onboarding' | 'dashboard'>('auth');
   
   useEffect(() => {
     if (loading) return; // Wait for auth to load
     
+    console.log('Index useEffect - User:', user?.email, 'Email verified:', isEmailVerified, 'Location:', location.pathname);
+    
     if (user) {
-      // User is authenticated
+      // User is authenticated, but check if email is verified
+      if (!isEmailVerified) {
+        console.log('User authenticated but email not verified - staying in auth state');
+        setAppState('auth');
+        return;
+      }
+      
+      // User is authenticated and email is verified
       if (location.pathname.startsWith('/dashboard')) {
         setAppState('dashboard');
       } else {
@@ -29,7 +38,7 @@ const Index = () => {
       // User is not authenticated
       setAppState('auth');
     }
-  }, [user, loading, location]);
+  }, [user, loading, isEmailVerified, location]);
 
   const checkUserOnboardingStatus = async () => {
     try {

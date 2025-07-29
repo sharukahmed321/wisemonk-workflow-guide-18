@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   userRole: string | null;
+  isEmailVerified: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -29,16 +30,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email, 'Email confirmed:', session?.user?.email_confirmed_at);
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Fetch user role when user signs in
-        if (session?.user) {
+        // Check email verification status
+        const emailVerified = session?.user?.email_confirmed_at !== null;
+        setIsEmailVerified(emailVerified);
+        
+        // Fetch user role when user signs in and email is verified
+        if (session?.user && emailVerified) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
           }, 0);
@@ -52,10 +59,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email, 'Email confirmed:', session?.user?.email_confirmed_at);
       setSession(session);
       setUser(session?.user ?? null);
       
-      if (session?.user) {
+      // Check email verification status
+      const emailVerified = session?.user?.email_confirmed_at !== null;
+      setIsEmailVerified(emailVerified);
+      
+      if (session?.user && emailVerified) {
         setTimeout(() => {
           fetchUserRole(session.user.id);
         }, 0);
@@ -139,6 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     session,
     loading,
     userRole,
+    isEmailVerified,
     signOut,
   };
 

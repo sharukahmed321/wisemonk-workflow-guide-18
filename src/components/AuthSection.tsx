@@ -244,85 +244,58 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     setError(null);
     
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-          data: {
-            first_name: '',
-            last_name: '',
+      // First, send OTP without creating the user in Supabase Auth yet
+      console.log('Sending OTP code for email verification before user creation');
+      
+      try {
+        const { data: otpData, error: otpError } = await supabase.functions.invoke('send-otp', {
+          body: {
+            email: data.email
           }
-        }
-      });
-
-      if (authError) {
-        await logAuthEvent('sign_up_failed', false, { 
-          email: data.email, 
-          error: authError.message 
         });
-        
-        if (authError.message.includes('User already registered')) {
-          setError('An account with this email already exists. Please sign in instead.');
-        } else {
-          setError(authError.message);
-        }
-        return;
-      }
 
-      if (authData.user) {
-        await logAuthEvent('sign_up_success', true, { email: data.email });
-        
-        setUserEmail(data.email);
-        
-        // Send OTP code via edge function
-        console.log('User created successfully, sending OTP code');
-        
-        try {
-          const { data: otpData, error: otpError } = await supabase.functions.invoke('send-otp', {
-            body: {
-              email: data.email
-            }
-          });
-
-          if (otpError) {
-            console.error('OTP send error:', otpError);
-            toast({
-              title: "OTP Send Failed",
-              description: "Failed to send verification code. Please try again.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          if (otpData?.success) {
-            toast({
-              title: "Account created!",
-              description: "Please check your email for the verification code.",
-            });
-            setAuthState('email-check');
-          } else {
-            console.error('OTP send failed:', otpData);
-            toast({
-              title: "OTP Send Failed", 
-              description: "Failed to send verification code. Please try again.",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error('OTP send error:', error);
+        if (otpError) {
+          console.error('OTP send error:', otpError);
           toast({
-            title: "OTP Send Failed",
-            description: "Failed to send verification code. Please try again.",
+            title: "Failed to send verification code",
+            description: "Please try again later.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (otpData?.success) {
+          // Store signup data temporarily for use after verification
+          setUserEmail(data.email);
+          
+          // Store password temporarily (we'll create the user after OTP verification)
+          localStorage.setItem('pending_signup_data', JSON.stringify({
+            email: data.email,
+            password: data.password
+          }));
+          
+          toast({
+            title: "Verification code sent!",
+            description: "Please check your email for the verification code.",
+          });
+          setAuthState('email-check');
+        } else {
+          console.error('OTP send failed:', otpData);
+          toast({
+            title: "Failed to send verification code", 
+            description: "Please try again later.",
             variant: "destructive",
           });
         }
+      } catch (error) {
+        console.error('OTP send error:', error);
+        toast({
+          title: "Failed to send verification code",
+          description: "An error occurred. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
-      await logAuthEvent('sign_up_error', false, { 
-        email: data.email, 
-        error: error.message 
-      });
       setError('An unexpected error occurred. Please try again.');
       console.error('Sign up error:', error);
     } finally {
@@ -365,10 +338,64 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     return (
       <OTPVerificationForm
         email={userEmail}
-        onBack={() => setAuthState('auth')}
-        onVerify={(otp: string) => {
-          console.log('OTP verification initiated for:', userEmail);
-          setAuthState('verified');
+        onBack={() => {
+          // Clear temporary data when going back
+          localStorage.removeItem('pending_signup_data');
+          setAuthState('auth');
+        }}
+        onVerify={async (otp: string) => {
+          console.log('OTP verification successful for:', userEmail);
+          
+          // Create the actual user account after OTP verification
+          const pendingData = localStorage.getItem('pending_signup_data');
+          if (pendingData) {
+            const { email, password } = JSON.parse(pendingData);
+            
+            try {
+              const { data: authData, error: authError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                  emailRedirectTo: `${window.location.origin}/dashboard`,
+                  data: {
+                    first_name: '',
+                    last_name: '',
+                  }
+                }
+              });
+
+              if (authError) {
+                console.error('User creation error after OTP:', authError);
+                toast({
+                  title: "Account creation failed",
+                  description: authError.message,
+                  variant: "destructive",
+                });
+                setAuthState('auth');
+                return;
+              }
+
+              if (authData.user) {
+                // Clear the temporary data
+                localStorage.removeItem('pending_signup_data');
+                
+                await logAuthEvent('sign_up_success', true, { email });
+                console.log('User account created successfully after OTP verification');
+                setAuthState('verified');
+              }
+            } catch (error: any) {
+              console.error('Error creating user after OTP:', error);
+              toast({
+                title: "Account creation failed",
+                description: "An error occurred while creating your account.",
+                variant: "destructive",
+              });
+              setAuthState('auth');
+            }
+          } else {
+            console.error('No pending signup data found');
+            setAuthState('auth');
+          }
         }}
         onResend={async () => {
           try {
