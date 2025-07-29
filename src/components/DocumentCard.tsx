@@ -1,15 +1,8 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Upload, Download, Eye, AlertCircle, CheckCircle, Clock, FileText, MoreVertical } from 'lucide-react';
-
 interface DocumentCardProps {
   title: string;
   type: 'identity' | 'employment' | 'compliance';
@@ -18,7 +11,6 @@ interface DocumentCardProps {
   expiryDate?: string;
   hasFile?: boolean;
 }
-
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'verified':
@@ -31,7 +23,6 @@ const getStatusIcon = (status: string) => {
       return <FileText className="w-4 h-4 text-gray-400" />;
   }
 };
-
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'verified':
@@ -44,7 +35,6 @@ const getStatusColor = (status: string) => {
       return 'bg-gray-50 text-gray-700 border-gray-200';
   }
 };
-
 export function DocumentCard({
   title,
   type,
@@ -54,7 +44,6 @@ export function DocumentCard({
   hasFile = false
 }: DocumentCardProps) {
   const [isUploading, setIsUploading] = useState(false);
-
   const handleUpload = () => {
     setIsUploading(true);
     // Simulate upload process
@@ -62,17 +51,13 @@ export function DocumentCard({
       setIsUploading(false);
     }, 2000);
   };
-
   const handleView = () => {
     console.log('View document:', title);
   };
-
   const handleDownload = () => {
     console.log('Download document:', title);
   };
-
-  return (
-    <div className="bg-white border border-gray-100 rounded-lg p-4 hover:border-gray-200 transition-colors">
+  return <div className="bg-white border border-gray-100 rounded-lg p-4 hover:border-gray-200 transition-colors">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           {getStatusIcon(status)}
@@ -80,9 +65,7 @@ export function DocumentCard({
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={getStatusColor(status)}>
-            {status.replace('_', ' ')}
-          </Badge>
+          
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -91,8 +74,7 @@ export function DocumentCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              {hasFile ? (
-                <>
+              {hasFile ? <>
                   <DropdownMenuItem onClick={handleView}>
                     <Eye className="w-4 h-4 mr-2" />
                     View Document
@@ -105,31 +87,15 @@ export function DocumentCard({
                     <Upload className="w-4 h-4 mr-2" />
                     {isUploading ? 'Uploading...' : 'Re-upload'}
                   </DropdownMenuItem>
-                </>
-              ) : (
-                <DropdownMenuItem onClick={handleUpload} disabled={isUploading}>
+                </> : <DropdownMenuItem onClick={handleUpload} disabled={isUploading}>
                   <Upload className="w-4 h-4 mr-2" />
                   {isUploading ? 'Uploading...' : 'Upload Document'}
-                </DropdownMenuItem>
-              )}
+                </DropdownMenuItem>}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
       
-      <div className="space-y-2">
-        {uploadedDate && (
-          <p className="text-xs text-gray-500">
-            Uploaded: {uploadedDate}
-          </p>
-        )}
-        
-        {expiryDate && (
-          <p className="text-xs text-gray-500">
-            Expires: {expiryDate}
-          </p>
-        )}
-      </div>
-    </div>
-  );
+      
+    </div>;
 }
