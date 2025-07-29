@@ -14,7 +14,8 @@ import { OTPVerificationForm } from "./OTPVerificationForm";
 import { EmailVerified } from "./OTPVerification";
 import { ForgotPasswordModal } from "./ForgotPasswordModal";
 import { AccountLockoutModal } from "./AccountLockoutModal";
-import { Eye, EyeOff, Shield, AlertCircle, Clock } from "lucide-react";
+import { LoadingScreen } from "./LoadingScreen";
+import { Eye, EyeOff, Shield, AlertCircle, Clock, Wifi } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -38,17 +39,24 @@ interface SecurityStatus {
 }
 
 const signInSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address')
+    .transform(val => val.trim().toLowerCase()), // T24: Auto-trim and normalize email
   password: z.string().min(1, 'Password is required'),
   remember: z.boolean().optional(),
 });
 
 const signUpSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address')
+    .transform(val => val.trim().toLowerCase()), // T24: Auto-trim and normalize email
   password: z.string()
+    .min(1, 'Password is required') // T4: Better required field validation
     .min(12, 'Password must be at least 12 characters')
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
-  confirmPassword: z.string(),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
   terms: z.boolean().refine(val => val === true, 'You must accept the terms and conditions'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -70,6 +78,8 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   const [lockoutModalOpen, setLockoutModalOpen] = useState(false);
   const [lockoutData, setLockoutData] = useState<SecurityStatus | null>(null);
   const [rateLimitCooldown, setRateLimitCooldown] = useState(0);
+  const [isTimeout, setIsTimeout] = useState(false); // T27: Track timeout state
+  const [isOffline, setIsOffline] = useState(!navigator.onLine); // T27: Track offline state
   const { toast } = useToast();
 
   const signInForm = useForm<SignInFormData>({
@@ -98,6 +108,20 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
       return () => clearTimeout(timer);
     }
   }, [rateLimitCooldown]);
+
+  // T27: Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Check account security status
   const checkAccountSecurity = async (email: string): Promise<SecurityStatus | null> => {
@@ -171,8 +195,49 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     setError(null);
     
     try {
+      // T5: Validate against whitespace-only input
+      if (!data.email.trim() || !data.password.trim()) {
+        setError('Email and password cannot be empty or contain only spaces.');
+        return;
+      }
+
+      // T22, T23: Sanitize inputs
+      const sanitizedEmail = sanitizeInput(data.email.trim().toLowerCase());
+
+      // T17: Check if user exists before attempting login
+      const accountExists = await checkExistingAccount(sanitizedEmail);
+      if (!accountExists) {
+        setError('No account found with this email address. Please sign up first.');
+        return;
+      }
+
+      // T18: Check email verification status
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('email', sanitizedEmail)
+        .single();
+
+      if (profileData?.user_id) {
+        // Check if email is verified in auth.users
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id !== profileData.user_id) {
+          // Need to check verification status for this specific user
+          const isVerified = await supabase.rpc('is_email_verified', {
+            user_id: profileData.user_id
+          });
+          
+          if (!isVerified) {
+            setError('Please verify your email address before signing in. Check your inbox for the verification link.');
+            // T29: Show option to resend verification
+            setShowForgotPassword(true);
+            return;
+          }
+        }
+      }
+
       // First check if account is locked
-      const securityStatus = await checkAccountSecurity(data.email);
+      const securityStatus = await checkAccountSecurity(sanitizedEmail);
       if (securityStatus?.is_locked) {
         setLockoutData(securityStatus);
         setLockoutModalOpen(true);
@@ -181,24 +246,25 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
       }
 
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: data.email,
+        email: sanitizedEmail,
         password: data.password,
       });
 
       if (authError) {
         await logAuthEvent('sign_in_failed', false, { 
-          email: data.email, 
+          email: sanitizedEmail, 
           error: authError.message 
         });
         
         if (authError.message.includes('Invalid login credentials')) {
-          await updateFailedLoginAttempts(data.email, true);
+          await updateFailedLoginAttempts(sanitizedEmail, true);
           setError('Invalid email or password. Please check your credentials and try again.');
           
           // Add rate limiting for repeated failures
           setRateLimitCooldown(5); // 5 second cooldown after failed attempt
         } else if (authError.message.includes('Email not confirmed')) {
-          setError('Please verify your email address before signing in.');
+          setError('Please verify your email address before signing in. Check your inbox for the verification link.');
+          setShowForgotPassword(true); // T29: Show resend option
         } else if (authError.message.includes('rate limit')) {
           setError('Too many login attempts. Please wait before trying again.');
           setRateLimitCooldown(60); // 1 minute cooldown for rate limiting
@@ -210,7 +276,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
 
       if (authData.user) {
         // Reset failed login attempts on successful login
-        await updateFailedLoginAttempts(data.email, false);
+        await updateFailedLoginAttempts(sanitizedEmail, false);
         
         // Update last login time in profiles table
         await supabase
@@ -218,7 +284,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
           .update({ last_login_at: new Date().toISOString() })
           .eq('user_id', authData.user.id);
 
-        await logAuthEvent('sign_in_success', true, { email: data.email });
+        await logAuthEvent('sign_in_success', true, { email: sanitizedEmail });
         
         toast({
           title: "Welcome back!",
@@ -239,38 +305,95 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     }
   };
 
+  // T5: Input sanitization function
+  const sanitizeInput = (input: string): string => {
+    return input.replace(/[<>'"&]/g, ''); // T22: Basic XSS prevention
+  };
+
+  // T1, T7: Check if account already exists
+  const checkExistingAccount = async (email: string): Promise<boolean> => {
+    try {
+      // Check if user already exists in auth.users via profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .eq('email', email.toLowerCase())
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error checking existing account:', error);
+        return false;
+      }
+
+      return !!data; // Returns true if account exists
+    } catch (error) {
+      console.error('Error checking existing account:', error);
+      return false;
+    }
+  };
+
   const onSignUp = async (data: SignUpFormData) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // T5: Validate against whitespace-only input
+      if (!data.email.trim() || !data.password.trim()) {
+        setError('Email and password cannot be empty or contain only spaces.');
+        return;
+      }
+
+      // T22, T23: Sanitize inputs to prevent XSS and injection
+      const sanitizedEmail = sanitizeInput(data.email.trim().toLowerCase());
+      
+      // T1, T7: Check if account already exists
+      const accountExists = await checkExistingAccount(sanitizedEmail);
+      if (accountExists) {
+        setError('An account with this email already exists. Please sign in instead.');
+        return;
+      }
+
       // First, send OTP without creating the user in Supabase Auth yet
       console.log('Sending OTP code for email verification before user creation');
       
       try {
-        const { data: otpData, error: otpError } = await supabase.functions.invoke('send-otp', {
+        // T27: Add timeout handling for slow connections
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Request timeout')), 30000)
+        );
+
+        const otpPromise = supabase.functions.invoke('send-otp', {
           body: {
-            email: data.email
+            email: sanitizedEmail
           }
         });
 
+        const { data: otpData, error: otpError } = await Promise.race([
+          otpPromise,
+          timeoutPromise
+        ]) as any;
+
         if (otpError) {
           console.error('OTP send error:', otpError);
-          toast({
-            title: "Failed to send verification code",
-            description: "Please try again later.",
-            variant: "destructive",
-          });
+          
+          // Handle specific error cases
+          if (otpError.message?.includes('Too many OTP requests')) {
+            setError('Too many verification attempts. Please wait an hour before trying again.');
+          } else if (otpError.message?.includes('domain')) {
+            setError('Email sending is currently under configuration. Please contact support.');
+          } else {
+            setError('Failed to send verification code. Please try again later.');
+          }
           return;
         }
 
         if (otpData?.success) {
           // Store signup data temporarily for use after verification
-          setUserEmail(data.email);
+          setUserEmail(sanitizedEmail);
           
           // Store password temporarily (we'll create the user after OTP verification)
           localStorage.setItem('pending_signup_data', JSON.stringify({
-            email: data.email,
+            email: sanitizedEmail,
             password: data.password
           }));
           
@@ -281,19 +404,17 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
           setAuthState('email-check');
         } else {
           console.error('OTP send failed:', otpData);
-          toast({
-            title: "Failed to send verification code", 
-            description: "Please try again later.",
-            variant: "destructive",
-          });
+          setError('Failed to send verification code. Please try again later.');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('OTP send error:', error);
-        toast({
-          title: "Failed to send verification code",
-          description: "An error occurred. Please try again.",
-          variant: "destructive",
-        });
+        
+        if (error.message === 'Request timeout') {
+          setIsTimeout(true);
+          setError('Request timed out. Please check your connection and try again.');
+        } else {
+          setError('Failed to send verification code. An error occurred. Please try again.');
+        }
       }
     } catch (error: any) {
       setError('An unexpected error occurred. Please try again.');
@@ -462,6 +583,31 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
             <Clock className="h-4 w-4" />
             <AlertDescription>
               Please wait {rateLimitCooldown} seconds before trying again.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* T27: Show offline/timeout status */}
+        {isOffline && (
+          <Alert variant="destructive" className="mb-6">
+            <Wifi className="h-4 w-4" />
+            <AlertDescription>
+              You appear to be offline. Please check your internet connection.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isTimeout && (
+          <Alert variant="destructive" className="mb-6">
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              Request timed out. This might be due to a slow connection.{' '}
+              <button 
+                onClick={() => setIsTimeout(false)}
+                className="underline font-medium"
+              >
+                Try again
+              </button>
             </AlertDescription>
           </Alert>
         )}

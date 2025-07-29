@@ -31,6 +31,8 @@ export function OTPVerificationForm({ email, onVerify, onResend, onBack }: OTPVe
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [otpAttempts, setOtpAttempts] = useState(0); // T13: Track OTP attempts
+  const [isBlocked, setIsBlocked] = useState(false); // T13: Block after max attempts
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,6 +52,16 @@ export function OTPVerificationForm({ email, onVerify, onResend, onBack }: OTPVe
   }, [countdown]);
 
   const handleVerify = async () => {
+    // T13: Check if blocked due to too many attempts
+    if (isBlocked) {
+      toast({
+        title: "Too many attempts",
+        description: "Please wait 15 minutes before trying again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (otp.length !== 6) {
       toast({
         title: "Invalid code",
@@ -72,11 +84,36 @@ export function OTPVerificationForm({ email, onVerify, onResend, onBack }: OTPVe
 
       if (error) {
         console.error('OTP verification error:', error);
+        
+        // T13: Increment attempts on failure
+        const newAttempts = otpAttempts + 1;
+        setOtpAttempts(newAttempts);
+        
+        // T13: Block after 5 failed attempts
+        if (newAttempts >= 5) {
+          setIsBlocked(true);
+          toast({
+            title: "Too many failed attempts",
+            description: "You have been temporarily blocked. Please wait 15 minutes before trying again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // T10, T11: Better error messages based on attempt count
+        let description = error.message || "Invalid or expired code. Please try again.";
+        if (newAttempts >= 3) {
+          description += ` (${5 - newAttempts} attempts remaining)`;
+        }
+
         toast({
           title: "Verification failed",
-          description: error.message || "Invalid or expired code. Please try again.",
+          description,
           variant: "destructive",
         });
+        
+        // Clear OTP on failure
+        setOtp('');
         return;
       }
 
@@ -87,19 +124,57 @@ export function OTPVerificationForm({ email, onVerify, onResend, onBack }: OTPVe
         });
         onVerify(otp);
       } else {
+        // T13: Handle failure even if no error
+        const newAttempts = otpAttempts + 1;
+        setOtpAttempts(newAttempts);
+        
+        if (newAttempts >= 5) {
+          setIsBlocked(true);
+          toast({
+            title: "Too many failed attempts",
+            description: "You have been temporarily blocked. Please wait 15 minutes before trying again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        let description = "Invalid or expired code. Please try again.";
+        if (newAttempts >= 3) {
+          description += ` (${5 - newAttempts} attempts remaining)`;
+        }
+
         toast({
           title: "Verification failed",
-          description: "Invalid or expired code. Please try again.",
+          description,
           variant: "destructive",
         });
+        
+        setOtp('');
       }
     } catch (error: any) {
       console.error('OTP verification error:', error);
+      
+      // T13: Increment attempts on error
+      const newAttempts = otpAttempts + 1;
+      setOtpAttempts(newAttempts);
+      
+      if (newAttempts >= 5) {
+        setIsBlocked(true);
+        toast({
+          title: "Too many failed attempts",
+          description: "You have been temporarily blocked. Please wait 15 minutes before trying again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Verification failed",
         description: "An error occurred. Please try again.",
         variant: "destructive",
       });
+      
+      setOtp('');
     } finally {
       setIsVerifying(false);
     }
@@ -222,11 +297,18 @@ export function OTPVerificationForm({ email, onVerify, onResend, onBack }: OTPVe
         {/* Verify Button */}
         <Button
           onClick={handleVerify}
-          disabled={otp.length !== 6 || isVerifying}
+          disabled={otp.length !== 6 || isVerifying || isBlocked}
           className="w-full h-11 bg-indigo-600 hover:bg-indigo-700"
         >
-          {isVerifying ? 'Verifying...' : 'Verify Email'}
+          {isBlocked ? 'Blocked - Wait 15 minutes' : isVerifying ? 'Verifying...' : 'Verify Email'}
         </Button>
+
+        {/* T13: Show attempt counter */}
+        {otpAttempts > 0 && !isBlocked && (
+          <p className="text-xs text-center text-amber-600">
+            {otpAttempts >= 3 ? `Warning: ${5 - otpAttempts} attempts remaining` : `${otpAttempts} failed attempt${otpAttempts > 1 ? 's' : ''}`}
+          </p>
+        )}
       </div>
     </div>
   );
