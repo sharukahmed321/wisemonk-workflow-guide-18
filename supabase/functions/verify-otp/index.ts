@@ -101,36 +101,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Look up user by email from profiles table instead
-    const { data: profile, error: profileLookupError } = await supabase
-      .from("profiles")
-      .select("user_id")
-      .eq("email", email)
-      .single();
+    // This is a pre-registration flow - OTP verification happens before user creation
+    // Just mark the OTP as verified; user creation will happen in the frontend after verification
+    console.log(`Email ${email} verified successfully via OTP`);
     
-    if (profileLookupError || !profile) {
-      console.error("Profile lookup error:", profileLookupError);
-      return new Response(
-        JSON.stringify({ error: "User profile not found" }),
-        {
-          status: 404,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
-
-    console.log(`Found user profile for: ${email}, user_id: ${profile.user_id}`);
-
-    // Update user profile to mark email as verified
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ email_verified: true })
-      .eq("email", email);
-
-    if (profileError) {
-      console.error("Profile update error:", profileError);
-      // Don't fail the verification if this step fails
-    }
+    // Optional: Store verified emails in a temporary table or mark in otp_codes
+    // For now, we just rely on the OTP being marked as used
 
     console.log("OTP verified successfully for:", email);
 
