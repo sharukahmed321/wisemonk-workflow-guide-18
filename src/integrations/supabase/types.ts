@@ -552,6 +552,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      check_user_exists: {
+        Args: { user_email: string }
+        Returns: Json
+      }
       cleanup_expired_otp_codes: {
         Args: Record<PropertyKey, never>
         Returns: undefined

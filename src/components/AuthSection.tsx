@@ -38,6 +38,14 @@ interface SecurityStatus {
   last_verification_sent: string | null;
 }
 
+interface UserExistenceStatus {
+  exists: boolean;
+  email_verified: boolean;
+  profile_exists: boolean;
+  user_id: string | null;
+  status: 'new_user' | 'unverified' | 'partial_registration' | 'complete' | 'unknown';
+}
+
 const signInSchema = z.object({
   email: z.string()
     .min(1, 'Email is required')
@@ -310,26 +318,29 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
     return input.replace(/[<>'"&]/g, ''); // T22: Basic XSS prevention
   };
 
-  // T1, T7: Check if account already exists
-  const checkExistingAccount = async (email: string): Promise<boolean> => {
+  // Enhanced user existence check using comprehensive database function
+  const checkUserExists = async (email: string) => {
     try {
-      // Check if user already exists in auth.users via profiles table
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, email')
-        .eq('email', email.toLowerCase())
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('check_user_exists', {
+        user_email: email.toLowerCase()
+      });
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error checking existing account:', error);
-        return false;
+      if (error) {
+        console.error('Error checking user existence:', error);
+        return null;
       }
 
-      return !!data; // Returns true if account exists
+      return data;
     } catch (error) {
-      console.error('Error checking existing account:', error);
-      return false;
+      console.error('Error checking user existence:', error);
+      return null;
     }
+  };
+
+  // Legacy function for backwards compatibility
+  const checkExistingAccount = async (email: string): Promise<boolean> => {
+    const userStatus = await checkUserExists(email);
+    return (userStatus as unknown as UserExistenceStatus)?.exists || false;
   };
 
   const onSignUp = async (data: SignUpFormData) => {
@@ -346,11 +357,30 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
       // T22, T23: Sanitize inputs to prevent XSS and injection
       const sanitizedEmail = sanitizeInput(data.email.trim().toLowerCase());
       
-      // T1, T7: Check if account already exists
-      const accountExists = await checkExistingAccount(sanitizedEmail);
-      if (accountExists) {
-        setError('An account with this email already exists. Please sign in instead.');
-        return;
+      // Enhanced user existence check before sending OTP
+      const userStatus = await checkUserExists(sanitizedEmail);
+      if (userStatus) {
+        const status = userStatus as unknown as UserExistenceStatus;
+        
+        if (status.exists) {
+          switch (status.status) {
+            case 'complete':
+              setError('Account already exists with this email address. Please sign in instead.');
+              return;
+              
+            case 'unverified':
+              setError('Account exists but email is not verified. Please check your email and verify your account first.');
+              return;
+              
+            case 'partial_registration':
+              setError('Account registration was incomplete. Please contact support for assistance.');
+              return;
+              
+            default:
+              setError('An account with this email already exists. Please sign in instead.');
+              return;
+          }
+        }
       }
 
       // First, send OTP without creating the user in Supabase Auth yet
@@ -467,12 +497,13 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         onVerify={async (otp: string) => {
           console.log('OTP verification successful for:', userEmail);
           
-          // Create the actual user account after OTP verification
+          // Get pending signup data
           const pendingData = localStorage.getItem('pending_signup_data');
           if (pendingData) {
             const { email, password } = JSON.parse(pendingData);
             
             try {
+              // After OTP verification, create the user account
               const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
@@ -487,11 +518,22 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
 
               if (authError) {
                 console.error('User creation error after OTP:', authError);
-                toast({
-                  title: "Account creation failed",
-                  description: authError.message,
-                  variant: "destructive",
-                });
+                
+                // Handle specific error cases
+                if (authError.message.includes('User already registered')) {
+                  // This shouldn't happen with our new validation, but just in case
+                  toast({
+                    title: "Account already exists",
+                    description: "This email is already registered. Please sign in instead.",
+                    variant: "destructive",
+                  });
+                } else {
+                  toast({
+                    title: "Account creation failed",
+                    description: authError.message,
+                    variant: "destructive",
+                  });
+                }
                 setAuthState('auth');
                 return;
               }
