@@ -10,7 +10,8 @@ import { Checkbox } from "./ui/checkbox";
 import { Separator } from "./ui/separator";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { Alert, AlertDescription } from "./ui/alert";
-import { OTPVerification, EmailVerified } from "./OTPVerification";
+import { OTPVerificationForm } from "./OTPVerificationForm";
+import { EmailVerified } from "./OTPVerification";
 import { ForgotPasswordModal } from "./ForgotPasswordModal";
 import { AccountLockoutModal } from "./AccountLockoutModal";
 import { Eye, EyeOff, Shield, AlertCircle, Clock } from "lucide-react";
@@ -274,17 +275,48 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
         
         setUserEmail(data.email);
         
-        // User was created but needs email verification - Supabase handles this automatically
-        console.log('User created successfully, email verification sent automatically');
+        // Send OTP code via edge function
+        console.log('User created successfully, sending OTP code');
         
-        toast({
-          title: "Account created!",
-          description: "Please check your email and click the verification link to activate your account.",
-        });
-        
-        // Set email for verification screen
-        setUserEmail(data.email);
-        setAuthState('email-check');
+        try {
+          const { data: otpData, error: otpError } = await supabase.functions.invoke('send-otp', {
+            body: {
+              email: data.email
+            }
+          });
+
+          if (otpError) {
+            console.error('OTP send error:', otpError);
+            toast({
+              title: "OTP Send Failed",
+              description: "Failed to send verification code. Please try again.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (otpData?.success) {
+            toast({
+              title: "Account created!",
+              description: "Please check your email for the verification code.",
+            });
+            setAuthState('email-check');
+          } else {
+            console.error('OTP send failed:', otpData);
+            toast({
+              title: "OTP Send Failed", 
+              description: "Failed to send verification code. Please try again.",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error('OTP send error:', error);
+          toast({
+            title: "OTP Send Failed",
+            description: "Failed to send verification code. Please try again.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error: any) {
       await logAuthEvent('sign_up_error', false, { 
@@ -331,10 +363,89 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
 
   if (authState === 'email-check') {
     return (
-      <OTPVerification
+      <OTPVerificationForm
         email={userEmail}
         onBack={() => setAuthState('auth')}
-        onVerified={() => setAuthState('verified')}
+        onVerify={async (otp: string) => {
+          try {
+            const { data, error } = await supabase.functions.invoke('verify-otp', {
+              body: {
+                email: userEmail,
+                otp
+              }
+            });
+
+            if (error) {
+              console.error('OTP verification error:', error);
+              toast({
+                title: "Verification failed",
+                description: error.message || "Invalid or expired code. Please try again.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            if (data?.success) {
+              toast({
+                title: "Email verified!",
+                description: "Your email has been successfully verified.",
+              });
+              setAuthState('verified');
+            } else {
+              toast({
+                title: "Verification failed",
+                description: "Invalid or expired code. Please try again.",
+                variant: "destructive",
+              });
+            }
+          } catch (error: any) {
+            console.error('OTP verification error:', error);
+            toast({
+              title: "Verification failed",
+              description: "An error occurred. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }}
+        onResend={async () => {
+          try {
+            const { data, error } = await supabase.functions.invoke('send-otp', {
+              body: {
+                email: userEmail
+              }
+            });
+
+            if (error) {
+              console.error('OTP resend error:', error);
+              toast({
+                title: "Failed to resend",
+                description: error.message || "Please try again later.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            if (data?.success) {
+              toast({
+                title: "Code sent",
+                description: "A new verification code has been sent to your email.",
+              });
+            } else {
+              toast({
+                title: "Failed to resend",
+                description: "Please try again later.",
+                variant: "destructive",
+              });
+            }
+          } catch (error: any) {
+            console.error('OTP resend error:', error);
+            toast({
+              title: "Failed to resend",
+              description: "An error occurred. Please try again.",
+              variant: "destructive",
+            });
+          }
+        }}
       />
     );
   }
