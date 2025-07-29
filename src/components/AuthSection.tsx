@@ -282,22 +282,26 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
 
           if (otpError) throw otpError;
 
-          if (otpData.success) {
+          if (otpData?.success) {
             toast({
               title: "Account created!",
               description: "Please check your email for a verification code.",
             });
             setAuthState('otp');
           } else {
-            throw new Error(otpData.error || "Failed to send verification code");
+            throw new Error(otpData?.error || "Failed to send verification code");
           }
         } catch (otpError: any) {
           console.error('OTP sending error:', otpError);
+          // Don't redirect to OTP screen if email sending fails
           toast({
-            title: "Account created!",
-            description: "There was an issue sending the verification code. Please try signing in.",
+            title: "Account Created Successfully!",
+            description: "However, we couldn't send the verification email. You can sign in and verify your email later.",
+            variant: "destructive",
           });
-          setAuthState('otp');
+          
+          // Stay on auth screen and show additional options
+          setError("Email verification couldn't be sent. You can sign in with your credentials or try requesting verification again later.");
         }
       }
     } catch (error: any) {
