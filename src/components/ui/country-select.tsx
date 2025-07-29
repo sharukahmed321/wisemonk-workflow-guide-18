@@ -58,10 +58,10 @@ export function CountrySelect({
               {error}
             </div>
           )}
-          {!loading && !error && countries.length === 0 && (
+          {!loading && !error && (!countries || countries.length === 0) && (
             <CommandEmpty>No country found.</CommandEmpty>
           )}
-          {!loading && !error && countries.length > 0 && (
+          {!loading && !error && countries && countries.length > 0 && (
             <CommandGroup className="max-h-64 overflow-auto">
               {countries.map((country) => (
                 <CommandItem

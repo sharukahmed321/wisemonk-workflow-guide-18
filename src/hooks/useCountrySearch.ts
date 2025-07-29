@@ -18,15 +18,17 @@ export function useCountrySearch(searchTerm: string = '') {
       if (searchTerm.length === 0) {
         // Load all countries initially
         setLoading(true);
+        setError(null);
         try {
           const { data, error } = await supabase.rpc('search_countries', {
             search_term: ''
           });
           
           if (error) throw error;
-          setCountries(data || []);
+          setCountries(Array.isArray(data) ? data : []);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to load countries');
+          setCountries([]); // Ensure we always have an array
         } finally {
           setLoading(false);
         }
@@ -36,15 +38,17 @@ export function useCountrySearch(searchTerm: string = '') {
       // Only search if we have at least 1 character
       if (searchTerm.length >= 1) {
         setLoading(true);
+        setError(null);
         try {
           const { data, error } = await supabase.rpc('search_countries', {
             search_term: searchTerm
           });
           
           if (error) throw error;
-          setCountries(data || []);
+          setCountries(Array.isArray(data) ? data : []);
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to search countries');
+          setCountries([]); // Ensure we always have an array
         } finally {
           setLoading(false);
         }
