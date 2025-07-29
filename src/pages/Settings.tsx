@@ -22,26 +22,38 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+import { CountrySelect } from '@/components/ui/country-select';
+import { 
+  createNameValidator, 
+  createJobTitleValidator, 
+  createBusinessNameValidator,
+  createAddressValidator,
+  createCityValidator,
+  createStateValidator,
+  createPostalCodeValidator,
+  createDropdownValidator,
+  EMPLOYEE_COUNTS
+} from '@/lib/validationUtils';
 
-// Validation schemas
+// Enhanced validation schemas with comprehensive test cases
 const userDetailsSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  jobTitle: z.string().min(1, 'Job title is required'),
+  firstName: createNameValidator('First name', 2, 50),
+  lastName: createNameValidator('Last name', 1, 50),
+  jobTitle: createJobTitleValidator(100),
 });
 
 const companyDetailsSchema = z.object({
-  companyName: z.string().min(1, 'Company name is required'),
-  legalName: z.string().min(1, 'Legal name is required'),
-  country: z.string().min(1, 'Please select a country'),
-  employeeCount: z.string().min(1, 'Please select employee count'),
+  companyName: createBusinessNameValidator('Company name', 100),
+  legalName: createBusinessNameValidator('Legal name', 100),
+  country: createDropdownValidator('a country', ['']),
+  employeeCount: createDropdownValidator('employee count', EMPLOYEE_COUNTS),
 });
 
 const addressSchema = z.object({
-  address: z.string().min(1, 'Address is required'),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
-  postalCode: z.string().min(1, 'Postal code is required'),
+  address: createAddressValidator('Street address', 200),
+  city: createCityValidator(2, 100),
+  state: createStateValidator(100),
+  postalCode: createPostalCodeValidator(),
 });
 
 type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
@@ -107,14 +119,7 @@ function ProfileEditDialog({ userData, companyData, organizationId, onSave }: {
     defaultValues: companyData,
   });
 
-  const countries = [
-    'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 
-    'France', 'India', 'Japan', 'Singapore', 'Netherlands'
-  ];
-
-  const employeeCounts = [
-    '1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
-  ];
+  // Using enhanced validation and comprehensive country/employee count lists
 
   const handleSave = async () => {
     const userValid = await userForm.trigger();
@@ -281,20 +286,13 @@ function ProfileEditDialog({ userData, companyData, organizationId, onSave }: {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Country *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your country" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {countries.map((country) => (
-                            <SelectItem key={country} value={country}>
-                              {country}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <CountrySelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Select your country"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -313,7 +311,7 @@ function ProfileEditDialog({ userData, companyData, organizationId, onSave }: {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {employeeCounts.map((count) => (
+                          {EMPLOYEE_COUNTS.map((count) => (
                             <SelectItem key={count} value={count}>
                               {count} employees
                             </SelectItem>

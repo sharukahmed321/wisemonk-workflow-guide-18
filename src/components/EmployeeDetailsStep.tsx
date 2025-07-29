@@ -13,30 +13,27 @@ import { CalendarIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { createNameValidator, createJobTitleValidator } from '@/lib/validationUtils';
 
 const employeeDetailsSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Please enter a valid email address'),
-  phone: z.string().min(1, 'Phone number is required'),
-  jobTitle: z.string().min(1, 'Job title is required'),
+  firstName: createNameValidator('First name', 2, 50),
+  lastName: createNameValidator('Last name', 1, 50),
+  email: z.string()
+    .min(1, 'Email address is required')
+    .email('Please enter a valid email address')
+    .transform(val => val.trim().toLowerCase()),
+  phone: z.string()
+    .min(1, 'Phone number is required')
+    .refine(val => val.trim().length > 0, 'Phone number cannot be only whitespace')
+    .transform(val => val.trim()),
+  jobTitle: createJobTitleValidator(100),
   seniority: z.enum(['junior', 'mid-level', 'senior']),
   startDate: z.date(),
   workLocation: z.enum(['remote', 'office', 'hybrid']),
   jobDescription: z.string().optional()
 });
 
-export interface EmployeeDetailsData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  jobTitle: string;
-  seniority: 'junior' | 'mid-level' | 'senior';
-  startDate: Date;
-  workLocation: 'remote' | 'office' | 'hybrid';
-  jobDescription?: string;
-}
+export type EmployeeDetailsData = z.infer<typeof employeeDetailsSchema>;
 
 interface EmployeeDetailsStepProps {
   onNext: (data: EmployeeDetailsData) => void;

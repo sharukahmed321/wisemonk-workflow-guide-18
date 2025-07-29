@@ -11,22 +11,30 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { CountrySelect } from './ui/country-select';
+import { 
+  createNameValidator, 
+  createJobTitleValidator, 
+  createBusinessNameValidator,
+  createDropdownValidator,
+  EMPLOYEE_COUNTS
+} from '@/lib/validationUtils';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
 }
 
 const userDetailsSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  designation: z.string().min(1, 'Job title is required'),
+  firstName: createNameValidator('First name', 2, 50),
+  lastName: createNameValidator('Last name', 1, 50),
+  designation: createJobTitleValidator(100),
 });
 
 const companyDetailsSchema = z.object({
-  companyName: z.string().min(1, 'Company name is required'),
-  legalName: z.string().min(1, 'Legal name is required'),
-  country: z.string().min(1, 'Please select a country'),
-  employeeCount: z.string().min(1, 'Please select employee count'),
+  companyName: createBusinessNameValidator('Company name', 100),
+  legalName: createBusinessNameValidator('Legal name', 100),
+  country: createDropdownValidator('a country', ['']),
+  employeeCount: createDropdownValidator('employee count', EMPLOYEE_COUNTS),
 });
 
 type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
@@ -259,14 +267,7 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
     }
   };
 
-  const countries = [
-    'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 
-    'France', 'India', 'Japan', 'Singapore', 'Netherlands'
-  ];
-
-  const employeeCounts = [
-    '1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
-  ];
+  // Using COUNTRIES and EMPLOYEE_COUNTS from validationUtils
 
   return (
     <div className="space-y-6">
@@ -318,20 +319,14 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Country *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select your country" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CountrySelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Select your country"
+                    className="h-11"
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -343,14 +338,14 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Number of Employees *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="h-11">
                       <SelectValue placeholder="Select employee count" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {employeeCounts.map((count) => (
+                    {EMPLOYEE_COUNTS.map((count) => (
                       <SelectItem key={count} value={count}>
                         {count} employees
                       </SelectItem>
