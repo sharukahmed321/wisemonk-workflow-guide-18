@@ -187,7 +187,7 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               Previous
             </Button>
             <Button type="submit" className="px-8">
-              Continue to Background Verification
+              Continue
             </Button>
           </div>
         </form>
