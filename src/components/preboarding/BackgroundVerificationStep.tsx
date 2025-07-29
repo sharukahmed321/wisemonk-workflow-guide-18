@@ -155,7 +155,7 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious }: Bac
           disabled={!isComplete}
           className="px-8"
         >
-          Continue to Employment Agreement
+          Continue
         </Button>
       </div>
     </div>
