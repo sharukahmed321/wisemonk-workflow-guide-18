@@ -16,7 +16,7 @@ function App() {
         <Route path="/invite/:token" element={<InvitationPage />} />
         <Route path="/preboarding/:employeeId" element={<StandalonePreboardingPage />} />
         <Route path="/preboarding-complete" element={<PreboardingCompletePage />} />
-        <Route path="/dashboard/*" element={<Dashboard />} />
+        <Route path="dashboard/*" element={<Dashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

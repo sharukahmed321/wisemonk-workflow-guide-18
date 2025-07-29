@@ -281,6 +281,9 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
           title: "Account created!",
           description: "Please check your email and click the verification link to activate your account.",
         });
+        
+        // Set email for verification screen
+        setUserEmail(data.email);
         setAuthState('email-check');
       }
     } catch (error: any) {

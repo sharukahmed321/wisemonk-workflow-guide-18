@@ -96,7 +96,10 @@ const Index = () => {
               setAppState('dashboard');
               window.history.pushState({}, '', '/dashboard');
             }}
-            onSignUpComplete={() => setAppState('onboarding')} 
+            onSignUpComplete={() => {
+              console.log('onSignUpComplete called - checking user onboarding status');
+              checkUserOnboardingStatus();
+            }}
           />
         </div>
       </div>
