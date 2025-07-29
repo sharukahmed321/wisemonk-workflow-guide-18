@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { COUNTRIES } from '@/lib/validationUtils';
+import { useCountrySearch } from '@/hooks/useCountrySearch';
 
 interface CountrySelectProps {
   value?: string;
@@ -22,6 +22,8 @@ export function CountrySelect({
   className 
 }: CountrySelectProps) {
   const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const { countries, loading, error } = useCountrySearch(searchTerm);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -42,28 +44,46 @@ export function CountrySelect({
           <CommandInput 
             placeholder="Search countries..." 
             className="h-9"
+            value={searchTerm}
+            onValueChange={setSearchTerm}
           />
-          <CommandEmpty>No country found.</CommandEmpty>
-          <CommandGroup className="max-h-64 overflow-auto">
-            {COUNTRIES.map((country) => (
-              <CommandItem
-                key={country}
-                value={country}
-                onSelect={() => {
-                  onValueChange(country);
-                  setOpen(false);
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === country ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                {country}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          {loading && (
+            <div className="flex items-center justify-center p-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
+            </div>
+          )}
+          {error && (
+            <div className="p-4 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          {!loading && !error && countries.length === 0 && (
+            <CommandEmpty>No country found.</CommandEmpty>
+          )}
+          {!loading && !error && countries.length > 0 && (
+            <CommandGroup className="max-h-64 overflow-auto">
+              {countries.map((country) => (
+                <CommandItem
+                  key={country.id}
+                  value={country.name}
+                  onSelect={() => {
+                    onValueChange(country.name);
+                    setOpen(false);
+                    setSearchTerm('');
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === country.name ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {country.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
         </Command>
       </PopoverContent>
     </Popover>

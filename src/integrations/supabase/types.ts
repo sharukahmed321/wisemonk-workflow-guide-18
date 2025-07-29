@@ -47,6 +47,30 @@ export type Database = {
         }
         Relationships: []
       }
+      countries: {
+        Row: {
+          created_at: string
+          id: number
+          iso_code_2: string | null
+          iso_code_3: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          iso_code_2?: string | null
+          iso_code_3?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          iso_code_2?: string | null
+          iso_code_3?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           avatar_url: string | null
@@ -572,6 +596,15 @@ export type Database = {
       reset_failed_login_attempts: {
         Args: { user_email: string; ip_address?: string }
         Returns: undefined
+      }
+      search_countries: {
+        Args: { search_term?: string }
+        Returns: {
+          id: number
+          name: string
+          iso_code_2: string
+          iso_code_3: string
+        }[]
       }
       should_lock_account: {
         Args: { user_email: string }
