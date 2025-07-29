@@ -6,7 +6,6 @@ import { Dashboard } from './components/Dashboard';
 import Overview from './components/Overview';
 import People from './pages/People';
 import Settings from './pages/Settings';
-import PreboardingPage from './pages/Preboarding';
 import { AddEmployeeTwoStepForm } from './components/AddEmployeeTwoStepForm';
 import NotFound from './pages/NotFound';
 import EmployeeProfilePage from './pages/EmployeeProfile';
@@ -16,14 +15,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/dashboard" element={<Dashboard />}>
-          <Route index element={<Overview />} />
-          <Route path="people" element={<People />} />
-          <Route path="people/:id" element={<EmployeeProfilePage />} />
-          <Route path="people/add" element={<AddEmployeeTwoStepForm />} />
-          <Route path="preboarding/:employeeId" element={<PreboardingPage />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
+        <Route path="/dashboard/*" element={<Dashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

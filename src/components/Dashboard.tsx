@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Settings from '../pages/Settings';
@@ -17,6 +16,7 @@ import { AddressStep, MSAStep, SetupComplete } from './SetupFlow';
 import { DashboardHeader } from './DashboardHeader';
 import { EmailVerificationGuard } from './EmailVerificationGuard';
 import { supabase } from '@/integrations/supabase/client';
+import PreboardingPage from '../pages/Preboarding';
 
 function DashboardHome() {
   const navigate = useNavigate();
@@ -181,6 +181,7 @@ export function Dashboard() {
                 <Route path="people" element={<People />} />
                 <Route path="people/:id" element={<EmployeeProfilePage />} />
                 <Route path="people/add" element={<AddEmployeeTwoStepForm onSuccess={() => navigate('/dashboard/people')} />} />
+                <Route path="preboarding/:employeeId" element={<PreboardingPage />} />
                 <Route path="teams" element={<PlaceholderPage title="Teams" />} />
                 <Route path="time" element={<PlaceholderPage title="Time & Attendance" />} />
                 <Route path="reports" element={<PlaceholderPage title="Reports" />} />

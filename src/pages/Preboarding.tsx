@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -94,10 +93,10 @@ export default function PreboardingPage() {
 
   if (!employee) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Employee Not Found</h1>
-          <p className="text-gray-600 mb-4">The employee you're looking for doesn't exist.</p>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Employee Not Found</h1>
+          <p className="text-muted-foreground mb-4">The employee you're looking for doesn't exist.</p>
           <Button onClick={() => navigate('/dashboard/people')}>
             Back to People
           </Button>
@@ -111,19 +110,17 @@ export default function PreboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header with Back Button */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(`/dashboard/people/${employee.id}`)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to {employee.firstName} {employee.lastName}
-          </Button>
-        </div>
+    <div className="p-6">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(`/dashboard/people/${employee.id}`)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to {employee.firstName} {employee.lastName}
+        </Button>
       </div>
 
       {/* Preboarding Flow */}
