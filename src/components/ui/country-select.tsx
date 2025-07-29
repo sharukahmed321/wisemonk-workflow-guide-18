@@ -72,10 +72,14 @@ export function CountrySelect({
                   <CommandItem
                     key={country.id}
                     value={country.name}
-                    onSelect={() => {
-                      onValueChange(country.name);
-                      setOpen(false);
-                      setSearchTerm('');
+                    onSelect={(currentValue) => {
+                      // Prevent event bubbling that might trigger form submission
+                      const selectedCountry = safeCountries.find(c => c.name.toLowerCase() === currentValue.toLowerCase());
+                      if (selectedCountry) {
+                        onValueChange(selectedCountry.name);
+                        setOpen(false);
+                        setSearchTerm('');
+                      }
                     }}
                   >
                     <Check

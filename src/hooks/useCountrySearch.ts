@@ -10,52 +10,30 @@ interface Country {
 
 export function useCountrySearch(searchTerm: string = '') {
   const [countries, setCountries] = useState<Country[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const searchCountries = async () => {
-      if (searchTerm.length === 0) {
-        // Load all countries initially
-        setLoading(true);
-        setError(null);
-        try {
-          const { data, error } = await supabase.rpc('search_countries', {
-            search_term: ''
-          });
-          
-          if (error) throw error;
-          setCountries(Array.isArray(data) ? data : []);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to load countries');
-          setCountries([]); // Ensure we always have an array
-        } finally {
-          setLoading(false);
-        }
-        return;
-      }
-
-      // Only search if we have at least 1 character
-      if (searchTerm.length >= 1) {
-        setLoading(true);
-        setError(null);
-        try {
-          const { data, error } = await supabase.rpc('search_countries', {
-            search_term: searchTerm
-          });
-          
-          if (error) throw error;
-          setCountries(Array.isArray(data) ? data : []);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to search countries');
-          setCountries([]); // Ensure we always have an array
-        } finally {
-          setLoading(false);
-        }
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const { data, error } = await supabase.rpc('search_countries', {
+          search_term: searchTerm
+        });
+        
+        if (error) throw error;
+        setCountries(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load countries');
+        setCountries([]); // Ensure we always have an array
+      } finally {
+        setLoading(false);
       }
     };
 
-    const timeoutId = setTimeout(searchCountries, 300); // Debounce search
+    const timeoutId = setTimeout(searchCountries, searchTerm ? 300 : 0); // No debounce for initial load
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
