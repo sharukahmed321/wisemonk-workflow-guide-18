@@ -268,39 +268,6 @@ export type Database = {
         }
         Relationships: []
       }
-      otp_codes: {
-        Row: {
-          attempts: number
-          code: string
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          used: boolean
-          used_at: string | null
-        }
-        Insert: {
-          attempts?: number
-          code: string
-          created_at?: string
-          email: string
-          expires_at?: string
-          id?: string
-          used?: boolean
-          used_at?: string | null
-        }
-        Update: {
-          attempts?: number
-          code?: string
-          created_at?: string
-          email?: string
-          expires_at?: string
-          id?: string
-          used?: boolean
-          used_at?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           account_locked_reason: string | null
@@ -526,10 +493,6 @@ export type Database = {
           p_organization_id: string
           p_role?: Database["public"]["Enums"]["app_role"]
         }
-        Returns: undefined
-      }
-      cleanup_expired_otp_codes: {
-        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       get_account_security_status: {
