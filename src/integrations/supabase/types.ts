@@ -603,12 +603,7 @@ export type Database = {
       }
       search_countries: {
         Args: { search_term?: string }
-        Returns: {
-          id: number
-          name: string
-          iso_code_2: string
-          iso_code_3: string
-        }[]
+        Returns: Json
       }
       should_lock_account: {
         Args: { user_email: string }
