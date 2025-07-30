@@ -33,7 +33,7 @@ const userDetailsSchema = z.object({
 const companyDetailsSchema = z.object({
   companyName: createBusinessNameValidator('Company name', 100),
   legalName: createBusinessNameValidator('Legal name', 100),
-  country: createDropdownValidator('a country', ['']),
+  country: z.string().min(1, 'Please select a country'),
   employeeCount: createDropdownValidator('employee count', EMPLOYEE_COUNTS),
 });
 
