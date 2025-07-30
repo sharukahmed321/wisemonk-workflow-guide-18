@@ -25,14 +25,19 @@ export function useCountrySearch(searchTerm: string = '') {
         
         if (error) throw error;
         
+        // Debug the RPC response structure
+        console.log("RPC data response:", data);
+        
         // Handle the JSON response from the RPC function
         // Parse JSON data and ensure it's a valid Country array
-        const countryArray = Array.isArray(data) ? data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          iso_code_2: item.iso_code_2,
-          iso_code_3: item.iso_code_3
-        })) : [];
+        const countryArray = Array.isArray((data as any)?.search_countries) 
+          ? (data as any).search_countries.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              iso_code_2: item.iso_code_2,
+              iso_code_3: item.iso_code_3
+            })) 
+          : [];
         setCountries(countryArray);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load countries');
