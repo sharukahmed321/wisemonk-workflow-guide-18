@@ -9,8 +9,8 @@ interface Country {
 }
 
 export function useCountrySearch(searchTerm: string = '') {
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [loading, setLoading] = useState(true); // Start with loading true
+  const [countries, setCountries] = useState<Country[]>([]); // Always initialize as empty array
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,15 +29,22 @@ export function useCountrySearch(searchTerm: string = '') {
         console.log("RPC data response:", data);
         
         // Handle the JSON response from the RPC function
-        // Parse JSON data and ensure it's a valid Country array
-        const countryArray = Array.isArray((data as any)?.search_countries) 
-          ? (data as any).search_countries.map((item: any) => ({
+        let countryArray: Country[] = [];
+        try {
+          if (data && (data as any)?.search_countries && Array.isArray((data as any).search_countries)) {
+            countryArray = (data as any).search_countries.map((item: any) => ({
               id: item.id,
               name: item.name,
               iso_code_2: item.iso_code_2,
               iso_code_3: item.iso_code_3
-            })) 
-          : [];
+            }));
+          }
+        } catch (mapError) {
+          console.error("Error mapping country data:", mapError);
+          countryArray = [];
+        }
+        
+        console.log("Final country array:", countryArray);
         setCountries(countryArray);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load countries');

@@ -27,6 +27,9 @@ export function CountrySelect({
 
   // Add defensive check to ensure countries is always an array
   const safeCountries = Array.isArray(countries) ? countries : [];
+  
+  // Add debugging
+  console.log("CountrySelect render - countries:", countries, "safeCountries:", safeCountries, "loading:", loading);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -43,8 +46,8 @@ export function CountrySelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        {/* Only render Command when we have initialized data */}
-        {safeCountries !== undefined ? (
+        {/* Only render Command when countries array is properly initialized */}
+        {safeCountries ? (
           <Command>
             <CommandInput 
               placeholder="Search countries..." 
