@@ -32,7 +32,8 @@ import {
   createStateValidator,
   createPostalCodeValidator,
   createDropdownValidator,
-  EMPLOYEE_COUNTS
+  EMPLOYEE_COUNTS,
+  COUNTRIES
 } from '@/lib/validationUtils';
 
 // Enhanced validation schemas with comprehensive test cases
@@ -45,7 +46,7 @@ const userDetailsSchema = z.object({
 const companyDetailsSchema = z.object({
   companyName: createBusinessNameValidator('Company name', 100),
   legalName: createBusinessNameValidator('Legal name', 100),
-  country: createDropdownValidator('a country', ['']),
+  country: createDropdownValidator('a country', COUNTRIES),
   employeeCount: createDropdownValidator('employee count', EMPLOYEE_COUNTS),
 });
 
