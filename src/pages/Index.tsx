@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandingSection } from '../components/BrandingSection';
 import { AuthSection } from '../components/AuthSection';
 import { OnboardingFlow } from '../components/OnboardingFlow';
@@ -11,6 +11,7 @@ import { supabase } from '../integrations/supabase/client';
 
 const Index = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, loading, isEmailVerified } = useAuth();
   const [appState, setAppState] = useState<'auth' | 'onboarding' | 'dashboard'>('auth');
   
@@ -35,8 +36,9 @@ const Index = () => {
         checkUserOnboardingStatus();
       }
     } else {
-      // User is not authenticated
-      setAppState('auth');
+      // User is not authenticated - redirect to /auth
+      navigate('/auth');
+      return;
     }
   }, [user, loading, isEmailVerified, location]);
 
@@ -95,24 +97,10 @@ const Index = () => {
     return <Dashboard />;
   }
   
-  if (appState === 'auth') {
-    return (
-      <div className="min-h-screen bg-white">
-        <div className="flex min-h-screen">
-          <BrandingSection />
-          <AuthSection 
-            onSignInComplete={() => {
-              setAppState('dashboard');
-              window.history.pushState({}, '', '/dashboard');
-            }}
-            onSignUpComplete={() => {
-              console.log('onSignUpComplete called - checking user onboarding status');
-              checkUserOnboardingStatus();
-            }}
-          />
-        </div>
-      </div>
-    );
+  // Redirect to /auth if user is not authenticated
+  if (!user && !loading) {
+    navigate('/auth');
+    return null;
   }
   
   if (appState === 'onboarding') {

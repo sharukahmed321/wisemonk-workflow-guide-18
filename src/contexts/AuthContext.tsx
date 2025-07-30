@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   userRole: string | null;
   isEmailVerified: boolean;
+  isRecoverySession: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -31,6 +32,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isRecoverySession, setIsRecoverySession] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener first
@@ -43,6 +45,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Check email verification status
         const emailVerified = session?.user?.email_confirmed_at !== null;
         setIsEmailVerified(emailVerified);
+        
+        // Check if this is a recovery session (password reset)
+        const isRecovery = session?.user?.aud === 'authenticated' && 
+                          new URLSearchParams(window.location.search).get('type') === 'recovery';
+        setIsRecoverySession(isRecovery);
         
         // Fetch user role when user signs in and email is verified
         if (session?.user && emailVerified) {
@@ -66,6 +73,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Check email verification status
       const emailVerified = session?.user?.email_confirmed_at !== null;
       setIsEmailVerified(emailVerified);
+      
+      // Check if this is a recovery session (password reset)
+      const isRecovery = session?.user?.aud === 'authenticated' && 
+                        new URLSearchParams(window.location.search).get('type') === 'recovery';
+      setIsRecoverySession(isRecovery);
       
       if (session?.user && emailVerified) {
         setTimeout(() => {
@@ -152,6 +164,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     userRole,
     isEmailVerified,
+    isRecoverySession,
     signOut,
   };
 
