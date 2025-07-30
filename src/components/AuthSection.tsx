@@ -766,16 +766,14 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
                       </FormItem>
                     )}
                   />
-                  {showForgotPassword && (
-                    <button 
-                      type="button" 
-                      className="text-sm text-primary hover:text-primary/80"
-                      disabled={isLoading}
-                      onClick={() => setForgotPasswordModalOpen(true)}
-                    >
-                      Forgot password?
-                    </button>
-                  )}
+                  <button 
+                    type="button" 
+                    className="text-sm text-primary hover:text-primary/80"
+                    disabled={isLoading}
+                    onClick={() => setForgotPasswordModalOpen(true)}
+                  >
+                    Forgot password?
+                  </button>
                 </div>
                 
                 <Button 
