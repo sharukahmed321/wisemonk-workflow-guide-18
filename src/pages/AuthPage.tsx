@@ -26,43 +26,65 @@ export default function AuthPage() {
   const isRecoverySession = useMemo(() => {
     if (!session) return false;
     
-    // Check multiple indicators for recovery session
-    const params = new URLSearchParams(location.search);
+    // Check URL parameters (both search and hash)
+    const searchParams = new URLSearchParams(location.search);
     const hashParams = new URLSearchParams(location.hash.substring(1));
     
-    const hasRecoveryType = params.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
-    const isAuthenticatedAud = session?.user?.aud === 'authenticated';
+    // Multiple ways to detect recovery session
+    const hasRecoveryType = searchParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
+    const hasAccessToken = hashParams.get('access_token');
+    const hasRefreshToken = hashParams.get('refresh_token');
+    const isUpdatePasswordMode = mode === 'update-password';
+    const isAuthenticatedUser = session?.user?.aud === 'authenticated';
     
-    console.log('Recovery session check:', {
+    // Log everything for debugging
+    console.log('Recovery session analysis:', {
       hasRecoveryType,
-      isAuthenticatedAud,
+      hasAccessToken: !!hasAccessToken,
+      hasRefreshToken: !!hasRefreshToken,
+      isUpdatePasswordMode,
+      isAuthenticatedUser,
+      sessionUser: session?.user,
+      currentURL: window.location.href,
       searchParams: location.search,
-      hashParams: location.hash,
-      sessionAud: session?.user?.aud
+      hashParams: location.hash
     });
     
-    return isAuthenticatedAud && hasRecoveryType;
-  }, [session, location.search, location.hash]);
+    // Recovery session if we have the right indicators
+    return (hasRecoveryType || (hasAccessToken && isUpdatePasswordMode)) && isAuthenticatedUser;
+  }, [session, location.search, location.hash, mode]);
 
   // Handle authentication redirects
   useEffect(() => {
     if (loading) return;
 
-    // If user is authenticated and email verified, redirect to dashboard
-    if (user && isEmailVerified && !isRecoverySession) {
+    console.log('Auth redirect check:', { 
+      user: !!user, 
+      isEmailVerified, 
+      isRecoverySession, 
+      mode 
+    });
+
+    // Handle recovery sessions FIRST
+    if (isRecoverySession) {
+      if (mode !== 'update-password') {
+        console.log('Recovery session detected, redirecting to update-password mode');
+        navigate('/auth?mode=update-password', { replace: true });
+      }
+      return; // Don't process other redirects
+    }
+
+    // Handle normal authentication
+    if (user && isEmailVerified) {
+      console.log('Authenticated user, redirecting to dashboard');
       navigate('/dashboard');
       return;
     }
 
-    // If in update-password mode but no valid recovery session, redirect to sign-in
+    // Handle invalid recovery attempts
     if (mode === 'update-password' && !isRecoverySession) {
-      navigate('/auth?mode=sign-in');
-      return;
-    }
-
-    // If recovery session but not in update-password mode, redirect to update-password
-    if (isRecoverySession && mode !== 'update-password') {
-      navigate('/auth?mode=update-password');
+      console.log('Update password mode without valid recovery session, redirecting to sign-in');
+      navigate('/auth?mode=sign-in', { replace: true });
       return;
     }
   }, [user, isEmailVerified, loading, mode, isRecoverySession, navigate]);
