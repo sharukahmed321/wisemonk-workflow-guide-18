@@ -3,6 +3,14 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+
+interface UserExistenceStatus {
+  exists: boolean;
+  email_verified: boolean;
+  profile_exists: boolean;
+  user_id: string | null;
+  status: 'new_user' | 'unverified' | 'partial_registration' | 'complete' | 'unknown';
+}
 import {
   Dialog,
   DialogContent,
@@ -47,7 +55,35 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
     setError(null);
     
     try {
-      console.log('Sending password reset email to:', data.email);
+      console.log('Checking if user exists:', data.email);
+      
+      // First check if user exists
+      const { data: userCheck, error: checkError } = await supabase.rpc('check_user_exists', {
+        user_email: data.email.toLowerCase().trim()
+      });
+
+      if (checkError) {
+        console.error('User check error:', checkError);
+        setError('An error occurred while checking user. Please try again.');
+        return;
+      }
+
+      // Cast the response to the proper type
+      const userStatus = userCheck as unknown as UserExistenceStatus;
+
+      // If user doesn't exist, show error
+      if (!userStatus.exists) {
+        setError('User not found. Please sign up first.');
+        return;
+      }
+
+      // If user exists but email not verified
+      if (!userStatus.email_verified) {
+        setError('Email not verified. Please check your email for verification link or contact support.');
+        return;
+      }
+
+      console.log('User exists and verified, sending password reset email to:', data.email);
       
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(data.email, {
         redirectTo: `${window.location.origin}/?mode=update-password`,
@@ -55,11 +91,7 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
 
       if (resetError) {
         console.error('Password reset error:', resetError);
-        if (resetError.message.includes('User not found') || resetError.message.includes('Invalid')) {
-          setError('User not found. Please sign up first.');
-        } else {
-          setError(resetError.message);
-        }
+        setError('Failed to send reset email. Please try again.');
         return;
       }
 
