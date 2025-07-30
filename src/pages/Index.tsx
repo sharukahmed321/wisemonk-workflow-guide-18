@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { BrandingSection } from '../components/BrandingSection';
@@ -11,15 +10,27 @@ import { supabase } from '../integrations/supabase/client';
 
 const Index = () => {
   const location = useLocation();
-  const { user, loading, isEmailVerified } = useAuth();
+  const { user, loading, isEmailVerified, session } = useAuth();
   const [appState, setAppState] = useState<'auth' | 'onboarding' | 'dashboard'>('auth');
+  
+  // Recovery session detection
+  const searchParams = new URLSearchParams(location.search);
+  const mode = searchParams.get('mode');
+  const isRecoverySession = session?.user?.aud === 'authenticated' && mode === 'update-password';
   
   useEffect(() => {
     if (loading) return; // Wait for auth to load
     
-    console.log('Index useEffect - User:', user?.email, 'Email verified:', isEmailVerified, 'Location:', location.pathname);
+    console.log('Index useEffect - User:', user?.email, 'Email verified:', isEmailVerified, 'Location:', location.pathname, 'Recovery session:', isRecoverySession);
     
     if (user) {
+      // Check for recovery session first
+      if (isRecoverySession) {
+        console.log('Recovery session detected - staying in auth state for password update');
+        setAppState('auth');
+        return;
+      }
+      
       // User is authenticated, but check if email is verified
       if (!isEmailVerified) {
         console.log('User authenticated but email not verified - staying in auth state');
@@ -38,7 +49,7 @@ const Index = () => {
       // User is not authenticated
       setAppState('auth');
     }
-  }, [user, loading, isEmailVerified, location]);
+  }, [user, loading, isEmailVerified, location, isRecoverySession]);
 
   const checkUserOnboardingStatus = async () => {
     try {
@@ -108,6 +119,13 @@ const Index = () => {
             onSignUpComplete={() => {
               console.log('onSignUpComplete called - checking user onboarding status');
               checkUserOnboardingStatus();
+            }}
+            isRecoveryMode={isRecoverySession}
+            onPasswordUpdateComplete={() => {
+              console.log('Password updated successfully, redirecting to dashboard');
+              // Clear the recovery mode parameter
+              window.history.pushState({}, '', '/dashboard');
+              setAppState('dashboard');
             }}
           />
         </div>

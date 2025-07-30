@@ -15,6 +15,7 @@ import { EmailVerified } from "./OTPVerification";
 import { ForgotPasswordModal } from "./ForgotPasswordModal";
 import { AccountLockoutModal } from "./AccountLockoutModal";
 import { LoadingScreen } from "./LoadingScreen";
+import { PasswordUpdateForm } from "./PasswordUpdateForm";
 import { Eye, EyeOff, Shield, AlertCircle, Clock, Wifi } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,8 @@ import { useToast } from "@/hooks/use-toast";
 interface AuthSectionProps {
   onSignInComplete: () => void;
   onSignUpComplete: () => void;
+  isRecoveryMode?: boolean;
+  onPasswordUpdateComplete?: () => void;
 }
 
 interface SecurityStatus {
@@ -74,7 +77,7 @@ const signUpSchema = z.object({
 type SignInFormData = z.infer<typeof signInSchema>;
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
-export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionProps) {
+export function AuthSection({ onSignInComplete, onSignUpComplete, isRecoveryMode, onPasswordUpdateComplete }: AuthSectionProps) {
   const [authState, setAuthState] = useState<'auth' | 'email-check' | 'verified'>('auth');
   const [userEmail, setUserEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -606,6 +609,20 @@ export function AuthSection({ onSignInComplete, onSignUpComplete }: AuthSectionP
   if (authState === 'verified') {
     return (
       <EmailVerified onContinue={onSignUpComplete} />
+    );
+  }
+
+  // Show password update form in recovery mode
+  if (isRecoveryMode) {
+    return (
+      <div className="flex-1 flex flex-col justify-center px-6 py-8 lg:px-8 lg:w-1/2">
+        <div className="mx-auto w-full max-w-sm">
+          <PasswordUpdateForm onSuccess={() => {
+            console.log('Password update completed');
+            onPasswordUpdateComplete?.();
+          }} />
+        </div>
+      </div>
     );
   }
 
