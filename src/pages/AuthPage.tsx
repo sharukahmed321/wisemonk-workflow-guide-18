@@ -22,37 +22,22 @@ export default function AuthPage() {
       ? modeParam as AuthMode : 'sign-in';
   }, [location.search]);
 
-  // Check if this is a recovery session (password reset)
+  // Simplified recovery session detection
   const isRecoverySession = useMemo(() => {
-    if (!session) return false;
-    
-    // Check URL parameters (both search and hash)
-    const searchParams = new URLSearchParams(location.search);
-    const hashParams = new URLSearchParams(location.hash.substring(1));
-    
-    // Multiple ways to detect recovery session
-    const hasRecoveryType = searchParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
-    const hasAccessToken = hashParams.get('access_token');
-    const hasRefreshToken = hashParams.get('refresh_token');
+    // Simple logic: if we're in update-password mode and have a session, it's a recovery session
+    const hasSession = !!session;
     const isUpdatePasswordMode = mode === 'update-password';
-    const isAuthenticatedUser = session?.user?.aud === 'authenticated';
     
-    // Log everything for debugging
-    console.log('Recovery session analysis:', {
-      hasRecoveryType,
-      hasAccessToken: !!hasAccessToken,
-      hasRefreshToken: !!hasRefreshToken,
+    console.log('Recovery session check:', {
+      hasSession,
       isUpdatePasswordMode,
-      isAuthenticatedUser,
-      sessionUser: session?.user,
-      currentURL: window.location.href,
-      searchParams: location.search,
-      hashParams: location.hash
+      mode,
+      sessionExists: !!session,
+      currentURL: window.location.href
     });
     
-    // Recovery session if we have the right indicators
-    return (hasRecoveryType || (hasAccessToken && isUpdatePasswordMode)) && isAuthenticatedUser;
-  }, [session, location.search, location.hash, mode]);
+    return hasSession && isUpdatePasswordMode;
+  }, [session, mode]);
 
   // Handle authentication redirects
   useEffect(() => {
