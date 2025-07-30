@@ -47,23 +47,31 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
     setError(null);
     
     try {
+      console.log('Sending password reset email to:', data.email);
+      
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(data.email, {
         redirectTo: `${window.location.origin}/?mode=update-password`,
       });
 
       if (resetError) {
-        setError(resetError.message);
+        console.error('Password reset error:', resetError);
+        if (resetError.message.includes('User not found') || resetError.message.includes('Invalid')) {
+          setError('User not found. Please sign up first.');
+        } else {
+          setError(resetError.message);
+        }
         return;
       }
 
+      console.log('Password reset email sent successfully');
       setIsSuccess(true);
       toast({
         title: "Password reset sent!",
         description: "Check your email for the password reset link.",
       });
     } catch (error: any) {
-      setError('An unexpected error occurred. Please try again.');
       console.error('Password reset error:', error);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }

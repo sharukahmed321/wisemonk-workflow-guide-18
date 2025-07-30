@@ -16,8 +16,11 @@ interface PasswordUpdateFormProps {
 
 const passwordUpdateSchema = z.object({
   password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain uppercase, lowercase, and number'),
+    .min(12, 'Password must be at least 12 characters')
+    .regex(/^(?=.*[a-z])/, 'Password must contain lowercase letters')
+    .regex(/^(?=.*[A-Z])/, 'Password must contain uppercase letters')
+    .regex(/^(?=.*\d)/, 'Password must contain numbers')
+    .regex(/^(?=.*[!@#$%^&*(),.?":{}|<>])/, 'Password must contain special characters'),
   confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -32,6 +35,21 @@ export function PasswordUpdateForm({ onSuccess }: PasswordUpdateFormProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const checkPasswordStrength = (password: string) => {
+    const checks = {
+      length: password.length >= 12,
+      lowercase: /[a-z]/.test(password),
+      uppercase: /[A-Z]/.test(password),
+      number: /\d/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    };
+    
+    const passedChecks = Object.values(checks).filter(Boolean).length;
+    const strength = passedChecks === 5 ? 'Strong' : passedChecks >= 3 ? 'Good' : passedChecks >= 2 ? 'Fair' : 'Weak';
+    
+    return { checks, strength, score: passedChecks };
+  };
 
   const form = useForm<PasswordUpdateFormData>({
     resolver: zodResolver(passwordUpdateSchema),
@@ -58,9 +76,13 @@ export function PasswordUpdateForm({ onSuccess }: PasswordUpdateFormProps) {
       }
 
       console.log('Password updated successfully');
+      
+      // Sign out user to force login with new password
+      await supabase.auth.signOut();
+      
       toast({
         title: "Password updated!",
-        description: "Your password has been successfully updated.",
+        description: "Please log in with your new password.",
       });
       
       onSuccess();
@@ -93,37 +115,90 @@ export function PasswordUpdateForm({ onSuccess }: PasswordUpdateFormProps) {
           <FormField
             control={form.control}
             name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>New Password</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input 
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter new password"
-                      disabled={isLoading}
-                      {...field} 
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={isLoading}
-                      tabIndex={-1}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              const passwordStrength = checkPasswordStrength(field.value || '');
+              return (
+                <FormItem>
+                  <FormLabel>New Password</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input 
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter new password"
+                        disabled={isLoading}
+                        {...field} 
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  
+                  {field.value && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Password Strength:</span>
+                        <span className={`text-sm font-medium ${
+                          passwordStrength.strength === 'Strong' ? 'text-green-600' :
+                          passwordStrength.strength === 'Good' ? 'text-blue-600' :
+                          passwordStrength.strength === 'Fair' ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {passwordStrength.strength}
+                        </span>
+                      </div>
+                      
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            passwordStrength.strength === 'Strong' ? 'bg-green-600' :
+                            passwordStrength.strength === 'Good' ? 'bg-blue-600' :
+                            passwordStrength.strength === 'Fair' ? 'bg-yellow-600' : 'bg-red-600'
+                          }`}
+                          style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-1 text-xs">
+                        <div className={`flex items-center gap-1 ${passwordStrength.checks.length ? 'text-green-600' : 'text-gray-400'}`}>
+                          {passwordStrength.checks.length ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                          At least 12 characters
+                        </div>
+                        <div className={`flex items-center gap-1 ${passwordStrength.checks.lowercase ? 'text-green-600' : 'text-gray-400'}`}>
+                          {passwordStrength.checks.lowercase ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                          Lowercase letters
+                        </div>
+                        <div className={`flex items-center gap-1 ${passwordStrength.checks.uppercase ? 'text-green-600' : 'text-gray-400'}`}>
+                          {passwordStrength.checks.uppercase ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                          Uppercase letters
+                        </div>
+                        <div className={`flex items-center gap-1 ${passwordStrength.checks.number ? 'text-green-600' : 'text-gray-400'}`}>
+                          {passwordStrength.checks.number ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                          Numbers
+                        </div>
+                        <div className={`flex items-center gap-1 ${passwordStrength.checks.special ? 'text-green-600' : 'text-gray-400'}`}>
+                          {passwordStrength.checks.special ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                          Special characters
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           <FormField

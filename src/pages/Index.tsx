@@ -122,10 +122,10 @@ const Index = () => {
             }}
             isRecoveryMode={isRecoverySession}
             onPasswordUpdateComplete={() => {
-              console.log('Password updated successfully, redirecting to dashboard');
-              // Clear the recovery mode parameter
-              window.history.pushState({}, '', '/dashboard');
-              setAppState('dashboard');
+              console.log('Password updated successfully, redirecting to login');
+              // Clear recovery mode and redirect to login tab
+              window.history.pushState({}, '', '/?tab=signin');
+              setAppState('auth');
             }}
           />
         </div>
