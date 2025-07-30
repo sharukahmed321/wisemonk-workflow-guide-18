@@ -61,7 +61,7 @@ export function UpdatePasswordComponent({ onComplete }: UpdatePasswordComponentP
 
       toast({
         title: "Password updated successfully!",
-        description: "Your password has been reset. You are now signed in.",
+        description: "Please sign in with your new password.",
       });
       
       // Redirect to dashboard after successful password update

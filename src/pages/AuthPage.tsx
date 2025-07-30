@@ -25,9 +25,24 @@ export default function AuthPage() {
   // Check if this is a recovery session (password reset)
   const isRecoverySession = useMemo(() => {
     if (!session) return false;
+    
+    // Check multiple indicators for recovery session
     const params = new URLSearchParams(location.search);
-    return session?.user?.aud === 'authenticated' && params.get('type') === 'recovery';
-  }, [session, location.search]);
+    const hashParams = new URLSearchParams(location.hash.substring(1));
+    
+    const hasRecoveryType = params.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
+    const isAuthenticatedAud = session?.user?.aud === 'authenticated';
+    
+    console.log('Recovery session check:', {
+      hasRecoveryType,
+      isAuthenticatedAud,
+      searchParams: location.search,
+      hashParams: location.hash,
+      sessionAud: session?.user?.aud
+    });
+    
+    return isAuthenticatedAud && hasRecoveryType;
+  }, [session, location.search, location.hash]);
 
   // Handle authentication redirects
   useEffect(() => {
@@ -73,7 +88,7 @@ export default function AuthPage() {
   };
 
   const handleUpdateComplete = () => {
-    navigate('/dashboard');
+    navigate('/auth?mode=sign-in');
   };
 
   const renderAuthComponent = () => {
