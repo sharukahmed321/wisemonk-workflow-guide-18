@@ -16,7 +16,8 @@ const Index = () => {
   // Recovery session detection
   const searchParams = new URLSearchParams(location.search);
   const mode = searchParams.get('mode');
-  const isRecoverySession = session?.user?.aud === 'authenticated' && mode === 'update-password';
+  const hasRecoveryToken = searchParams.has('token') || searchParams.has('access_token');
+  const isRecoverySession = session?.user?.aud === 'authenticated' && mode === 'update-password' && hasRecoveryToken;
   
   useEffect(() => {
     if (loading) return; // Wait for auth to load
@@ -147,9 +148,13 @@ const Index = () => {
             isRecoveryMode={isRecoverySession}
             onPasswordUpdateComplete={() => {
               console.log('Password updated successfully, redirecting to login');
-              // Clear recovery mode and redirect to login tab
-              window.history.pushState({}, '', '/?tab=signin');
-              setAppState('auth');
+              // Clear all URL parameters to prevent recovery mode from persisting
+              window.history.replaceState({}, '', window.location.pathname);
+              // Force a small delay to ensure state cleanup
+              setTimeout(() => {
+                window.history.pushState({}, '', '/?tab=signin');
+                setAppState('auth');
+              }, 100);
             }}
           />
         </div>
