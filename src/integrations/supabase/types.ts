@@ -349,7 +349,7 @@ export type Database = {
           setup_completed: boolean | null
           setup_completed_at: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           account_locked_reason?: string | null
@@ -398,7 +398,7 @@ export type Database = {
           setup_completed?: boolean | null
           setup_completed_at?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           account_locked_reason?: string | null
@@ -447,7 +447,7 @@ export type Database = {
           setup_completed?: boolean | null
           setup_completed_at?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

@@ -106,14 +106,11 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
       const randomNum = Math.floor(Math.random() * 999) + 1;
       const employeeId = `EMP${randomNum.toString().padStart(3, '0')}`;
 
-      // Generate a temporary UUID for the pre-registered profile
-      const tempUserId = crypto.randomUUID();
-      
-      // Create pre-registered profile for the employee
-      const { error: profileError } = await supabase
+      // Create pre-registered profile for the employee (user_id is null until they sign up)
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
-          user_id: tempUserId,
+          user_id: null, // Set to null for pre-registered employees
           email: employeeData.email,
           first_name: employeeData.firstName,
           last_name: employeeData.lastName,
@@ -131,29 +128,16 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
           company_info_status: 'pending',
           address_status: 'pending',
           msa_status: 'pending'
-        });
+        })
+        .select()
+        .single();
 
       if (profileError) {
         console.error('Error creating pre-registered profile:', profileError);
         throw profileError;
       }
 
-      // Create employee role for the pre-registered profile
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: tempUserId,
-          role: 'employee',
-          organization_id: profile.organization_id,
-          assigned_by: user.user.id
-        });
-
-      if (roleError) {
-        console.error('Error creating employee role:', roleError);
-        throw roleError;
-      }
-      
-      // Create employee record in employees table
+      // Create employee record in employees table (no user role needed for pre-registered employees)
       const { error: employeeError } = await supabase
         .from('employees')
         .insert({
@@ -169,7 +153,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
           start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           status: 'Invited', // Set status to 'Invited' since they haven't signed up yet
           organization_id: profile.organization_id,
-          user_id: tempUserId // Link to the pre-registered profile
+          user_id: null // No user_id until they sign up
         });
 
       if (employeeError) {
