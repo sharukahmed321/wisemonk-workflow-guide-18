@@ -328,7 +328,10 @@ export type Database = {
           failed_login_attempts: number
           first_name: string | null
           id: string
+          invited_at: string | null
+          invited_by: string | null
           is_active: boolean
+          is_pre_registered: boolean | null
           job_title: string | null
           last_failed_login_at: string | null
           last_login_at: string | null
@@ -374,7 +377,10 @@ export type Database = {
           failed_login_attempts?: number
           first_name?: string | null
           id?: string
+          invited_at?: string | null
+          invited_by?: string | null
           is_active?: boolean
+          is_pre_registered?: boolean | null
           job_title?: string | null
           last_failed_login_at?: string | null
           last_login_at?: string | null
@@ -420,7 +426,10 @@ export type Database = {
           failed_login_attempts?: number
           first_name?: string | null
           id?: string
+          invited_at?: string | null
+          invited_by?: string | null
           is_active?: boolean
+          is_pre_registered?: boolean | null
           job_title?: string | null
           last_failed_login_at?: string | null
           last_login_at?: string | null

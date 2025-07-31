@@ -53,19 +53,43 @@ const Index = () => {
 
   const checkUserOnboardingStatus = async () => {
     try {
-      // Check if user profile has basic information filled out
-      const { data: profile, error } = await supabase
+      // Check user profile and role
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('first_name, last_name, job_title')
+        .select('first_name, last_name, job_title, organization_id')
         .eq('user_id', user?.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error checking profile:', error);
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error checking profile:', profileError);
         // Default to dashboard on error
         setAppState('dashboard');
         if (!location.pathname.startsWith('/dashboard')) {
           window.history.pushState({}, '', '/dashboard');
+        }
+        return;
+      }
+
+      // Check user role
+      const { data: userRole, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role, organization_id')
+        .eq('user_id', user?.id)
+        .order('role')
+        .limit(1);
+
+      if (roleError) {
+        console.error('Error checking user role:', roleError);
+      }
+
+      const role = userRole?.[0]?.role;
+      const hasOrganization = profile?.organization_id || userRole?.[0]?.organization_id;
+
+      // If user is an employee with organization, redirect to people dashboard
+      if (role === 'employee' && hasOrganization) {
+        setAppState('dashboard');
+        if (!location.pathname.startsWith('/dashboard/people')) {
+          window.history.pushState({}, '', '/dashboard/people');
         }
         return;
       }

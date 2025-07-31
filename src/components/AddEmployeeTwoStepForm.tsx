@@ -105,9 +105,56 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
       // Generate employee ID
       const randomNum = Math.floor(Math.random() * 999) + 1;
       const employeeId = `EMP${randomNum.toString().padStart(3, '0')}`;
+
+      // Generate a temporary UUID for the pre-registered profile
+      const tempUserId = crypto.randomUUID();
       
-      // Create employee in database
-      const { error } = await supabase
+      // Create pre-registered profile for the employee
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: tempUserId,
+          email: employeeData.email,
+          first_name: employeeData.firstName,
+          last_name: employeeData.lastName,
+          job_title: employeeData.jobTitle,
+          organization_id: profile.organization_id,
+          is_pre_registered: true,
+          invited_by: user.user.id,
+          invited_at: new Date().toISOString(),
+          basic_info_completed: false,
+          company_info_completed: false,
+          address_completed: false,
+          msa_completed: false,
+          setup_completed: false,
+          basic_info_status: 'pending',
+          company_info_status: 'pending',
+          address_status: 'pending',
+          msa_status: 'pending'
+        });
+
+      if (profileError) {
+        console.error('Error creating pre-registered profile:', profileError);
+        throw profileError;
+      }
+
+      // Create employee role for the pre-registered profile
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: tempUserId,
+          role: 'employee',
+          organization_id: profile.organization_id,
+          assigned_by: user.user.id
+        });
+
+      if (roleError) {
+        console.error('Error creating employee role:', roleError);
+        throw roleError;
+      }
+      
+      // Create employee record in employees table
+      const { error: employeeError } = await supabase
         .from('employees')
         .insert({
           employee_id: employeeId,
@@ -120,13 +167,14 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
           employment_type: 'Full-time', // Default employment type (could be enhanced later)
           salary: data.salary,
           start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          status: 'Active',
+          status: 'Invited', // Set status to 'Invited' since they haven't signed up yet
           organization_id: profile.organization_id,
+          user_id: tempUserId // Link to the pre-registered profile
         });
 
-      if (error) {
-        console.error('Error creating employee:', error);
-        throw error;
+      if (employeeError) {
+        console.error('Error creating employee:', employeeError);
+        throw employeeError;
       }
 
       setShowSuccess(true);
@@ -134,7 +182,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
       toast({
         title: "Success!",
-        description: `${employeeData.firstName} ${employeeData.lastName} has been added to your team.`,
+        description: `${employeeData.firstName} ${employeeData.lastName} has been added to your team. They can now sign up using their email to access the portal.`,
       });
 
       // Auto-redirect after success
