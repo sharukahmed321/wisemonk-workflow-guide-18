@@ -120,7 +120,7 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reset Password</DialogTitle>
+          <DialogTitle>Reset your password</DialogTitle>
           <DialogDescription>
             Enter your email address and we'll send you a link to reset your password.
           </DialogDescription>
