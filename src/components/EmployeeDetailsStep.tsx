@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -231,7 +230,8 @@ export function EmployeeDetailsStep({
                           selected={field.value} 
                           onSelect={field.onChange} 
                           disabled={date => date < new Date()} 
-                          initialFocus 
+                          initialFocus
+                          defaultMonth={new Date()}
                           className="pointer-events-auto"
                         />
                       </PopoverContent>
