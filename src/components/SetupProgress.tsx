@@ -22,16 +22,25 @@ interface SetupProgressProps {
 }
 
 export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupProgressProps) {
-  // Calculate progress based on specific percentages
+  // Calculate progress based on flexible completion logic
   const getProgressPercentage = (completedSteps: string[]) => {
-    if (completedSteps.includes('first-employee')) return 100;
-    if (completedSteps.includes('msa')) return 75;
-    if (completedSteps.includes('address')) return 50;
-    if (completedSteps.includes('basic-info')) return 25;
+    const hasBasicInfo = completedSteps.includes('basic-info');
+    const hasAddress = completedSteps.includes('address');
+    const hasMsa = completedSteps.includes('msa');
+    const hasEmployee = completedSteps.includes('first-employee');
+
+    // Both MSA and employee = 100%
+    if (hasMsa && hasEmployee) return 100;
+    // Either MSA or employee = 75%
+    if (hasMsa || hasEmployee) return 75;
+    // Address = 50%
+    if (hasAddress) return 50;
+    // Basic info = 25%
+    if (hasBasicInfo) return 25;
     return 0;
   };
 
-  // Determine which steps are active based on completion status
+  // Determine which steps are active based on completion status (flexible logic)
   const getStepStatus = (stepId: string, completedSteps: string[]) => {
     const completed = completedSteps.includes(stepId);
     let active = false;
@@ -44,10 +53,12 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
         active = completedSteps.includes('basic-info');
         break;
       case 'msa':
+        // Active once address is completed
         active = completedSteps.includes('address');
         break;
       case 'first-employee':
-        active = completedSteps.includes('msa');
+        // Active once address is completed (parallel with MSA)
+        active = completedSteps.includes('address');
         break;
     }
 
@@ -72,7 +83,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
     {
       id: 'msa',
       title: 'Master Service Agreement',
-      description: 'Review and sign the MSA document',
+      description: 'Review and sign the MSA document (Optional)',
       ...getStepStatus('msa', completedSteps),
       action: 'Sign Agreement',
       url: '/dashboard/setup/msa'
@@ -80,7 +91,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
     {
       id: 'first-employee',
       title: 'Add First Employee',
-      description: 'Add your first team member',
+      description: 'Add your first team member (Alternative)',
       ...getStepStatus('first-employee', completedSteps),
       action: 'Add Employee',
       url: '/dashboard/add-employee'
@@ -88,10 +99,10 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
   ];
 
   const progressPercentage = getProgressPercentage(completedSteps);
-  const isComplete = completedSteps.includes('first-employee');
+  const isComplete = progressPercentage === 100;
 
   if (isComplete) {
-    return null; // Don't show when complete
+    return null; // Don't show when 100% complete
   }
 
   return (
@@ -125,65 +136,73 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
       </CardHeader>
       
       <CardContent className="space-y-1.5 p-4 pt-0">
-        {setupSteps.map((step) => (
-          <div
-            key={step.id}
-            className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
-              step.completed 
-                ? 'bg-success/10 border border-success/20' 
-                : step.active
-                ? 'bg-muted/30 hover:bg-muted/50'
-                : 'bg-muted/10 opacity-60'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <div className={`flex-shrink-0 ${
+        {setupSteps.map((step, index) => (
+          <div key={step.id}>
+            <div
+              className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
                 step.completed 
-                  ? 'text-success' 
-                  : step.active 
-                  ? 'text-muted-foreground'
-                  : 'text-muted-foreground/50'
-              }`}>
-                {step.completed ? (
-                  <CheckCircle className="h-3.5 w-3.5" />
-                ) : step.active ? (
-                  <Circle className="h-3.5 w-3.5" />
-                ) : (
-                  <Lock className="h-3.5 w-3.5" />
-                )}
-              </div>
-              <div>
-                <h3 className={`text-xs font-medium ${
+                  ? 'bg-success/10 border border-success/20' 
+                  : step.active
+                  ? 'bg-muted/30 hover:bg-muted/50'
+                  : 'bg-muted/10 opacity-60'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`flex-shrink-0 ${
                   step.completed 
                     ? 'text-success' 
-                    : step.active
-                    ? 'text-foreground'
-                    : 'text-muted-foreground/50'
-                }`}>
-                  {step.title}
-                </h3>
-                <p className={`text-xs ${
-                  step.active 
+                    : step.active 
                     ? 'text-muted-foreground'
                     : 'text-muted-foreground/50'
                 }`}>
-                  {step.description}
-                </p>
+                  {step.completed ? (
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  ) : step.active ? (
+                    <Circle className="h-3.5 w-3.5" />
+                  ) : (
+                    <Lock className="h-3.5 w-3.5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className={`text-xs font-medium ${
+                    step.completed 
+                      ? 'text-success' 
+                      : step.active
+                      ? 'text-foreground'
+                      : 'text-muted-foreground/50'
+                  }`}>
+                    {step.title}
+                  </h3>
+                  <p className={`text-xs ${
+                    step.active 
+                      ? 'text-muted-foreground'
+                      : 'text-muted-foreground/50'
+                  }`}>
+                    {step.description}
+                  </p>
+                </div>
               </div>
+              
+              {!step.completed && step.action && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onStepClick(step.id)}
+                  disabled={!step.active}
+                  className={`ml-2 flex-shrink-0 h-6 text-xs ${
+                    !step.active ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {step.action}
+                </Button>
+              )}
             </div>
             
-            {!step.completed && step.action && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onStepClick(step.id)}
-                disabled={!step.active}
-                className={`ml-2 flex-shrink-0 h-6 text-xs ${
-                  !step.active ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {step.action}
-              </Button>
+            {/* Show flexible completion indicator after address step */}
+            {step.id === 'address' && step.completed && !completedSteps.includes('msa') && !completedSteps.includes('first-employee') && (
+              <div className="mt-2 ml-6 p-2 bg-primary/5 border-l-2 border-primary/20 text-xs text-muted-foreground">
+                💡 Complete either step below to continue (75% progress)
+              </div>
             )}
           </div>
         ))}

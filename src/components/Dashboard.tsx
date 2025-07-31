@@ -53,7 +53,7 @@ function DashboardHome() {
       // Get profile data
       const { data: profile } = await supabase
         .from('profiles')
-        .select('basic_info_completed, address_completed, msa_completed, organization_id')
+        .select('basic_info_completed, address_completed, msa_completed, msa_signed, organization_id')
         .eq('user_id', user.user.id)
         .single();
 
@@ -70,8 +70,8 @@ function DashboardHome() {
           steps.push('address');
         }
         
-        // Check MSA completion
-        if (profile.msa_completed) {
+        // Check MSA completion (either msa_completed OR msa_signed)
+        if (profile.msa_completed || profile.msa_signed) {
           steps.push('msa');
         }
         
@@ -90,8 +90,20 @@ function DashboardHome() {
         
         setCompletedSteps(steps);
         
-        // Hide setup progress if all steps are completed
-        if (steps.includes('first-employee')) {
+        // Calculate completion percentage using the same logic as SetupProgress
+        const hasBasicInfo = steps.includes('basic-info');
+        const hasAddress = steps.includes('address');
+        const hasMsa = steps.includes('msa');
+        const hasEmployee = steps.includes('first-employee');
+        
+        let progressPercentage = 0;
+        if (hasMsa && hasEmployee) progressPercentage = 100;
+        else if (hasMsa || hasEmployee) progressPercentage = 75;
+        else if (hasAddress) progressPercentage = 50;
+        else if (hasBasicInfo) progressPercentage = 25;
+        
+        // Hide setup progress when 100% complete
+        if (progressPercentage === 100) {
           setShowSetupProgress(false);
         }
       }
