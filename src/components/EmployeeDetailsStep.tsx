@@ -231,7 +231,7 @@ export function EmployeeDetailsStep({
                           onSelect={field.onChange} 
                           disabled={date => date < new Date()} 
                           initialFocus
-                          month={new Date()}
+                          defaultMonth={new Date()}
                           className="pointer-events-auto"
                         />
                       </PopoverContent>
