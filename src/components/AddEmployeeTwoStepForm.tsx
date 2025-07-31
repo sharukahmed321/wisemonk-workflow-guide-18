@@ -83,12 +83,14 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
     try {
       if (!employeeData) {
+        console.error('❌ Employee details are missing');
         throw new Error('Employee details are missing');
       }
 
       // Get user data to fetch organization ID
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
+        console.error('❌ User not authenticated');
         throw new Error('User not authenticated');
       }
 
@@ -100,117 +102,186 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
         .single();
 
       if (!userRole?.organization_id) {
+        console.error('❌ Organization not found in user roles');
         throw new Error('Organization not found. Please complete setup first.');
       }
 
       const organizationId = userRole.organization_id;
 
+      console.log('🚀 Starting employee creation process with data:', {
+        email: employeeData.email,
+        firstName: employeeData.firstName,
+        lastName: employeeData.lastName,
+        jobTitle: employeeData.jobTitle,
+        department: data.department,
+        employmentType: data.employmentType,
+        organizationId,
+        userId: user.user.id
+      });
+
+      // Check for existing employee with same email
+      const { data: existingEmployee } = await supabase
+        .from('employees')
+        .select('email')
+        .eq('email', employeeData.email)
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      if (existingEmployee) {
+        console.error('❌ Employee with this email already exists');
+        throw new Error(`Employee with email ${employeeData.email} already exists.`);
+      }
+
       // Generate employee ID
       const randomNum = Math.floor(Math.random() * 999) + 1;
       const employeeId = `EMP${randomNum.toString().padStart(3, '0')}`;
+      console.log('📋 Generated employee ID:', employeeId);
 
-      console.log('Starting employee creation process...');
+      // Transaction-like approach with rollback capability
+      let profileData = null;
+      let employeeRecord = null;
+      let roleData = null;
 
-      // Step 1: Create pre-registered profile for the employee
-      console.log('Creating pre-registered profile...');
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: null, // Set to null for pre-registered employees
-          email: employeeData.email,
-          first_name: employeeData.firstName,
-          last_name: employeeData.lastName,
-          job_title: employeeData.jobTitle,
-          organization_id: organizationId,
-          is_pre_registered: true,
-          invited_by: user.user.id,
-          invited_at: new Date().toISOString(),
-          basic_info_completed: false,
-          company_info_completed: false,
-          address_completed: false,
-          msa_completed: false,
-          setup_completed: false,
-          basic_info_status: 'pending',
-          company_info_status: 'pending',
-          address_status: 'pending',
-          msa_status: 'pending'
-        })
-        .select()
-        .single();
+      try {
+        // Step 1: Create pre-registered profile for the employee
+        console.log('📝 Step 1: Creating pre-registered profile...');
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: null, // Set to null for pre-registered employees
+            email: employeeData.email,
+            first_name: employeeData.firstName,
+            last_name: employeeData.lastName,
+            job_title: employeeData.jobTitle,
+            department: data.department,
+            organization_id: organizationId,
+            is_pre_registered: true,
+            invited_by: user.user.id,
+            invited_at: new Date().toISOString(),
+            basic_info_completed: false,
+            company_info_completed: false,
+            address_completed: false,
+            msa_completed: false,
+            setup_completed: false,
+            basic_info_status: 'pending',
+            company_info_status: 'pending',
+            address_status: 'pending',
+            msa_status: 'pending'
+          })
+          .select()
+          .single();
 
-      if (profileError) {
-        console.error('Error creating pre-registered profile:', profileError);
-        throw new Error(`Failed to create employee profile: ${profileError.message}`);
-      }
+        if (profileError) {
+          console.error('❌ Profile creation failed:', profileError);
+          throw new Error(`Failed to create employee profile: ${profileError.message}`);
+        }
 
-      console.log('Profile created successfully:', profileData);
+        profileData = profile;
+        console.log('✅ Profile created successfully:', { id: profileData.id, email: profileData.email });
 
-      // Step 2: Create employee record
-      console.log('Creating employee record...');
-      const { error: employeeError } = await supabase
-        .from('employees')
-        .insert({
-          employee_id: employeeId,
-          first_name: employeeData.firstName,
-          last_name: employeeData.lastName,
-          email: employeeData.email,
-          phone: employeeData.phone,
-          job_title: employeeData.jobTitle,
-          department: data.department, // Now using actual form data
-          employment_type: data.employmentType, // Now using actual form data
-          salary: data.salary,
-          start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          status: 'Invited', // This should now work with our updated constraint
-          organization_id: organizationId,
-          user_id: null // No user_id until they sign up
+        // Step 2: Create employee record
+        console.log('👤 Step 2: Creating employee record...');
+        const { data: employee, error: employeeError } = await supabase
+          .from('employees')
+          .insert({
+            employee_id: employeeId,
+            first_name: employeeData.firstName,
+            last_name: employeeData.lastName,
+            email: employeeData.email,
+            phone: employeeData.phone,
+            job_title: employeeData.jobTitle,
+            department: data.department, // Using actual form data
+            employment_type: data.employmentType, // Using actual form data
+            salary: data.salary,
+            start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            status: 'Invited',
+            organization_id: organizationId,
+            user_id: null // No user_id until they sign up
+          })
+          .select()
+          .single();
+
+        if (employeeError) {
+          console.error('❌ Employee creation failed:', employeeError);
+          throw new Error(`Failed to create employee record: ${employeeError.message}`);
+        }
+
+        employeeRecord = employee;
+        console.log('✅ Employee record created successfully:', { 
+          id: employeeRecord.id, 
+          employeeId: employeeRecord.employee_id,
+          email: employeeRecord.email 
         });
 
-      if (employeeError) {
-        console.error('Error creating employee:', employeeError);
-        throw new Error(`Failed to create employee record: ${employeeError.message}`);
-      }
+        // Step 3: Create user role for the pre-registered employee
+        console.log('🔐 Step 3: Creating user role...');
+        const { data: role, error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: null, // Now nullable! Will be updated when employee signs up
+            role: 'employee',
+            organization_id: organizationId,
+            assigned_by: user.user.id
+          })
+          .select()
+          .single();
 
-      console.log('Employee record created successfully');
+        if (roleError) {
+          console.error('❌ User role creation failed:', roleError);
+          throw new Error(`Failed to create user role: ${roleError.message}`);
+        }
 
-      // Step 3: Create user role for the pre-registered employee
-      console.log('Creating user role...');
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: null, // Will be updated when employee signs up
-          role: 'employee',
-          organization_id: organizationId,
-          assigned_by: user.user.id,
-          assigned_at: new Date().toISOString()
+        roleData = role;
+        console.log('✅ User role created successfully:', { 
+          id: roleData.id, 
+          role: roleData.role,
+          organizationId: roleData.organization_id 
         });
 
-      if (roleError) {
-        console.error('Error creating user role:', roleError);
-        throw new Error(`Failed to create user role: ${roleError.message}`);
+        console.log('🎉 All operations completed successfully!');
+
+        setShowSuccess(true);
+        clearDraft();
+
+        toast({
+          title: "Success!",
+          description: `${employeeData.firstName} ${employeeData.lastName} has been added to your team. They can now sign up using their email to access the portal.`,
+        });
+
+        // Auto-redirect after success
+        setTimeout(() => {
+          onSuccess?.();
+          navigate('/dashboard');
+        }, 2500);
+
+      } catch (operationError) {
+        console.error('❌ Transaction failed, attempting cleanup...', operationError);
+        
+        // Attempt cleanup of created records in reverse order
+        if (roleData?.id) {
+          console.log('🧹 Cleaning up user role...');
+          await supabase.from('user_roles').delete().eq('id', roleData.id);
+        }
+        
+        if (employeeRecord?.id) {
+          console.log('🧹 Cleaning up employee record...');
+          await supabase.from('employees').delete().eq('id', employeeRecord.id);
+        }
+        
+        if (profileData?.id) {
+          console.log('🧹 Cleaning up profile...');
+          await supabase.from('profiles').delete().eq('id', profileData.id);
+        }
+
+        throw operationError; // Re-throw to be caught by outer catch
       }
-
-      console.log('User role created successfully');
-      console.log('Employee creation process completed successfully');
-
-      setShowSuccess(true);
-      clearDraft();
-
-      toast({
-        title: "Success!",
-        description: `${employeeData.firstName} ${employeeData.lastName} has been added to your team. They can now sign up using their email to access the portal.`,
-      });
-
-      // Auto-redirect after success
-      setTimeout(() => {
-        onSuccess?.();
-        navigate('/dashboard');
-      }, 2500);
 
     } catch (error) {
-      console.error('Error creating employee:', error);
+      console.error('❌ Unexpected error during employee creation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create employee. Please try again.';
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create employee. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
