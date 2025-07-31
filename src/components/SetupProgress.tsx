@@ -197,13 +197,6 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
                 </Button>
               )}
             </div>
-            
-            {/* Show flexible completion indicator after address step */}
-            {step.id === 'address' && step.completed && !completedSteps.includes('msa') && !completedSteps.includes('first-employee') && (
-              <div className="mt-2 ml-6 p-2 bg-primary/5 border-l-2 border-primary/20 text-xs text-muted-foreground">
-                💡 Complete either step below to continue (75% progress)
-              </div>
-            )}
           </div>
         ))}
       </CardContent>
