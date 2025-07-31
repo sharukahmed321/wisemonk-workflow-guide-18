@@ -156,11 +156,11 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
           email: employeeData.email,
           phone: employeeData.phone,
           job_title: employeeData.jobTitle,
-          department: 'Engineering', // Use default since CompensationReviewData doesn't have these fields
-          employment_type: 'Full-time', // Use default since CompensationReviewData doesn't have these fields
+          department: data.department, // Now using actual form data
+          employment_type: data.employmentType, // Now using actual form data
           salary: data.salary,
           start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          status: 'Invited',
+          status: 'Invited', // This should now work with our updated constraint
           organization_id: organizationId,
           user_id: null // No user_id until they sign up
         });

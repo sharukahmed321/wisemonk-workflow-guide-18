@@ -15,6 +15,8 @@ import { format } from "date-fns";
 const compensationReviewSchema = z.object({
   salary: z.number().min(1, 'Salary is required'),
   currency: z.string().min(1, 'Currency is required'),
+  department: z.string().min(1, 'Department is required'),
+  employmentType: z.string().min(1, 'Employment type is required'),
   agreementAccepted: z.boolean().refine(val => val === true, {
     message: 'You must accept the employment agreement to proceed'
   })
@@ -23,6 +25,8 @@ const compensationReviewSchema = z.object({
 export interface CompensationReviewData {
   salary: number;
   currency: string;
+  department: string;
+  employmentType: string;
   agreementAccepted: boolean;
 }
 
@@ -46,6 +50,8 @@ export function CompensationReviewStep({
     defaultValues: {
       salary: defaultValues?.salary || 0,
       currency: defaultValues?.currency || 'INR',
+      department: defaultValues?.department || 'Engineering',
+      employmentType: defaultValues?.employmentType || 'Full-time',
       agreementAccepted: defaultValues?.agreementAccepted || false
     }
   });
@@ -71,7 +77,7 @@ export function CompensationReviewStep({
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Compensation Details */}
           <div>
-            <h4 className="font-medium text-foreground mb-4">Compensation Details</h4>
+            <h4 className="font-medium text-foreground mb-4">Compensation & Work Details</h4>
             <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -106,6 +112,57 @@ export function CompensationReviewStep({
                         className="h-11 bg-muted"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Engineering">Engineering</SelectItem>
+                        <SelectItem value="Marketing">Marketing</SelectItem>
+                        <SelectItem value="Sales">Sales</SelectItem>
+                        <SelectItem value="HR">HR</SelectItem>
+                        <SelectItem value="Finance">Finance</SelectItem>
+                        <SelectItem value="Operations">Operations</SelectItem>
+                        <SelectItem value="Design">Design</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="employmentType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Employment Type *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select employment type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Full-time">Full-time</SelectItem>
+                        <SelectItem value="Part-time">Part-time</SelectItem>
+                        <SelectItem value="Contract">Contract</SelectItem>
+                        <SelectItem value="Intern">Intern</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -167,15 +224,23 @@ export function CompensationReviewStep({
                 
                 <Separator />
                 
-                {/* Compensation Information */}
+                 {/* Compensation & Work Information */}
                 <div>
-                  <h5 className="font-medium text-sm text-muted-foreground mb-2">Compensation</h5>
+                  <h5 className="font-medium text-sm text-muted-foreground mb-2">Compensation & Work Details</h5>
                   <div className="grid gap-3 md:grid-cols-2 text-sm">
                     <div>
                       <span className="font-medium text-muted-foreground">Annual Salary:</span>
                        <p className="font-medium text-lg">
                          ₹ {form.watch('salary')?.toLocaleString() || '0'}
                        </p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-muted-foreground">Department:</span>
+                      <p className="capitalize">{form.watch('department') || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-muted-foreground">Employment Type:</span>
+                      <p className="capitalize">{form.watch('employmentType') || 'Not specified'}</p>
                     </div>
                   </div>
                 </div>
