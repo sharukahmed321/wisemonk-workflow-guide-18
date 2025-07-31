@@ -8,6 +8,7 @@ import { EmployeeDetailsStep, EmployeeDetailsData } from './EmployeeDetailsStep'
 import { CompensationReviewStep, CompensationReviewData } from './CompensationReviewStep';
 import { WizardStepIndicator } from './WizardStepIndicator';
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 
 export interface CompleteEmployeeData extends EmployeeDetailsData, CompensationReviewData {}
 
@@ -80,18 +81,77 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
     setCompensationData(data);
     setIsSubmitting(true);
 
-    // Simulate API call with complete employee data
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    clearDraft();
+    try {
+      if (!employeeData) {
+        throw new Error('Employee details are missing');
+      }
 
-    // Auto-redirect after success
-    setTimeout(() => {
-      onSuccess?.();
-      navigate('/dashboard');
-    }, 2500);
+      // Get user data to fetch organization ID
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!profile?.organization_id) {
+        throw new Error('Organization not found. Please complete setup first.');
+      }
+
+      // Generate employee ID
+      const randomNum = Math.floor(Math.random() * 999) + 1;
+      const employeeId = `EMP${randomNum.toString().padStart(3, '0')}`;
+      
+      // Create employee in database
+      const { error } = await supabase
+        .from('employees')
+        .insert({
+          employee_id: employeeId,
+          first_name: employeeData.firstName,
+          last_name: employeeData.lastName,
+          email: employeeData.email,
+          phone: employeeData.phone,
+          job_title: employeeData.jobTitle,
+          department: 'Engineering', // Default department (could be enhanced later)
+          employment_type: 'Full-time', // Default employment type (could be enhanced later)
+          salary: data.salary,
+          start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          status: 'Active',
+          organization_id: profile.organization_id,
+        });
+
+      if (error) {
+        console.error('Error creating employee:', error);
+        throw error;
+      }
+
+      setShowSuccess(true);
+      clearDraft();
+
+      toast({
+        title: "Success!",
+        description: `${employeeData.firstName} ${employeeData.lastName} has been added to your team.`,
+      });
+
+      // Auto-redirect after success
+      setTimeout(() => {
+        onSuccess?.();
+        navigate('/dashboard');
+      }, 2500);
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create employee. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBackToStep = (step: number) => {
