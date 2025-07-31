@@ -92,21 +92,27 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
         throw new Error('User not authenticated');
       }
 
-      const { data: profile } = await supabase
-        .from('profiles')
+      // Get current user's organization ID from user_roles table for better performance
+      const { data: userRole } = await supabase
+        .from('user_roles')
         .select('organization_id')
         .eq('user_id', user.user.id)
         .single();
 
-      if (!profile?.organization_id) {
+      if (!userRole?.organization_id) {
         throw new Error('Organization not found. Please complete setup first.');
       }
+
+      const organizationId = userRole.organization_id;
 
       // Generate employee ID
       const randomNum = Math.floor(Math.random() * 999) + 1;
       const employeeId = `EMP${randomNum.toString().padStart(3, '0')}`;
 
-      // Create pre-registered profile for the employee (user_id is null until they sign up)
+      console.log('Starting employee creation process...');
+
+      // Step 1: Create pre-registered profile for the employee
+      console.log('Creating pre-registered profile...');
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -115,7 +121,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
           first_name: employeeData.firstName,
           last_name: employeeData.lastName,
           job_title: employeeData.jobTitle,
-          organization_id: profile.organization_id,
+          organization_id: organizationId,
           is_pre_registered: true,
           invited_by: user.user.id,
           invited_at: new Date().toISOString(),
@@ -134,10 +140,13 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
       if (profileError) {
         console.error('Error creating pre-registered profile:', profileError);
-        throw profileError;
+        throw new Error(`Failed to create employee profile: ${profileError.message}`);
       }
 
-      // Create employee record in employees table (no user role needed for pre-registered employees)
+      console.log('Profile created successfully:', profileData);
+
+      // Step 2: Create employee record
+      console.log('Creating employee record...');
       const { error: employeeError } = await supabase
         .from('employees')
         .insert({
@@ -147,19 +156,41 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
           email: employeeData.email,
           phone: employeeData.phone,
           job_title: employeeData.jobTitle,
-          department: 'Engineering', // Default department (could be enhanced later)
-          employment_type: 'Full-time', // Default employment type (could be enhanced later)
+          department: 'Engineering', // Use default since CompensationReviewData doesn't have these fields
+          employment_type: 'Full-time', // Use default since CompensationReviewData doesn't have these fields
           salary: data.salary,
           start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          status: 'Invited', // Set status to 'Invited' since they haven't signed up yet
-          organization_id: profile.organization_id,
+          status: 'Invited',
+          organization_id: organizationId,
           user_id: null // No user_id until they sign up
         });
 
       if (employeeError) {
         console.error('Error creating employee:', employeeError);
-        throw employeeError;
+        throw new Error(`Failed to create employee record: ${employeeError.message}`);
       }
+
+      console.log('Employee record created successfully');
+
+      // Step 3: Create user role for the pre-registered employee
+      console.log('Creating user role...');
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: null, // Will be updated when employee signs up
+          role: 'employee',
+          organization_id: organizationId,
+          assigned_by: user.user.id,
+          assigned_at: new Date().toISOString()
+        });
+
+      if (roleError) {
+        console.error('Error creating user role:', roleError);
+        throw new Error(`Failed to create user role: ${roleError.message}`);
+      }
+
+      console.log('User role created successfully');
+      console.log('Employee creation process completed successfully');
 
       setShowSuccess(true);
       clearDraft();
@@ -174,6 +205,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
         onSuccess?.();
         navigate('/dashboard');
       }, 2500);
+
     } catch (error) {
       console.error('Error creating employee:', error);
       toast({
