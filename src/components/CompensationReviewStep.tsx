@@ -45,17 +45,13 @@ export function CompensationReviewStep({
     resolver: zodResolver(compensationReviewSchema),
     defaultValues: {
       salary: defaultValues?.salary || 0,
-      currency: defaultValues?.currency || 'USD',
+      currency: defaultValues?.currency || 'INR',
       agreementAccepted: defaultValues?.agreementAccepted || false
     }
   });
 
   const currencies = [
-    { value: 'USD', label: 'USD ($)' },
-    { value: 'EUR', label: 'EUR (€)' },
-    { value: 'GBP', label: 'GBP (£)' },
-    { value: 'CAD', label: 'CAD (C$)' },
-    { value: 'AUD', label: 'AUD (A$)' }
+    { value: 'INR', label: 'INR (₹)' }
   ];
 
   const onSubmit = (data: CompensationReviewData) => {
