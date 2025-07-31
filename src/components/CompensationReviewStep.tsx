@@ -98,21 +98,14 @@ export function CompensationReviewStep({
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Currency *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select currency" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {currencies.map(currency => (
-                          <SelectItem key={currency.value} value={currency.value}>
-                            {currency.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Currency</FormLabel>
+                    <FormControl>
+                      <Input
+                        value="INR (₹)"
+                        disabled
+                        className="h-11 bg-muted"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -180,9 +173,9 @@ export function CompensationReviewStep({
                   <div className="grid gap-3 md:grid-cols-2 text-sm">
                     <div>
                       <span className="font-medium text-muted-foreground">Annual Salary:</span>
-                      <p className="font-medium text-lg">
-                        {form.watch('currency')} {form.watch('salary')?.toLocaleString() || '0'}
-                      </p>
+                       <p className="font-medium text-lg">
+                         ₹ {form.watch('salary')?.toLocaleString() || '0'}
+                       </p>
                     </div>
                   </div>
                 </div>
