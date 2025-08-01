@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailVerificationGuard } from './EmailVerificationGuard';
-import { DashboardHeader } from './DashboardHeader';
+import { EmployeeHeader } from './EmployeeHeader';
 import { PreboardingFlow } from './PreboardingFlow';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { CheckCircle, Clock, User } from 'lucide-react';
@@ -66,7 +66,7 @@ export function EmployeeDashboard() {
       <EmailVerificationGuard>
         <div className="min-h-screen flex w-full">
           <div className="flex-1 flex flex-col">
-            <DashboardHeader />
+            <EmployeeHeader />
             <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -84,7 +84,7 @@ export function EmployeeDashboard() {
       <EmailVerificationGuard>
         <div className="min-h-screen flex w-full">
           <div className="flex-1 flex flex-col">
-            <DashboardHeader />
+            <EmployeeHeader />
             <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
               <Card className="max-w-md">
                 <CardHeader className="text-center">
@@ -105,7 +105,7 @@ export function EmployeeDashboard() {
       <EmailVerificationGuard>
         <div className="min-h-screen flex w-full">
           <div className="flex-1 flex flex-col">
-            <DashboardHeader />
+            <EmployeeHeader />
             <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
               <div className="p-6">
                 <PreboardingFlow
@@ -126,7 +126,7 @@ export function EmployeeDashboard() {
     <EmailVerificationGuard>
       <div className="min-h-screen flex w-full">
         <div className="flex-1 flex flex-col">
-          <DashboardHeader />
+          <EmployeeHeader />
           <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
             <div className="p-6 md:p-8 max-w-4xl mx-auto">
               <div className="space-y-6">
