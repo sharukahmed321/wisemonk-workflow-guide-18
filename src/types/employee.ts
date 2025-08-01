@@ -19,6 +19,7 @@ export interface Employee {
   status: EmployeeStatus;
   avatar?: string;
   birthday?: string; // MM-DD format
+  age?: number; // Calculated from date_of_birth
   // Preboarding-specific fields
   joiningDate?: string;
   preboardingStatus?: PreboardingStatus;
