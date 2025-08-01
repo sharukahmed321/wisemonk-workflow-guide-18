@@ -30,6 +30,7 @@ const employeeSchema = z.object({
   salary: z.number().min(0, 'Salary must be a positive number'),
   startDate: z.date(),
   birthday: z.date().optional(),
+  gender: z.enum(['Male', 'Female'], { message: 'Gender is required' }),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -156,6 +157,12 @@ export function AddEmployeeForm({
     try {
       const employeeId = generateEmployeeId();
       
+      // Map gender from Male/Female to Son/Daughter
+      const genderMapping = {
+        'Male': 'Son',
+        'Female': 'Daughter'
+      };
+      
       const { error } = await supabase
         .from('employees')
         .insert({
@@ -171,6 +178,7 @@ export function AddEmployeeForm({
           start_date: data.startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
           status: 'Active', // Default status for new employees
           birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
+          gender: genderMapping[data.gender], // Map to Son/Daughter
           organization_id: userOrganizationId, // Include organization ID
         });
 
@@ -295,13 +303,31 @@ export function AddEmployeeForm({
                         <FormMessage />
                       </FormItem>} />
 
-                  <FormField control={form.control} name="phone" render={({
+                   <FormField control={form.control} name="phone" render={({
                   field
                 }) => <FormItem>
                         <FormLabel>Phone Number *</FormLabel>
                         <FormControl>
                           <Input placeholder="+1 (555) 123-4567" className="h-11" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>} />
+
+                   <FormField control={form.control} name="gender" render={({
+                  field
+                }) => <FormItem>
+                        <FormLabel>Gender *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>} />
                 </div>

@@ -49,64 +49,109 @@ export type Database = {
       }
       employees: {
         Row: {
+          aadhaar_number: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          age: number | null
           avatar_url: string | null
           birthday: string | null
+          city: string | null
           created_at: string | null
+          currency: string | null
+          date_of_birth: string | null
           department: string
           email: string
           employee_id: string
           employment_type: string
+          father_name: string | null
           first_name: string
+          full_name: string | null
+          gender: string | null
           id: string
+          job_description: string | null
           job_title: string
           last_name: string
           organization_id: string | null
           phone: string | null
+          pincode: string | null
           salary: number | null
+          seniority: string | null
           start_date: string
+          state: string | null
           status: string | null
           updated_at: string | null
           user_id: string | null
+          work_location: string | null
         }
         Insert: {
+          aadhaar_number?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          age?: number | null
           avatar_url?: string | null
           birthday?: string | null
+          city?: string | null
           created_at?: string | null
+          currency?: string | null
+          date_of_birth?: string | null
           department: string
           email: string
           employee_id: string
           employment_type: string
+          father_name?: string | null
           first_name: string
+          full_name?: string | null
+          gender?: string | null
           id?: string
+          job_description?: string | null
           job_title: string
           last_name: string
           organization_id?: string | null
           phone?: string | null
+          pincode?: string | null
           salary?: number | null
+          seniority?: string | null
           start_date: string
+          state?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string | null
+          work_location?: string | null
         }
         Update: {
+          aadhaar_number?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          age?: number | null
           avatar_url?: string | null
           birthday?: string | null
+          city?: string | null
           created_at?: string | null
+          currency?: string | null
+          date_of_birth?: string | null
           department?: string
           email?: string
           employee_id?: string
           employment_type?: string
+          father_name?: string | null
           first_name?: string
+          full_name?: string | null
+          gender?: string | null
           id?: string
+          job_description?: string | null
           job_title?: string
           last_name?: string
           organization_id?: string | null
           phone?: string | null
+          pincode?: string | null
           salary?: number | null
+          seniority?: string | null
           start_date?: string
+          state?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string | null
+          work_location?: string | null
         }
         Relationships: [
           {
@@ -536,6 +581,10 @@ export type Database = {
           p_role?: Database["public"]["Enums"]["app_role"]
         }
         Returns: undefined
+      }
+      calculate_age: {
+        Args: { birth_date: string }
+        Returns: number
       }
       check_user_exists: {
         Args: { user_email: string }

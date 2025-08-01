@@ -20,6 +20,7 @@ export interface Employee {
   avatar?: string;
   birthday?: string; // MM-DD format
   age?: number; // Calculated from date_of_birth
+  gender?: string; // "Son" or "Daughter"
   // Preboarding-specific fields
   joiningDate?: string;
   preboardingStatus?: PreboardingStatus;
