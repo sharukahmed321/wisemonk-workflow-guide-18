@@ -9,14 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { User, Calendar as CalendarIcon, UserCheck } from 'lucide-react';
+import { User, Calendar as CalendarIcon, UserCheck, MapPin, Home, Building } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { createAddressValidator, createCityValidator, createStateValidator, createPostalCodeValidator } from "@/lib/validationUtils";
 
 const personalDetailsSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   fatherName: z.string().min(2, 'Father\'s name must be at least 2 characters'),
   dateOfBirth: z.date(),
-  aadhaarNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be 12 digits')
+  aadhaarNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be 12 digits'),
+  addressLine1: createAddressValidator('Address Line 1'),
+  addressLine2: createAddressValidator('Address Line 2'),
+  city: createCityValidator(),
+  state: createStateValidator(),
+  pincode: createPostalCodeValidator('IN')
 });
 
 type PersonalDetailsData = z.infer<typeof personalDetailsSchema>;
@@ -160,6 +166,121 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
                 </FormItem>
               )}
             />
+          </div>
+
+          {/* Address Information Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pt-6 pb-2">
+              <MapPin className="w-5 h-5 text-primary" />
+              <h4 className="text-lg font-medium text-foreground">Address Information</h4>
+            </div>
+            
+            <div className="grid gap-6 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="addressLine1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Address Line 1 *
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Address Line 1" 
+                        className="h-11"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="addressLine2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Home className="w-4 h-4" />
+                      Address Line 2 *
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Address Line 2" 
+                        className="h-11"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Building className="w-4 h-4" />
+                      City *
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="City" 
+                        className="h-11"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      State *
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="State" 
+                        className="h-11"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="pincode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Pincode *
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Pincode" 
+                        className="h-11"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
 
           <div className="flex justify-between pt-6">

@@ -32,7 +32,12 @@ export function PreboardingFlow({
       fullName: '',
       fatherName: '',
       dateOfBirth: new Date(),
-      aadhaarNumber: ''
+      aadhaarNumber: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      pincode: ''
     },
     backgroundVerification: {
       documents: {},
