@@ -4,68 +4,46 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmployeeProfile as EmployeeProfileComponent } from '@/components/EmployeeProfile';
-import { Employee } from '@/types/employee';
-
-// Mock data - in real app, this would come from API
-const mockEmployees: Employee[] = [
-  {
-    id: '1',
-    employeeId: 'EMP001',
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    email: 'sarah.johnson@company.com',
-    phone: '+1 555 0123',
-    jobTitle: 'Senior Frontend Developer',
-    department: 'Engineering',
-    employmentType: 'Full-time',
-    salary: 85000,
-    startDate: '2022-03-15',
-    status: 'Active',
-  },
-  {
-    id: '2',
-    employeeId: 'EMP002',
-    firstName: 'Michael',
-    lastName: 'Rodriguez',
-    email: 'michael.rodriguez@company.com',
-    phone: '+1 (555) 234-5678',
-    jobTitle: 'Software Engineer',
-    department: 'Engineering',
-    employmentType: 'Full-time',
-    salary: 75000,
-    startDate: '2023-11-01',
-    status: 'Onboarding',
-  },
-  {
-    id: '3',
-    employeeId: 'EMP003',
-    firstName: 'David',
-    lastName: 'Thompson',
-    email: 'david.thompson@company.com',
-    phone: '+1 (555) 345-6789',
-    jobTitle: 'Marketing Specialist',
-    department: 'Marketing',
-    employmentType: 'Full-time',
-    salary: 60000,
-    startDate: '2024-01-15',
-    status: 'Preboarding',
-    joiningDate: '2024-02-01',
-    preboardingStatus: 'Documents Pending',
-  },
-];
+import { useEmployees } from '@/hooks/useEmployees';
 
 export default function EmployeeProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { employees, loading, error } = useEmployees();
 
-  const employee = mockEmployees.find(emp => emp.id === id);
+  const employee = employees.find(emp => emp.id === id);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading employee details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-destructive mb-4">Error Loading Employee</h1>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={() => navigate('/dashboard/people')}>
+            Back to People
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!employee) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Employee Not Found</h1>
-          <p className="text-gray-600 mb-4">The employee you're looking for doesn't exist.</p>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Employee Not Found</h1>
+          <p className="text-muted-foreground mb-4">The employee you're looking for doesn't exist.</p>
           <Button onClick={() => navigate('/dashboard/people')}>
             Back to People
           </Button>
@@ -75,14 +53,14 @@ export default function EmployeeProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header with Back Button */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <Button
             variant="ghost"
             onClick={() => navigate('/dashboard/people')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+            className="flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to People
