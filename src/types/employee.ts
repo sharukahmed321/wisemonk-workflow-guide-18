@@ -26,11 +26,9 @@ export interface Employee {
 
 export interface PreboardingData {
   personalDetails: {
-    phoneNumber: string;
-    alternateEmail?: string;
-    currentAddress: string;
-    permanentAddress: string;
+    fullName: string;
     fatherName: string;
+    dateOfBirth: Date;
     aadhaarNumber: string;
   };
   backgroundVerification: {

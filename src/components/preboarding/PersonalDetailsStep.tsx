@@ -3,17 +3,19 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { User, Phone, Mail, MapPin, UserCheck } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { User, Calendar as CalendarIcon, UserCheck } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 const personalDetailsSchema = z.object({
-  phoneNumber: z.string().regex(/^\d{10}$/, 'Phone number must be 10 digits'),
-  alternateEmail: z.string().email('Invalid email address').optional().or(z.literal('')),
-  currentAddress: z.string().min(10, 'Current address must be at least 10 characters'),
-  permanentAddress: z.string().min(10, 'Permanent address must be at least 10 characters'),
+  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   fatherName: z.string().min(2, 'Father\'s name must be at least 2 characters'),
+  dateOfBirth: z.date(),
   aadhaarNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be 12 digits')
 });
 
@@ -52,79 +54,16 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
           <div className="grid gap-6 md:grid-cols-2">
             <FormField
               control={form.control}
-              name="phoneNumber"
+              name="fullName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    Phone Number *
+                    <User className="w-4 h-4" />
+                    Full name *
                   </FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Enter 10-digit phone number" 
-                      className="h-11"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="alternateEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Alternate Email
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="alternate@example.com" 
-                      className="h-11"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="currentAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Current Address *
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter your current address" 
-                      className="h-11"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="permanentAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Permanent Address *
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter your permanent address" 
+                      placeholder="Enter your full name" 
                       className="h-11"
                       {...field} 
                     />
@@ -141,15 +80,61 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <UserCheck className="w-4 h-4" />
-                    Father's Name *
+                    Father's name *
                   </FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Enter father's name" 
+                      placeholder="e.g. John Doe" 
                       className="h-11"
                       {...field} 
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="dateOfBirth"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    DOB *
+                  </FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "h-11 justify-start text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date("1900-01-01")
+                        }
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -162,11 +147,11 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <User className="w-4 h-4" />
-                    Aadhaar Number *
+                    Aadhar No. *
                   </FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Enter 12-digit Aadhaar number" 
+                      placeholder="Enter your aadhar no." 
                       className="h-11"
                       {...field} 
                     />

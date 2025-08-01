@@ -29,11 +29,9 @@ export function PreboardingFlow({
   // Initialize preboarding data
   const [preboardingData, setPreboardingData] = useState<PreboardingData>({
     personalDetails: {
-      phoneNumber: '',
-      alternateEmail: '',
-      currentAddress: '',
-      permanentAddress: '',
+      fullName: '',
       fatherName: '',
+      dateOfBirth: new Date(),
       aadhaarNumber: ''
     },
     backgroundVerification: {
@@ -62,7 +60,7 @@ export function PreboardingFlow({
 
         // Determine completed steps based on saved data
         const completed = new Set<number>();
-        if (parsedData.personalDetails.phoneNumber && parsedData.personalDetails.currentAddress) {
+        if (parsedData.personalDetails.fullName && parsedData.personalDetails.aadhaarNumber) {
           completed.add(1);
         }
         if (Object.keys(parsedData.backgroundVerification.documents).length > 0) {
