@@ -1,10 +1,12 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation, Navigate } from 'react-router-dom';
 import { Dashboard } from './Dashboard';
 import { EmployeeDashboard } from './EmployeeDashboard';
 
 export function RoleBasedDashboard() {
   const { userRole, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -19,6 +21,21 @@ export function RoleBasedDashboard() {
 
   // Employee users only see preboarding interface
   if (userRole === 'employee') {
+    // Check if employee is trying to access restricted routes
+    const allowedEmployeeRoutes = [
+      '/dashboard',
+      '/dashboard/preboarding'
+    ];
+    
+    const isAllowedRoute = allowedEmployeeRoutes.some(route => 
+      location.pathname === route || location.pathname.startsWith(route + '/')
+    );
+    
+    if (!isAllowedRoute) {
+      // Redirect employees to their dashboard if accessing restricted routes
+      return <Navigate to="/dashboard" replace />;
+    }
+    
     return <EmployeeDashboard />;
   }
 
