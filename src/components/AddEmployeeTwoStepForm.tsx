@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle, Save, AlertTriangle, TestTube } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { StepOverview } from './StepOverview';
 import { EmployeeDetailsStep, EmployeeDetailsData } from './EmployeeDetailsStep';
@@ -26,6 +26,8 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
   const [compensationData, setCompensationData] = useState<CompensationReviewData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionTestResults, setConnectionTestResults] = useState<string | null>(null);
 
   // Load draft data on component mount
   useEffect(() => {
@@ -77,30 +79,102 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
     });
   };
 
+  // Manual database connection test for debugging
+  const runManualConnectionTest = async () => {
+    setIsTestingConnection(true);
+    setConnectionTestResults(null);
+    
+    try {
+      const results = await testDatabaseConnection();
+      setConnectionTestResults('✅ All database tests passed! Form should work properly.');
+      toast({
+        title: "Database Test Passed",
+        description: "All permissions and connectivity checks passed.",
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setConnectionTestResults(`❌ Database test failed: ${errorMsg}`);
+      toast({
+        title: "Database Test Failed",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  // Test database connectivity and permissions
+  const testDatabaseConnection = async () => {
+    console.log('🔧 Testing database connectivity and permissions...');
+    
+    try {
+      // Test basic auth
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      console.log('✅ Auth test passed:', { userId: user.id, email: user.email });
+      
+      // Test user_roles read permission
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role, organization_id')
+        .eq('user_id', user.id);
+      
+      if (rolesError) {
+        console.error('❌ user_roles read test failed:', rolesError);
+        throw new Error(`Cannot read user roles: ${rolesError.message}`);
+      }
+      console.log('✅ user_roles read test passed:', roles);
+      
+      // Test profiles read permission
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error('❌ profiles read test failed:', profileError);
+        throw new Error(`Cannot read profiles: ${profileError.message}`);
+      }
+      console.log('✅ profiles read test passed:', profile);
+      
+      return { user, roles, profile };
+    } catch (error) {
+      console.error('❌ Database connectivity test failed:', error);
+      throw error;
+    }
+  };
+
   const handleCompensationComplete = async (data: CompensationReviewData) => {
+    console.log('🚀 Form submission started with data:', {
+      employee: employeeData,
+      compensation: data,
+      timestamp: new Date().toISOString()
+    });
+
     setCompensationData(data);
     setIsSubmitting(true);
 
     try {
+      // Step 0: Test database connectivity and permissions
+      const { user, roles } = await testDatabaseConnection();
+      
       if (!employeeData) {
         console.error('❌ Employee details are missing');
         throw new Error('Employee details are missing');
       }
 
-      // Get user data to fetch organization ID
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) {
-        console.error('❌ User not authenticated');
-        throw new Error('User not authenticated');
+      if (!roles || roles.length === 0) {
+        console.error('❌ No user roles found');
+        throw new Error('No user roles found. Please contact administrator.');
       }
 
-      // Get current user's organization ID from user_roles table for better performance
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('organization_id')
-        .eq('user_id', user.user.id)
-        .single();
-
+      // Get organization ID from user roles
+      const userRole = roles[0]; // Take the first role
       if (!userRole?.organization_id) {
         console.error('❌ Organization not found in user roles');
         throw new Error('Organization not found. Please complete setup first.');
@@ -116,7 +190,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
         department: data.department,
         employmentType: data.employmentType,
         organizationId,
-        userId: user.user.id
+        userId: user.id
       });
 
       // Check for existing employee with same email
@@ -156,7 +230,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
             department: data.department,
             organization_id: organizationId,
             is_pre_registered: true,
-            invited_by: user.user.id,
+            invited_by: user.id,
             invited_at: new Date().toISOString(),
             basic_info_completed: false,
             company_info_completed: false,
@@ -221,7 +295,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
             user_id: null, // Now nullable! Will be updated when employee signs up
             role: 'employee',
             organization_id: organizationId,
-            assigned_by: user.user.id
+            assigned_by: user.id
           })
           .select()
           .single();
@@ -424,13 +498,44 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
               />
             )}
             {currentStep === 2 && employeeData && (
-              <CompensationReviewStep 
-                onNext={handleCompensationComplete}
-                onBack={() => handleBackToStep(1)}
-                employeeData={employeeData}
-                isSubmitting={isSubmitting}
-                defaultValues={compensationData || undefined}
-              />
+              <>
+                <CompensationReviewStep 
+                  onNext={handleCompensationComplete}
+                  onBack={() => handleBackToStep(1)}
+                  employeeData={employeeData}
+                  isSubmitting={isSubmitting}
+                  defaultValues={compensationData || undefined}
+                />
+                
+                {/* Debug Panel */}
+                <div className="mt-8 p-4 border-2 border-dashed border-muted-foreground/20 rounded-lg bg-muted/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <h4 className="text-sm font-medium">Debug Tools</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    If you're experiencing issues with form submission, use this tool to test database connectivity and permissions.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={runManualConnectionTest}
+                      disabled={isTestingConnection}
+                      className="w-fit"
+                    >
+                      <TestTube className="h-4 w-4 mr-2" />
+                      {isTestingConnection ? 'Testing...' : 'Test Database Connection'}
+                    </Button>
+                    {connectionTestResults && (
+                      <div className="text-xs p-2 bg-muted rounded border">
+                        <pre className="whitespace-pre-wrap font-mono">{connectionTestResults}</pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
