@@ -264,9 +264,13 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
             email: employeeData.email,
             phone: employeeData.phone,
             job_title: employeeData.jobTitle,
+            seniority: employeeData.seniority,
+            work_location: employeeData.workLocation,
+            job_description: employeeData.jobDescription,
             department: data.department, // Using actual form data
             employment_type: data.employmentType, // Using actual form data
             salary: data.salary,
+            currency: data.currency,
             start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             status: 'Invited',
             organization_id: organizationId,
