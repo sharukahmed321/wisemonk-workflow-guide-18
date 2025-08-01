@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MoreHorizontal, Edit, Trash2, Eye, FileText, Send, CheckCircle, Info } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Eye, FileText, Send, CheckCircle, Info, Mail, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Employee } from '@/types/employee';
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -44,6 +45,7 @@ export function EmployeeTable({
 }: EmployeeTableProps) {
   const navigate = useNavigate();
   const isPreboarding = selectedStatus === 'Preboarding';
+  const isInvited = selectedStatus === 'Invited';
 
   const handleViewDetails = (employeeId: string) => {
     navigate(`/dashboard/people/${employeeId}`);
@@ -57,14 +59,19 @@ export function EmployeeTable({
     event.stopPropagation();
   };
 
+  const handleResendInvitation = (employeeId: string) => {
+    // TODO: Implement resend invitation logic
+    console.log('Resending invitation for:', employeeId);
+  };
+
   return (
     <div className="rounded-lg border bg-card">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            {!isPreboarding && <TableHead className="w-[120px]">ID</TableHead>}
+            {!isPreboarding && !isInvited && <TableHead className="w-[120px]">ID</TableHead>}
             <TableHead className="min-w-[200px]">
-              {isPreboarding ? 'Candidate Name' : 'Employee Name'}
+              {isPreboarding ? 'Candidate Name' : isInvited ? 'Invited Person' : 'Employee Name'}
             </TableHead>
             <TableHead>Job Title</TableHead>
             {isPreboarding ? (
@@ -88,6 +95,26 @@ export function EmployeeTable({
                   </div>
                 </TableHead>
               </>
+            ) : isInvited ? (
+              <>
+                <TableHead>Invited Date</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <span>Status</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="text-sm">
+                          <div>Invitation Sent: Waiting for response</div>
+                          <div>Pending Response: Invitation sent but not accepted</div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TableHead>
+              </>
             ) : (
               <TableHead>Contact</TableHead>
             )}
@@ -103,7 +130,7 @@ export function EmployeeTable({
                 className="group cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => handleRowClick(employee.id)}
               >
-                {!isPreboarding && (
+                {!isPreboarding && !isInvited && (
                   <TableCell className="font-mono text-sm font-medium">
                     {employee.employeeId}
                   </TableCell>
@@ -112,13 +139,16 @@ export function EmployeeTable({
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <span className="text-sm font-semibold text-primary">
-                        {employee.firstName[0]}{employee.lastName[0]}
+                        {employee.firstName?.[0] || '?'}{employee.lastName?.[0] || '?'}
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-foreground">
                         {employee.firstName} {employee.lastName}
                       </div>
+                      {isInvited && (
+                        <div className="text-sm text-muted-foreground">{employee.email}</div>
+                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -134,6 +164,18 @@ export function EmployeeTable({
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <span>{employee.preboardingStatus}</span>
                       </div>
+                    </TableCell>
+                  </>
+                ) : isInvited ? (
+                  <>
+                    <TableCell className="text-muted-foreground">
+                      {formatJoiningDate(employee.joiningDate || employee.startDate)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="gap-1">
+                        <Clock className="h-3 w-3" />
+                        {employee.preboardingStatus || 'Invitation Sent'}
+                      </Badge>
                     </TableCell>
                   </>
                 ) : (
@@ -161,10 +203,17 @@ export function EmployeeTable({
                         <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
+                      {isInvited ? (
+                        <DropdownMenuItem onClick={() => handleResendInvitation(employee.id)}>
+                          <Mail className="mr-2 h-4 w-4" />
+                          Resend Invitation
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
