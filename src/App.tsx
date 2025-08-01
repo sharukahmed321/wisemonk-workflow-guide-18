@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Index from './pages/Index';
-import { Dashboard } from './components/Dashboard';
+import { RoleBasedDashboard } from './components/RoleBasedDashboard';
 import NotFound from './pages/NotFound';
 import InvitationPage from './pages/InvitationPage';
 import StandalonePreboardingPage from './pages/StandalonePreboarding';
@@ -16,7 +16,7 @@ function App() {
         <Route path="/invite/:token" element={<InvitationPage />} />
         <Route path="/preboarding/:employeeId" element={<StandalonePreboardingPage />} />
         <Route path="/preboarding-complete" element={<PreboardingCompletePage />} />
-        <Route path="/dashboard/*" element={<Dashboard />} />
+        <Route path="/dashboard/*" element={<RoleBasedDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
