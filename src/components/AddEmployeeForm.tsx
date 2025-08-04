@@ -184,6 +184,50 @@ export function AddEmployeeForm({
 
       if (error) throw error;
 
+      // Send employment agreement email
+      try {
+        // Fetch organization details
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .select('name')
+          .eq('id', userOrganizationId)
+          .single();
+
+        if (orgError) {
+          console.error('Error fetching organization:', orgError);
+          toast({
+            title: "Warning",
+            description: "Employee added but failed to send employment agreement email.",
+            variant: "destructive",
+          });
+        } else {
+          // Send employment agreement email
+          const { error: emailError } = await supabase.functions.invoke('send-employment-email', {
+            body: {
+              employeeFirstName: data.firstName,
+              employeeEmail: data.email,
+              organizationName: orgData.name
+            }
+          });
+
+          if (emailError) {
+            console.error('Error sending employment email:', emailError);
+            toast({
+              title: "Warning",
+              description: "Employee added but failed to send employment agreement email.",
+              variant: "destructive",
+            });
+          }
+        }
+      } catch (emailError) {
+        console.error('Error sending employment email:', emailError);
+        toast({
+          title: "Warning",
+          description: "Employee added but failed to send employment agreement email.",
+          variant: "destructive",
+        });
+      }
+
       setShowSuccess(true);
       toast({
         title: "Success!",
