@@ -550,39 +550,11 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
                   defaultValues={compensationData || undefined}
                 />
                 
-                {/* Debug Panel */}
-                <div className="mt-8 p-4 border-2 border-dashed border-muted-foreground/20 rounded-lg bg-muted/5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <h4 className="text-sm font-medium">Debug Tools</h4>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    If you're experiencing issues with form submission, use this tool to test database connectivity and permissions.
-                  </p>
-                  <div className="flex flex-col gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={runManualConnectionTest}
-                      disabled={isTestingConnection}
-                      className="w-fit"
-                    >
-                      <TestTube className="h-4 w-4 mr-2" />
-                      {isTestingConnection ? 'Testing...' : 'Test Database Connection'}
-                    </Button>
-                    {connectionTestResults && (
-                      <div className="text-xs p-2 bg-muted rounded border">
-                        <pre className="whitespace-pre-wrap font-mono">{connectionTestResults}</pre>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
     </div>
   );
 }
