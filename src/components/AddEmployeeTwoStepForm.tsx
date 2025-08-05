@@ -318,13 +318,52 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
         console.log('🎉 All operations completed successfully!');
 
+        // Send employment email to the new employee
+        try {
+          console.log('📧 Sending employment email...');
+          
+          // Get organization name for the email
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('name')
+            .eq('id', organizationId)
+            .single();
+
+          const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-employment-email', {
+            body: {
+              employeeFirstName: employeeData.firstName,
+              employeeEmail: employeeData.email,
+              organizationName: orgData?.name || 'Your Organization'
+            }
+          });
+
+          if (emailError) {
+            console.error('❌ Failed to send employment email:', emailError);
+            // Don't fail the entire process for email issues, just log it
+            toast({
+              title: "Employee Added",
+              description: `${employeeData.firstName} ${employeeData.lastName} has been added, but the welcome email failed to send.`,
+              variant: "destructive",
+            });
+          } else {
+            console.log('✅ Employment email sent successfully:', emailResponse);
+            toast({
+              title: "Success!",
+              description: `${employeeData.firstName} ${employeeData.lastName} has been added to your team and sent a welcome email.`,
+            });
+          }
+        } catch (emailError) {
+          console.error('❌ Error sending employment email:', emailError);
+          // Show success for employee creation even if email fails
+          toast({
+            title: "Employee Added",
+            description: `${employeeData.firstName} ${employeeData.lastName} has been added, but the welcome email failed to send.`,
+            variant: "destructive",
+          });
+        }
+
         setShowSuccess(true);
         clearDraft();
-
-        toast({
-          title: "Success!",
-          description: `${employeeData.firstName} ${employeeData.lastName} has been added to your team. They can now sign up using their email to access the portal.`,
-        });
 
         // Auto-redirect after success
         setTimeout(() => {
