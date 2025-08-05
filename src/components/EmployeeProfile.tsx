@@ -14,7 +14,7 @@ interface EmployeeRecord {
   status: string;
   start_date: string;
   department?: string;
-  position?: string;
+  job_title?: string;
 }
 
 export function EmployeeProfile() {
@@ -33,7 +33,7 @@ export function EmployeeProfile() {
     try {
       const { data, error } = await supabase
         .from('employees')
-        .select('id, employee_id, first_name, last_name, email, status, start_date, department, position')
+        .select('id, employee_id, first_name, last_name, email, status, start_date, department, job_title')
         .eq('user_id', user?.id)
         .single();
 
@@ -131,7 +131,7 @@ export function EmployeeProfile() {
             </div>
           </div>
           
-          {(employee.department || employee.position) && (
+          {(employee.department || employee.job_title) && (
             <div className="pt-4 border-t">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {employee.department && (
@@ -143,12 +143,12 @@ export function EmployeeProfile() {
                     </div>
                   </div>
                 )}
-                {employee.position && (
+                {employee.job_title && (
                   <div className="flex items-center gap-3">
                     <User className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Position</p>
-                      <p className="font-medium">{employee.position}</p>
+                      <p className="text-sm text-muted-foreground">Job Title</p>
+                      <p className="font-medium">{employee.job_title}</p>
                     </div>
                   </div>
                 )}

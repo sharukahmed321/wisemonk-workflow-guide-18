@@ -43,28 +43,43 @@ export function EmployeeOnboarding() {
 
       setEmployee(employeeData);
       
-      // Create onboarding steps based on employee status and data
+      // Create onboarding steps based on available employee data
+      const hasPersonalDetails = Boolean(
+        employeeData.first_name && 
+        employeeData.last_name && 
+        employeeData.email
+      );
+      
+      const hasJobDetails = Boolean(
+        employeeData.job_title && 
+        employeeData.department && 
+        employeeData.employment_type
+      );
+      
+      const hasAddressDetails = Boolean(
+        employeeData.address_line_1 && 
+        employeeData.city && 
+        employeeData.state
+      );
+
       const onboardingSteps: OnboardingStep[] = [
         {
           id: 'personal-details',
           title: 'Personal Details',
           description: 'Complete your personal information and contact details',
-          status: employeeData.personal_details_completed ? 'completed' : 
-                 employeeData.status === 'Preboarding' ? 'in-progress' : 'pending',
+          status: hasPersonalDetails ? 'completed' : 'in-progress',
         },
         {
-          id: 'background-verification',
-          title: 'Background Verification',
-          description: 'Submit required documents for background verification',
-          status: employeeData.background_verification_completed ? 'completed' : 
-                 employeeData.personal_details_completed ? 'in-progress' : 'pending',
+          id: 'job-details',
+          title: 'Job Information',
+          description: 'Review your job title, department, and employment details',
+          status: hasJobDetails ? 'completed' : hasPersonalDetails ? 'in-progress' : 'pending',
         },
         {
-          id: 'employment-agreement',
-          title: 'Employment Agreement',
-          description: 'Review and sign your employment agreement',
-          status: employeeData.employment_agreement_signed ? 'completed' : 
-                 employeeData.background_verification_completed ? 'in-progress' : 'pending',
+          id: 'address-details',
+          title: 'Address Information',
+          description: 'Complete your address and contact information',
+          status: hasAddressDetails ? 'completed' : hasJobDetails ? 'in-progress' : 'pending',
         },
         {
           id: 'welcome',
