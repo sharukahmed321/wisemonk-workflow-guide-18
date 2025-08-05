@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,6 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { EmailVerificationGuard } from './EmailVerificationGuard';
 import { EmployeeHeader } from './EmployeeHeader';
 import { PreboardingFlow } from './PreboardingFlow';
+import { EmployeeSidebar } from './EmployeeSidebar';
+import { EmployeeProfile } from './EmployeeProfile';
+import { EmployeeOnboarding } from './EmployeeOnboarding';
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { CheckCircle, Clock, User } from 'lucide-react';
 
@@ -57,116 +62,112 @@ function EmployeeHome() {
   };
 
   const handlePreboardingComplete = () => {
-    // Refresh employee data to get updated status
     fetchEmployeeRecord();
   };
 
   if (loading) {
     return (
-      <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your dashboard...</p>
+      <div className="p-6 md:p-8 max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-4 bg-muted rounded w-1/2"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (error || !employee) {
     return (
-      <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
-        <Card className="max-w-md">
+      <div className="p-6 md:p-8 max-w-4xl mx-auto">
+        <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-destructive">Access Error</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
         </Card>
-      </main>
+      </div>
     );
   }
 
   // Show preboarding flow for invited/preboarding employees
   if (employee.status === 'Invited' || employee.status === 'Preboarding') {
     return (
-      <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
-        <div className="p-6">
-          <PreboardingFlow
-            employeeId={employee.id}
-            employeeName={`${employee.first_name} ${employee.last_name}`}
-            onComplete={handlePreboardingComplete}
-          />
-        </div>
-      </main>
+      <div className="p-6">
+        <PreboardingFlow
+          employeeId={employee.id}
+          employeeName={`${employee.first_name} ${employee.last_name}`}
+          onComplete={handlePreboardingComplete}
+        />
+      </div>
     );
   }
 
   // Show completion status for active employees
   return (
-    <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
-      <div className="p-6 md:p-8 max-w-4xl mx-auto">
-        <div className="space-y-6">
-          {/* Welcome Header */}
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Welcome, {employee.first_name}!
-            </h1>
-            <p className="text-muted-foreground">
-              Your onboarding is complete. Here's your employee information.
-            </p>
-          </div>
-
-          {/* Employee Status Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-success" />
-                Employment Status
-              </CardTitle>
-              <CardDescription>Your current employment information</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Employee ID</p>
-                    <p className="font-medium">{employee.employee_id}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Start Date</p>
-                    <p className="font-medium">
-                      {new Date(employee.start_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="pt-2">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    employee.status === 'Active' ? 'bg-success' : 'bg-warning'
-                  }`} />
-                  <span className="text-sm font-medium">Status: {employee.status}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Additional Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Next Steps</CardTitle>
-              <CardDescription>
-                Your onboarding process is complete. If you need access to additional features 
-                or have questions, please contact your manager or HR representative.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+    <div className="p-6 md:p-8 max-w-4xl mx-auto">
+      <div className="space-y-6">
+        {/* Welcome Header */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Welcome, {employee.first_name}!
+          </h1>
+          <p className="text-muted-foreground">
+            Your onboarding is complete. Here's your employee information.
+          </p>
         </div>
+
+        {/* Employee Status Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-success" />
+              Employment Status
+            </CardTitle>
+            <CardDescription>Your current employment information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Employee ID</p>
+                  <p className="font-medium">{employee.employee_id}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Start Date</p>
+                  <p className="font-medium">
+                    {new Date(employee.start_date).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="pt-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  employee.status === 'Active' ? 'bg-success' : 'bg-warning'
+                }`} />
+                <span className="text-sm font-medium">Status: {employee.status}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Additional Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Next Steps</CardTitle>
+            <CardDescription>
+              Your onboarding process is complete. If you need access to additional features 
+              or have questions, please contact your manager or HR representative.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -214,62 +215,69 @@ function EmployeePreboarding() {
   };
 
   const handlePreboardingComplete = () => {
-    // Refresh employee data to get updated status
     fetchEmployeeRecord();
   };
 
   if (loading) {
     return (
-      <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading preboarding...</p>
+      <div className="p-6 md:p-8 max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-4 bg-muted rounded w-1/2"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (error || !employee) {
     return (
-      <main className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
-        <Card className="max-w-md">
+      <div className="p-6 md:p-8 max-w-4xl mx-auto">
+        <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-destructive">Access Error</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
         </Card>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
-      <div className="p-6">
-        <PreboardingFlow
-          employeeId={employee.id}
-          employeeName={`${employee.first_name} ${employee.last_name}`}
-          onComplete={handlePreboardingComplete}
-        />
-      </div>
-    </main>
+    <div className="p-6">
+      <PreboardingFlow
+        employeeId={employee.id}
+        employeeName={`${employee.first_name} ${employee.last_name}`}
+        onComplete={handlePreboardingComplete}
+      />
+    </div>
   );
 }
 
-// Main employee dashboard with routing
+// Main employee dashboard with routing and sidebar
 export function EmployeeDashboard() {
   return (
     <EmailVerificationGuard>
-      <div className="min-h-screen flex w-full">
-        <div className="flex-1 flex flex-col">
-          <EmployeeHeader />
-          <Routes>
-            <Route index element={<EmployeeHome />} />
-            <Route path="preboarding/:employeeId" element={<EmployeePreboarding />} />
-            {/* Redirect any other paths back to employee home */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <EmployeeSidebar />
+          
+          <div className="flex-1 flex flex-col">
+            <EmployeeHeader />
+            
+            <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
+              <Routes>
+                <Route index element={<EmployeeHome />} />
+                <Route path="profile" element={<EmployeeProfile />} />
+                <Route path="onboarding" element={<EmployeeOnboarding />} />
+                <Route path="preboarding/:employeeId" element={<EmployeePreboarding />} />
+                {/* Redirect any other paths back to employee home */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </main>
+          </div>
         </div>
-      </div>
+      </SidebarProvider>
     </EmailVerificationGuard>
   );
 }

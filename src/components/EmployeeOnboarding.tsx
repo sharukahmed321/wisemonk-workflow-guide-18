@@ -1,0 +1,212 @@
+
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
+import { Button } from './ui/button';
+import { useNavigate } from 'react-router-dom';
+
+interface OnboardingStep {
+  id: string;
+  title: string;
+  description: string;
+  status: 'completed' | 'in-progress' | 'pending';
+  action?: string;
+}
+
+export function EmployeeOnboarding() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [employee, setEmployee] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [steps, setSteps] = useState<OnboardingStep[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      fetchOnboardingStatus();
+    }
+  }, [user]);
+
+  const fetchOnboardingStatus = async () => {
+    try {
+      const { data: employeeData, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching employee:', error);
+        return;
+      }
+
+      setEmployee(employeeData);
+      
+      // Create onboarding steps based on employee status and data
+      const onboardingSteps: OnboardingStep[] = [
+        {
+          id: 'personal-details',
+          title: 'Personal Details',
+          description: 'Complete your personal information and contact details',
+          status: employeeData.personal_details_completed ? 'completed' : 
+                 employeeData.status === 'Preboarding' ? 'in-progress' : 'pending',
+        },
+        {
+          id: 'background-verification',
+          title: 'Background Verification',
+          description: 'Submit required documents for background verification',
+          status: employeeData.background_verification_completed ? 'completed' : 
+                 employeeData.personal_details_completed ? 'in-progress' : 'pending',
+        },
+        {
+          id: 'employment-agreement',
+          title: 'Employment Agreement',
+          description: 'Review and sign your employment agreement',
+          status: employeeData.employment_agreement_signed ? 'completed' : 
+                 employeeData.background_verification_completed ? 'in-progress' : 'pending',
+        },
+        {
+          id: 'welcome',
+          title: 'Welcome to the Team',
+          description: 'Complete your onboarding and join the team',
+          status: employeeData.status === 'Active' ? 'completed' : 'pending',
+        }
+      ];
+
+      setSteps(onboardingSteps);
+    } catch (err) {
+      console.error('Error fetching onboarding status:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusIcon = (status: OnboardingStep['status']) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="w-5 h-5 text-success" />;
+      case 'in-progress':
+        return <Clock className="w-5 h-5 text-warning" />;
+      default:
+        return <AlertCircle className="w-5 h-5 text-muted-foreground" />;
+    }
+  };
+
+  const getStatusColor = (status: OnboardingStep['status']) => {
+    switch (status) {
+      case 'completed':
+        return 'text-success';
+      case 'in-progress':
+        return 'text-warning';
+      default:
+        return 'text-muted-foreground';
+    }
+  };
+
+  const handleContinueOnboarding = () => {
+    if (employee && (employee.status === 'Invited' || employee.status === 'Preboarding')) {
+      navigate(`/dashboard/preboarding/${employee.id}`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 md:p-8 max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-4 bg-muted rounded w-1/2"></div>
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-muted rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Onboarding Steps</h1>
+        <p className="text-muted-foreground">Track your progress through the onboarding process</p>
+      </div>
+
+      {/* Continue Onboarding Button */}
+      {employee && (employee.status === 'Invited' || employee.status === 'Preboarding') && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground">Continue Your Onboarding</h3>
+                <p className="text-sm text-muted-foreground">Complete your remaining onboarding steps</p>
+              </div>
+              <Button onClick={handleContinueOnboarding}>
+                <FileText className="w-4 h-4 mr-2" />
+                Continue
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Onboarding Steps */}
+      <div className="space-y-4">
+        {steps.map((step, index) => (
+          <Card key={step.id} className={`${
+            step.status === 'completed' ? 'bg-success/5 border-success/20' :
+            step.status === 'in-progress' ? 'bg-warning/5 border-warning/20' :
+            'bg-muted/30'
+          }`}>
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 mt-1">
+                  {getStatusIcon(step.status)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Step {index + 1}
+                    </span>
+                    <span className={`text-sm font-medium ${getStatusColor(step.status)}`}>
+                      {step.status === 'completed' ? 'Completed' :
+                       step.status === 'in-progress' ? 'In Progress' : 'Pending'}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-1">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Overall Progress */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Overall Progress</CardTitle>
+          <CardDescription>Your onboarding completion status</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Progress</span>
+              <span>{steps.filter(s => s.status === 'completed').length} of {steps.length} completed</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div 
+                className="bg-primary h-2 rounded-full transition-all duration-300" 
+                style={{ 
+                  width: `${(steps.filter(s => s.status === 'completed').length / steps.length) * 100}%` 
+                }}
+              ></div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
