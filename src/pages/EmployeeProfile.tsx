@@ -68,8 +68,8 @@ export default function EmployeeProfilePage() {
         </div>
       </div>
 
-      {/* Employee Profile Content - Component fetches its own data */}
-      <EmployeeProfileComponent />
+      {/* Employee Profile Content - Pass the employee ID to the component */}
+      <EmployeeProfileComponent employeeId={id} />
     </div>
   );
 }
