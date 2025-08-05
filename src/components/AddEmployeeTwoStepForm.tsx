@@ -293,28 +293,49 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
         // Step 3: Create user role for the pre-registered employee
         console.log('🔐 Step 3: Creating user role...');
-        const { data: role, error: roleError } = await supabase
+        
+        // First check if a pending employee role already exists for this organization
+        const { data: existingRole } = await supabase
           .from('user_roles')
-          .insert({
-            user_id: null, // Now nullable! Will be updated when employee signs up
-            role: 'employee',
-            organization_id: organizationId,
-            assigned_by: user.id
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('organization_id', organizationId)
+          .eq('role', 'employee')
+          .is('user_id', null)
+          .maybeSingle();
 
-        if (roleError) {
-          console.error('❌ User role creation failed:', roleError);
-          throw new Error(`Failed to create user role: ${roleError.message}`);
+        if (existingRole) {
+          // Reuse the existing pending role
+          roleData = existingRole;
+          console.log('✅ Reusing existing pending employee role:', { 
+            id: roleData.id, 
+            role: roleData.role,
+            organizationId: roleData.organization_id 
+          });
+        } else {
+          // Create a new pending employee role
+          const { data: role, error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: null, // Now nullable! Will be updated when employee signs up
+              role: 'employee',
+              organization_id: organizationId,
+              assigned_by: user.id
+            })
+            .select()
+            .single();
+
+          if (roleError) {
+            console.error('❌ User role creation failed:', roleError);
+            throw new Error(`Failed to create user role: ${roleError.message}`);
+          }
+
+          roleData = role;
+          console.log('✅ User role created successfully:', { 
+            id: roleData.id, 
+            role: roleData.role,
+            organizationId: roleData.organization_id 
+          });
         }
-
-        roleData = role;
-        console.log('✅ User role created successfully:', { 
-          id: roleData.id, 
-          role: roleData.role,
-          organizationId: roleData.organization_id 
-        });
 
         console.log('🎉 All operations completed successfully!');
 

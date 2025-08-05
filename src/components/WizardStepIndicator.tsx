@@ -19,7 +19,7 @@ export function WizardStepIndicator({ steps, className }: WizardStepIndicatorPro
     <div className={cn("w-full", className)}>
       <div className="flex items-center justify-between">
         {steps.map((step, index) => (
-          <React.Fragment key={step.number}>
+          <div key={step.number} className="flex items-center">
             {/* Step Circle and Label */}
             <div className="flex flex-col items-center">
               <div
@@ -61,7 +61,7 @@ export function WizardStepIndicator({ steps, className }: WizardStepIndicatorPro
                 />
               </div>
             )}
-          </React.Fragment>
+          </div>
         ))}
       </div>
     </div>
