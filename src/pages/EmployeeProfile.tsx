@@ -68,8 +68,8 @@ export default function EmployeeProfilePage() {
         </div>
       </div>
 
-      {/* Employee Profile Content */}
-      <EmployeeProfileComponent employee={employee} />
+      {/* Employee Profile Content - Component fetches its own data */}
+      <EmployeeProfileComponent />
     </div>
   );
 }
