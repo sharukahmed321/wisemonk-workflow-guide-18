@@ -1,9 +1,14 @@
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { User, Mail, Calendar, Building, DollarSign, MapPin } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { ArrowLeft, Mail, Phone, Calendar, Building, FileText, CreditCard, Plane } from 'lucide-react';
 
 interface EmployeeRecord {
   id: string;
@@ -11,28 +16,41 @@ interface EmployeeRecord {
   first_name: string;
   last_name: string;
   email: string;
-  status: string;
-  start_date: string;
-  department?: string;
-  job_title?: string;
-  employment_type?: string;
-  salary?: number;
-  currency?: string;
   phone?: string;
+  job_title: string;
+  department: string;
+  employment_type: string;
+  salary?: number;
+  start_date: string;
+  status: string;
+  organization_id: string;
+  date_of_birth?: string;
+  age?: number;
+  avatar_url?: string;
+  currency?: string;
   work_location?: string;
   seniority?: string;
+  user_id?: string;
 }
 
 interface EmployeeProfileProps {
   employeeId?: string;
 }
 
+const statusColors = {
+  Active: 'bg-green-500/10 text-green-600 border-green-500/20',
+  Onboarding: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  Preboarding: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+  Invited: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+  Exit: 'bg-red-500/10 text-red-600 border-red-500/20',
+} as const;
+
 export function EmployeeProfile({ employeeId }: EmployeeProfileProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isViewingOwnProfile = !employeeId;
 
   useEffect(() => {
     if (employeeId) {
@@ -44,25 +62,25 @@ export function EmployeeProfile({ employeeId }: EmployeeProfileProps) {
 
   const fetchEmployeeById = async (id: string) => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('employees')
-        .select(`
-          id, employee_id, first_name, last_name, email, status, start_date, 
-          department, job_title, employment_type, salary, currency, phone, 
-          work_location, seniority
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
       if (error) {
-        setError('Failed to load employee information.');
+        console.error('Error fetching employee:', error);
+        setError(error.message);
         return;
       }
 
       setEmployee(data);
     } catch (err) {
-      console.error('Error fetching employee profile:', err);
-      setError('An unexpected error occurred.');
+      console.error('Unexpected error:', err);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -70,212 +88,346 @@ export function EmployeeProfile({ employeeId }: EmployeeProfileProps) {
 
   const fetchCurrentUserProfile = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('employees')
-        .select(`
-          id, employee_id, first_name, last_name, email, status, start_date, 
-          department, job_title, employment_type, salary, currency, phone, 
-          work_location, seniority
-        `)
-        .eq('user_id', user?.id)
+        .select('*')
+        .eq('user_id', user!.id)
         .single();
 
       if (error) {
-        setError('Failed to load profile information.');
+        console.error('Error fetching user profile:', error);
+        setError(error.message);
         return;
       }
 
       setEmployee(data);
     } catch (err) {
-      console.error('Error fetching employee profile:', err);
-      setError('An unexpected error occurred.');
+      console.error('Unexpected error:', err);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
 
+  const getStatusBadgeColor = (status: string) => {
+    return statusColors[status as keyof typeof statusColors] || 'bg-gray-500/10 text-gray-600 border-gray-500/20';
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
   if (loading) {
     return (
-      <div className="p-6 md:p-8 max-w-4xl mx-auto">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3"></div>
-          <div className="h-4 bg-muted rounded w-1/2"></div>
-          <div className="h-64 bg-muted rounded"></div>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading employee profile...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error || !employee) {
+  if (error) {
     return (
-      <div className="p-6 md:p-8 max-w-4xl mx-auto">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-destructive">Profile Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto">
+          <Button variant="ghost" onClick={() => navigate('/dashboard/people')} className="mb-6">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to People
+          </Button>
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center text-destructive">
+                <p className="font-medium">Error loading employee profile</p>
+                <p className="text-sm text-muted-foreground mt-2">{error}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          {isViewingOwnProfile ? 'My Profile' : `${employee.first_name} ${employee.last_name}`}
-        </h1>
-        <p className="text-muted-foreground">
-          {isViewingOwnProfile 
-            ? 'View and manage your profile information'
-            : 'Employee profile information'
-          }
-        </p>
+  if (!employee) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto">
+          <Button variant="ghost" onClick={() => navigate('/dashboard/people')} className="mb-6">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to People
+          </Button>
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center">
+                <p className="font-medium">Employee not found</p>
+                <p className="text-sm text-muted-foreground mt-2">The requested employee profile could not be found.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+    );
+  }
 
-      {/* Profile Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Personal Information
-          </CardTitle>
-          <CardDescription>
-            {isViewingOwnProfile ? 'Your personal and employment details' : 'Employee personal and employment details'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Full Name</p>
-                  <p className="font-medium">{employee.first_name} {employee.last_name}</p>
+  const isOwnProfile = user?.id && employee.user_id === user.id;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Back Navigation */}
+        <Button variant="ghost" onClick={() => navigate('/dashboard/people')} className="mb-6">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to People
+        </Button>
+
+        {/* Header Section */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              {/* Employee Info */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24">
+                  <AvatarImage src={employee.avatar_url} alt={`${employee.first_name} ${employee.last_name}`} />
+                  <AvatarFallback className="text-lg sm:text-xl lg:text-2xl">
+                    {getInitials(employee.first_name, employee.last_name)}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                    {employee.first_name} {employee.last_name}
+                  </h1>
+                  <p className="text-lg sm:text-xl text-muted-foreground">{employee.job_title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {employee.employee_id} • {employee.department}
+                  </p>
+                  <Badge className={`mt-2 ${getStatusBadgeColor(employee.status)}`}>
+                    {employee.status}
+                  </Badge>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Email Address</p>
-                  <p className="font-medium">{employee.email}</p>
+
+              {/* Contact Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:min-w-[300px]">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="break-all">{employee.email}</span>
+                </div>
+                {employee.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{employee.phone}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>{formatDate(employee.start_date)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Building className="h-4 w-4 text-muted-foreground" />
+                  <span>{employee.employment_type}</span>
                 </div>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Building className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Employee ID</p>
-                  <p className="font-medium">{employee.employee_id}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium">
-                    {new Date(employee.start_date).toLocaleDateString()}
+          </CardContent>
+        </Card>
+
+        {/* Tab System */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="bg-transparent border-0 p-0 h-auto">
+            <TabsTrigger 
+              value="overview" 
+              className="bg-transparent border-0 rounded-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="documents" 
+              className="bg-transparent border-0 rounded-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger 
+              value="leaves" 
+              className="bg-transparent border-0 rounded-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none"
+            >
+              <Plane className="mr-2 h-4 w-4" />
+              Leaves
+            </TabsTrigger>
+            <TabsTrigger 
+              value="finance" 
+              className="bg-transparent border-0 rounded-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none"
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Finance
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Full Name:</span>
+                    <span className="font-medium">{employee.first_name} {employee.last_name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Employee ID:</span>
+                    <span className="font-medium">{employee.employee_id}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Email:</span>
+                    <span className="font-medium break-all">{employee.email}</span>
+                  </div>
+                  {employee.phone && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Phone:</span>
+                      <span className="font-medium">{employee.phone}</span>
+                    </div>
+                  )}
+                  {employee.date_of_birth && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Date of Birth:</span>
+                      <span className="font-medium">{formatDate(employee.date_of_birth)}</span>
+                    </div>
+                  )}
+                  {employee.age && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Age:</span>
+                      <span className="font-medium">{employee.age} years</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Employment Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Job Title:</span>
+                    <span className="font-medium">{employee.job_title}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Department:</span>
+                    <span className="font-medium">{employee.department}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Employment Type:</span>
+                    <span className="font-medium">{employee.employment_type}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Start Date:</span>
+                    <span className="font-medium">{formatDate(employee.start_date)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Status:</span>
+                    <Badge className={getStatusBadgeColor(employee.status)}>
+                      {employee.status}
+                    </Badge>
+                  </div>
+                  {employee.work_location && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Work Location:</span>
+                      <span className="font-medium">{employee.work_location}</span>
+                    </div>
+                  )}
+                  {employee.seniority && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Seniority:</span>
+                      <span className="font-medium">{employee.seniority}</span>
+                    </div>
+                  )}
+                  {isOwnProfile && employee.salary && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Salary:</span>
+                      <span className="font-medium">
+                        {employee.currency || 'USD'} {employee.salary.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Documents Tab */}
+          <TabsContent value="documents">
+            <Card>
+              <CardHeader>
+                <CardTitle>Document Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Document management system coming soon</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    KYC documents, employment agreements, and personal files will be managed here.
                   </p>
                 </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Employment Information */}
-          {(employee.department || employee.job_title || employee.employment_type || employee.work_location) && (
-            <div className="pt-4 border-t">
-              <h4 className="text-sm font-semibold text-muted-foreground mb-4">Employment Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {employee.department && (
-                  <div className="flex items-center gap-3">
-                    <Building className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Department</p>
-                      <p className="font-medium">{employee.department}</p>
-                    </div>
-                  </div>
-                )}
-                {employee.job_title && (
-                  <div className="flex items-center gap-3">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Job Title</p>
-                      <p className="font-medium">{employee.job_title}</p>
-                    </div>
-                  </div>
-                )}
-                {employee.employment_type && (
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Employment Type</p>
-                      <p className="font-medium">{employee.employment_type}</p>
-                    </div>
-                  </div>
-                )}
-                {employee.work_location && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Work Location</p>
-                      <p className="font-medium">{employee.work_location}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {/* Contact Information */}
-          {employee.phone && (
-            <div className="pt-4 border-t">
-              <h4 className="text-sm font-semibold text-muted-foreground mb-4">Contact Information</h4>
-              <div className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{employee.phone}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Compensation Information (only for own profile or managers) */}
-          {(employee.salary && employee.currency) && isViewingOwnProfile && (
-            <div className="pt-4 border-t">
-              <h4 className="text-sm font-semibold text-muted-foreground mb-4">Compensation</h4>
-              <div className="flex items-center gap-3">
-                <DollarSign className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Salary</p>
-                  <p className="font-medium">
-                    {employee.currency} {employee.salary?.toLocaleString()}
+          {/* Leaves Tab */}
+          <TabsContent value="leaves">
+            <Card>
+              <CardHeader>
+                <CardTitle>Leave Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Plane className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Leave management system coming soon</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Track vacation days, sick leave, and other time-off requests here.
                   </p>
                 </div>
-              </div>
-            </div>
-          )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {/* Status and Additional Info */}
-          <div className="pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  employee.status === 'Active' ? 'bg-success' : 'bg-warning'
-                }`} />
-                <span className="text-sm font-medium">Status: {employee.status}</span>
-              </div>
-              {employee.seniority && (
-                <span className="text-sm text-muted-foreground">
-                  Seniority: {employee.seniority}
-                </span>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Finance Tab */}
+          <TabsContent value="finance">
+            <Card>
+              <CardHeader>
+                <CardTitle>Financial Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Financial management system coming soon</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Salary history, bonuses, and payment information will be available here.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
