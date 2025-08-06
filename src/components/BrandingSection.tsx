@@ -1,7 +1,7 @@
 
-
 import React from 'react';
 import { Users, DollarSign } from 'lucide-react';
+import wisemonkLogo from '../assets/wisemonk-logo.jpg';
 
 export function BrandingSection() {
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -24,9 +24,9 @@ export function BrandingSection() {
       <div className="relative z-10 max-w-lg w-full">
         <div className="flex items-center gap-4 mb-8">
           <img 
-            src="/lovable-uploads/0748a3d4-1f22-484d-96dc-85520406b146.png" 
+            src={wisemonkLogo}
             alt="Wisemonk" 
-            className="w-12 h-12 object-cover" 
+            className="w-12 h-12 object-cover rounded" 
             onError={handleImageError}
             onLoad={handleImageLoad}
           />
