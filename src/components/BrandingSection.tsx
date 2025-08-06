@@ -13,7 +13,7 @@ export function BrandingSection() {
       
       <div className="relative z-10 max-w-lg w-full">
         <div className="flex items-center gap-4 mb-8">
-          <img src="/lovable-uploads/9acffbb3-df26-455c-8489-4395709d810d.png" alt="Wisemonk" className="w-12 h-12 object-cover" />
+          <img src="/lovable-uploads/cf15d81e-ec01-42d7-af59-cc03a2f429b5.png" alt="Wisemonk" className="w-12 h-12 object-cover" />
           <h1 className="text-3xl font-bold text-foreground">Wisemonk</h1>
         </div>
         
