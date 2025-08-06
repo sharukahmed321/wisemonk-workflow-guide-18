@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Calendar as CalendarIcon, UserCheck, MapPin, Home, Building } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { createAddressValidator, createCityValidator, createStateValidator, createPostalCodeValidator } from "@/lib/validationUtils";
+
 const personalDetailsSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   fatherName: z.string().min(2, 'Father\'s name must be at least 2 characters'),
@@ -22,12 +24,15 @@ const personalDetailsSchema = z.object({
   state: createStateValidator(),
   pincode: createPostalCodeValidator('IN')
 });
+
 type PersonalDetailsData = z.infer<typeof personalDetailsSchema>;
+
 interface PersonalDetailsStepProps {
   data: PersonalDetailsData;
   onComplete: (data: PersonalDetailsData) => void;
   onPrevious?: () => void;
 }
+
 export function PersonalDetailsStep({
   data,
   onComplete,
@@ -37,10 +42,32 @@ export function PersonalDetailsStep({
     resolver: zodResolver(personalDetailsSchema),
     defaultValues: data
   });
+
   const onSubmit = (formData: PersonalDetailsData) => {
     onComplete(formData);
   };
-  return <div className="space-y-6">
+
+  // Generate years from 1950 to current year
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 1950 + 1 }, (_, i) => currentYear - i);
+  
+  const months = [
+    { value: 0, label: 'January' },
+    { value: 1, label: 'February' },
+    { value: 2, label: 'March' },
+    { value: 3, label: 'April' },
+    { value: 4, label: 'May' },
+    { value: 5, label: 'June' },
+    { value: 6, label: 'July' },
+    { value: 7, label: 'August' },
+    { value: 8, label: 'September' },
+    { value: 9, label: 'October' },
+    { value: 10, label: 'November' },
+    { value: 11, label: 'December' }
+  ];
+
+  return (
+    <div className="space-y-6">
       <div className="text-center">
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <User className="w-8 h-8 text-primary" />
@@ -54,67 +81,137 @@ export function PersonalDetailsStep({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
-            <FormField control={form.control} name="fullName" render={({
-            field
-          }) => <FormItem>
+            <FormField 
+              control={form.control} 
+              name="fullName" 
+              render={({ field }) => (
+                <FormItem>
                   <FormLabel className="flex items-center gap-2">
-                    
                     Full name *
                   </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter your full name" className="h-11" {...field} />
                   </FormControl>
                   <FormMessage />
-                </FormItem>} />
+                </FormItem>
+              )} 
+            />
 
-            <FormField control={form.control} name="fatherName" render={({
-            field
-          }) => <FormItem>
+            <FormField 
+              control={form.control} 
+              name="fatherName" 
+              render={({ field }) => (
+                <FormItem>
                   <FormLabel className="flex items-center gap-2">
-                    
                     Father's name *
                   </FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. John Doe" className="h-11" {...field} />
                   </FormControl>
                   <FormMessage />
-                </FormItem>} />
+                </FormItem>
+              )} 
+            />
 
-            <FormField control={form.control} name="dateOfBirth" render={({
-            field
-          }) => <FormItem className="flex flex-col">
+            <FormField 
+              control={form.control} 
+              name="dateOfBirth" 
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
                   <FormLabel className="flex items-center gap-2">
-                    
                     DOB *
                   </FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
-                        <Button variant="outline" className={cn("h-11 justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "h-11 justify-start text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={date => date > new Date() || date < new Date("1900-01-01")} initialFocus className={cn("p-3 pointer-events-auto")} />
+                      <div className="p-3 space-y-3">
+                        <div className="flex gap-2">
+                          <Select
+                            value={field.value ? field.value.getFullYear().toString() : ""}
+                            onValueChange={(year) => {
+                              const currentDate = field.value || new Date();
+                              const newDate = new Date(parseInt(year), currentDate.getMonth(), currentDate.getDate());
+                              field.onChange(newDate);
+                            }}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue placeholder="Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {years.map((year) => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          
+                          <Select
+                            value={field.value ? field.value.getMonth().toString() : ""}
+                            onValueChange={(month) => {
+                              const currentDate = field.value || new Date();
+                              const newDate = new Date(currentDate.getFullYear(), parseInt(month), currentDate.getDate());
+                              field.onChange(newDate);
+                            }}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="Month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {months.map((month) => (
+                                <SelectItem key={month.value} value={month.value.toString()}>
+                                  {month.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={date => date > new Date() || date < new Date("1950-01-01")}
+                          initialFocus
+                          className={cn("p-0 pointer-events-auto")}
+                          defaultMonth={field.value || new Date(1990, 0)}
+                        />
+                      </div>
                     </PopoverContent>
                   </Popover>
                   <FormMessage />
-                </FormItem>} />
+                </FormItem>
+              )} 
+            />
 
-            <FormField control={form.control} name="aadhaarNumber" render={({
-            field
-          }) => <FormItem>
+            <FormField 
+              control={form.control} 
+              name="aadhaarNumber" 
+              render={({ field }) => (
+                <FormItem>
                   <FormLabel className="flex items-center gap-2">
-                    
                     Aadhar No. *
                   </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter your aadhar no." className="h-11" {...field} />
                   </FormControl>
                   <FormMessage />
-                </FormItem>} />
+                </FormItem>
+              )} 
+            />
           </div>
 
           {/* Address Information Section */}
@@ -125,70 +222,85 @@ export function PersonalDetailsStep({
             </div>
             
             <div className="grid gap-6 md:grid-cols-2">
-              <FormField control={form.control} name="addressLine1" render={({
-              field
-            }) => <FormItem>
+              <FormField 
+                control={form.control} 
+                name="addressLine1" 
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      
                       Address Line 1 *
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Address Line 1" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="addressLine2" render={({
-              field
-            }) => <FormItem>
+              <FormField 
+                control={form.control} 
+                name="addressLine2" 
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      
                       Address Line 2 *
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Address Line 2" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="city" render={({
-              field
-            }) => <FormItem>
+              <FormField 
+                control={form.control} 
+                name="city" 
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      
                       City *
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="City" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="state" render={({
-              field
-            }) => <FormItem>
+              <FormField 
+                control={form.control} 
+                name="state" 
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      
                       State *
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="State" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
 
-              <FormField control={form.control} name="pincode" render={({
-              field
-            }) => <FormItem>
+              <FormField 
+                control={form.control} 
+                name="pincode" 
+                render={({ field }) => (
+                  <FormItem>
                     <FormLabel className="flex items-center gap-2">
-                      
                       Pincode *
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Pincode" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>} />
+                  </FormItem>
+                )} 
+              />
             </div>
           </div>
 
@@ -202,5 +314,6 @@ export function PersonalDetailsStep({
           </div>
         </form>
       </Form>
-    </div>;
+    </div>
+  );
 }
