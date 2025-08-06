@@ -17,11 +17,15 @@ interface UseEmploymentAgreementReturn {
   generateAgreement: () => Promise<EmploymentAgreementDocument | null>;
   isGenerating: boolean;
   error: string | null;
+  document: EmploymentAgreementDocument | null;
+  isGenerated: boolean;
+  downloadDocument: (document: EmploymentAgreementDocument) => void;
 }
 
 export function useEmploymentAgreement(): UseEmploymentAgreementReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [document, setDocument] = useState<EmploymentAgreementDocument | null>(null);
   const { toast } = useToast();
 
   const generateAgreement = async (): Promise<EmploymentAgreementDocument | null> => {
@@ -54,6 +58,8 @@ export function useEmploymentAgreement(): UseEmploymentAgreementReturn {
 
       console.log('✅ Employment agreement generated successfully:', data.document);
 
+      setDocument(data.document);
+
       toast({
         title: "Employment Agreement Generated",
         description: "Your employment agreement has been generated successfully.",
@@ -79,9 +85,26 @@ export function useEmploymentAgreement(): UseEmploymentAgreementReturn {
     }
   };
 
+  const downloadDocument = (document: EmploymentAgreementDocument) => {
+    if (document.download_url) {
+      window.open(document.download_url, '_blank');
+    } else {
+      toast({
+        title: "Download Error",
+        description: "Download URL not available for this document.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const isGenerated = !!document;
+
   return {
     generateAgreement,
     isGenerating,
     error,
+    document,
+    isGenerated,
+    downloadDocument,
   };
 }

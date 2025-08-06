@@ -11,17 +11,19 @@ interface EmploymentAgreementCardProps {
 }
 
 export function EmploymentAgreementCard({ onGenerated }: EmploymentAgreementCardProps) {
-  const { generateAgreement, isGenerating, error } = useEmploymentAgreement();
+  const { generateAgreement, isGenerating, error, document, isGenerated, downloadDocument } = useEmploymentAgreement();
 
   const handleGenerate = async () => {
-    const document = await generateAgreement();
-    if (document && onGenerated) {
+    const generatedDocument = await generateAgreement();
+    if (generatedDocument && onGenerated) {
       onGenerated();
     }
   };
 
-  const handleDownload = (downloadUrl: string, fileName: string) => {
-    window.open(downloadUrl, '_blank');
+  const handleDownload = () => {
+    if (document) {
+      downloadDocument(document);
+    }
   };
 
   return (
@@ -35,14 +37,24 @@ export function EmploymentAgreementCard({ onGenerated }: EmploymentAgreementCard
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Status:</span>
-          <Badge variant="secondary">
-            <Clock className="w-3 h-3 mr-1" />
-            Pending Generation
-          </Badge>
+          {isGenerated ? (
+            <Badge variant="default">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Generated
+            </Badge>
+          ) : (
+            <Badge variant="secondary">
+              <Clock className="w-3 h-3 mr-1" />
+              Pending Generation
+            </Badge>
+          )}
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Generate your employment agreement document to complete the preboarding process.
+          {isGenerated 
+            ? "Your employment agreement has been generated successfully. Click download to access the document."
+            : "Generate your employment agreement document to complete the preboarding process."
+          }
         </p>
 
         {error && (
@@ -55,23 +67,33 @@ export function EmploymentAgreementCard({ onGenerated }: EmploymentAgreementCard
           </div>
         )}
 
-        <Button 
-          onClick={handleGenerate}
-          disabled={isGenerating}
-          className="w-full"
-        >
-          {isGenerating ? (
-            <>
-              <Clock className="w-4 h-4 mr-2 animate-spin" />
-              Generating Agreement...
-            </>
-          ) : (
-            <>
-              <FileText className="w-4 h-4 mr-2" />
-              Generate Employment Agreement
-            </>
-          )}
-        </Button>
+        {isGenerated ? (
+          <Button 
+            onClick={handleDownload}
+            className="w-full"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download Employment Agreement
+          </Button>
+        ) : (
+          <Button 
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            className="w-full"
+          >
+            {isGenerating ? (
+              <>
+                <Clock className="w-4 h-4 mr-2 animate-spin" />
+                Generating Agreement...
+              </>
+            ) : (
+              <>
+                <FileText className="w-4 h-4 mr-2" />
+                Generate Employment Agreement
+              </>
+            )}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
