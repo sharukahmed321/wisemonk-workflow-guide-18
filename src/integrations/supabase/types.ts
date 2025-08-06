@@ -53,6 +53,7 @@ export type Database = {
           address_line_1: string | null
           address_line_2: string | null
           age: number | null
+          agreement_date: string | null
           annual_basic: number | null
           annual_gross_salary: number | null
           annual_hra: number | null
@@ -75,6 +76,7 @@ export type Database = {
           id: string
           job_description: string | null
           job_title: string
+          last_date: string | null
           last_name: string
           mfbp: number | null
           monthly_basic: number | null
@@ -100,6 +102,7 @@ export type Database = {
           address_line_1?: string | null
           address_line_2?: string | null
           age?: number | null
+          agreement_date?: string | null
           annual_basic?: number | null
           annual_gross_salary?: number | null
           annual_hra?: number | null
@@ -122,6 +125,7 @@ export type Database = {
           id?: string
           job_description?: string | null
           job_title: string
+          last_date?: string | null
           last_name: string
           mfbp?: number | null
           monthly_basic?: number | null
@@ -147,6 +151,7 @@ export type Database = {
           address_line_1?: string | null
           address_line_2?: string | null
           age?: number | null
+          agreement_date?: string | null
           annual_basic?: number | null
           annual_gross_salary?: number | null
           annual_hra?: number | null
@@ -169,6 +174,7 @@ export type Database = {
           id?: string
           job_description?: string | null
           job_title?: string
+          last_date?: string | null
           last_name?: string
           mfbp?: number | null
           monthly_basic?: number | null

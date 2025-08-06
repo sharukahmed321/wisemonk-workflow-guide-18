@@ -1,7 +1,8 @@
+
 import { formatCurrency, formatDate, formatAddress } from './formatters.ts';
 import { htmlToPlainText } from './html-utils.ts';
 
-// New function to match MSA structure - use this in pdf-generator.ts
+// Enhanced function to create employment placeholders with comprehensive employee data
 export const createEmploymentPlaceholders = (employmentData) => {
   const fullAddress = formatAddress(
     employmentData.business_address, 
@@ -11,27 +12,72 @@ export const createEmploymentPlaceholders = (employmentData) => {
   );
   
   return {
+    // Client and Company Information
     '{{Client_name_address}}': `${employmentData.legal_name || employmentData.name || 'N/A'}, ${fullAddress}`,
-    '{{Agreement_date}}': employmentData.currentDate ? formatDate(employmentData.currentDate) : formatDate(new Date().toISOString()),
+    '{{Agreement_date}}': employmentData.agreement_date ? formatDate(employmentData.agreement_date) : formatDate(new Date().toISOString()),
     '{{Client}}': employmentData.legal_name || employmentData.name || 'N/A',
-    '{{Name}}': `${employmentData.first_name || ''} ${employmentData.last_name || ''}`.trim() || 'N/A',
-    '{{Designation}}': employmentData.job_title || 'N/A',
-    
-    // Additional employment-specific fields
     '{{Company}}': employmentData.legal_name || employmentData.name || 'N/A',
+    '{{client Name}}': employmentData.legal_name || employmentData.name || 'Company',
+    
+    // Employee Basic Information
+    '{{Name}}': `${employmentData.first_name || ''} ${employmentData.last_name || ''}`.trim() || 'N/A',
     '{{Employee_Name}}': `${employmentData.first_name || ''} ${employmentData.last_name || ''}`.trim() || 'N/A',
+    '{{First Name}}': employmentData.first_name || 'N/A',
+    '{{last Name}}': employmentData.last_name || 'N/A',
+    '{{Full Name}}': `${employmentData.first_name || ''} ${employmentData.last_name || ''}`.trim() || 'N/A',
+    '{{email}}': employmentData.email || 'N/A',
+    '{{Id}}': employmentData.id || employmentData.employee_id || 'N/A',
+    
+    // Job Information
+    '{{Designation}}': employmentData.job_title || 'N/A',
     '{{Position}}': employmentData.job_title || 'N/A',
-    '{{Start_Date}}': employmentData.start_date ? formatDate(employmentData.start_date) : formatDate(new Date().toISOString()),
-    '{{Employment_Type}}': employmentData.employment_type || 'Full-time',
+    '{{Job role}}': employmentData.job_title || 'N/A',
+    '{{Role details}}': employmentData.job_description ? htmlToPlainText(employmentData.job_description) : 'N/A',
     '{{Department}}': employmentData.department || 'N/A',
-    '{{Supervisor}}': employmentData.supervisor || 'N/A',
+    '{{Manager}}': employmentData.manager_details || 'N/A',
+    
+    // Employment Details
+    '{{Employment_Type}}': employmentData.employment_type || 'Full-time',
+    '{{Start_Date}}': employmentData.start_date ? formatDate(employmentData.start_date) : (employmentData.joining_date ? formatDate(employmentData.joining_date) : formatDate(new Date().toISOString())),
+    '{{Joining Date}}': employmentData.joining_date ? formatDate(employmentData.joining_date) : (employmentData.start_date ? formatDate(employmentData.start_date) : formatDate(new Date().toISOString())),
+    '{{Last Date}}': employmentData.last_date ? formatDate(employmentData.last_date) : 'N/A',
     '{{Work_Location}}': employmentData.work_location || fullAddress,
     
-    // Salary information (if provided)
-    '{{Salary}}': employmentData.salary ? formatCurrency(employmentData.salary) : 'N/A',
-    '{{Hourly_Rate}}': employmentData.hourly_rate ? formatCurrency(employmentData.hourly_rate) : 'N/A',
+    // Salary Information - Annual
+    '{{Annual_gross}}': employmentData.annual_gross_salary ? formatCurrency(employmentData.annual_gross_salary) : 'N/A',
+    '{{Annual_basic}}': employmentData.annual_basic ? formatCurrency(employmentData.annual_basic) : 'N/A',
+    '{{Annual_hra}}': employmentData.annual_hra ? formatCurrency(employmentData.annual_hra) : 'N/A',
+    '{{Annual_special_allowance}}': employmentData.annual_special_allowance ? formatCurrency(employmentData.annual_special_allowance) : 'N/A',
+    '{{YFBP}}': employmentData.yfbp ? formatCurrency(employmentData.yfbp) : 'N/A',
+    '{{Annual_LTA}}': employmentData.annual_lta ? formatCurrency(employmentData.annual_lta) : 'N/A',
     
-    // Benefits and other details
+    // Salary Information - Monthly
+    '{{Monthly_gross}}': employmentData.monthly_gross ? formatCurrency(employmentData.monthly_gross) : 'N/A',
+    '{{Monthly_basic}}': employmentData.monthly_basic ? formatCurrency(employmentData.monthly_basic) : 'N/A',
+    '{{Monthly_hra}}': employmentData.monthly_hra ? formatCurrency(employmentData.monthly_hra) : 'N/A',
+    '{{Monthly_special_allowance}}': employmentData.monthly_special_allowance ? formatCurrency(employmentData.monthly_special_allowance) : 'N/A',
+    '{{Monthly_LTA}}': employmentData.monthly_lta ? formatCurrency(employmentData.monthly_lta) : 'N/A',
+    '{{MFBP}}': employmentData.mfbp ? formatCurrency(employmentData.mfbp) : 'N/A',
+    
+    // Legacy salary field for backward compatibility
+    '{{Salary}}': employmentData.annual_gross_salary ? formatCurrency(employmentData.annual_gross_salary) : 'N/A',
+    '{{Hourly_Rate}}': employmentData.hourly_rate ? formatCurrency(employmentData.hourly_rate) : 'N/A',
+    '{{bonus}}': employmentData.bonus ? formatCurrency(employmentData.bonus) : formatCurrency(0),
+    
+    // Personal Details
+    '{{Fathers name}}': employmentData.father_name || 'N/A',
+    '{{Age}}': employmentData.age ? employmentData.age.toString() : 'N/A',
+    '{{relation}}': employmentData.gender || 'N/A', // Maps to gender field
+    '{{Aadhar}}': employmentData.aadhaar_number || 'N/A',
+    
+    // Address Information
+    '{{Address Line 1}}': employmentData.address_line_1 || 'N/A',
+    '{{Address Line 2}}': employmentData.address_line_2 || 'N/A',
+    '{{Address City}}': employmentData.city || 'N/A',
+    '{{Address State}}': employmentData.state || 'N/A',
+    '{{Pincode}}': employmentData.pincode || 'N/A',
+    
+    // Benefits and Other Details
     '{{Benefits}}': employmentData.benefits || 'As per company policy',
     '{{Vacation_Days}}': employmentData.vacation_days || 'As per company policy',
     '{{Probation_Period}}': employmentData.probation_period || '90 days'
