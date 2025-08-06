@@ -1,6 +1,7 @@
 
+
 import React from 'react';
-import { Users, Clock } from 'lucide-react';
+import { Users, DollarSign } from 'lucide-react';
 
 export function BrandingSection() {
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -55,7 +56,7 @@ export function BrandingSection() {
             
             <div className="flex items-start gap-4">
               <div className="w-6 h-6 bg-brand-100 rounded-full flex items-center justify-center mt-1">
-                <Clock className="w-3 h-3 text-primary" />
+                <DollarSign className="w-3 h-3 text-primary" />
               </div>
               <div>
                 <h3 className="font-semibold text-foreground">Payroll & Compliance</h3>
