@@ -9,6 +9,7 @@ import { EmploymentAgreementStep } from './preboarding/EmploymentAgreementStep';
 import { PreboardingData, PreboardingStep } from '@/types/employee';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, FileText, Shield, User } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 interface PreboardingFlowProps {
   employeeId: string;
   employeeName: string;
@@ -138,11 +139,31 @@ export function PreboardingFlow({
       handleComplete();
     }
   };
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Save personal details to the employee record
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          full_name: preboardingData.personalDetails.fullName,
+          father_name: preboardingData.personalDetails.fatherName,
+          date_of_birth: preboardingData.personalDetails.dateOfBirth.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
+          aadhaar_number: preboardingData.personalDetails.aadhaarNumber,
+          address_line_1: preboardingData.personalDetails.addressLine1,
+          address_line_2: preboardingData.personalDetails.addressLine2,
+          city: preboardingData.personalDetails.city,
+          state: preboardingData.personalDetails.state,
+          pincode: preboardingData.personalDetails.pincode,
+          status: 'Active'
+        })
+        .eq('id', employeeId);
+
+      if (error) {
+        throw error;
+      }
+
       localStorage.removeItem(`preboarding-${employeeId}`);
       setIsLoading(false);
       toast({
@@ -150,7 +171,15 @@ export function PreboardingFlow({
         description: "Welcome to the team! Your preboarding is now complete."
       });
       onComplete?.();
-    }, 1500);
+    } catch (error) {
+      console.error('Error completing preboarding:', error);
+      setIsLoading(false);
+      toast({
+        title: "Error",
+        description: "Failed to complete preboarding. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   const handlePrevious = () => {
     if (currentStep > 1) {
