@@ -1,0 +1,17 @@
+export function htmlToPlainText(html) {
+  if (!html || typeof html !== 'string') {
+    return '';
+  }
+  
+  // Remove HTML tags and decode entities
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}

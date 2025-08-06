@@ -1,376 +1,277 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
+import { generateAgreementPDF } from './pdf-generator.ts';
+import { quickSetupCheck, verifyBothIDs } from './setup-verification.ts';
+import { getGoogleAccessToken } from './google-auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
-interface EmploymentAgreementData {
-  user_id: string;
-  organization_id: string;
-  employee_name: string;
-  job_title: string;
-  start_date: string;
-  salary: string;
-  organization_name: string;
-  organization_address: string;
-}
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '', 
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders
+    });
   }
 
   try {
-    console.log('🔄 Starting employment agreement generation...');
-
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      throw new Error('Authorization header missing');
+    }
 
     // Get user from JWT token
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header found');
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
     
-    if (authError || !user) {
-      throw new Error('Invalid authentication token');
+    if (userError || !user) {
+      throw new Error('Invalid authentication');
     }
 
-    console.log('✅ User authenticated:', user.id);
+    console.log('🔄 Generating Employment Agreement for user:', user.id);
 
-    // Get user profile and organization data
-    const { data: profile, error: profileError } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(`
-        *,
-        organizations (*)
+        first_name,
+        last_name,
+        job_title,
+        organization_id,
+        organizations (
+          id,
+          name,
+          legal_name,
+          business_address,
+          business_city,
+          business_state,
+          business_postal_code
+        )
       `)
       .eq('user_id', user.id)
       .single();
 
-    if (profileError || !profile) {
-      throw new Error('User profile not found');
+    if (profileError || !profileData) {
+      console.error('❌ Error fetching profile data:', profileError);
+      throw new Error('Failed to fetch user profile data');
     }
 
-    if (!profile.organization_id || !profile.organizations) {
-      throw new Error('Organization not found for user');
+    if (!profileData.organizations) {
+      throw new Error('No organization found for user');
     }
 
-    console.log('✅ Profile and organization data retrieved');
+    const organization = profileData.organizations;
+    console.log('✅ Fetched user data for:', profileData.first_name, profileData.last_name);
+    console.log('✅ Organization:', organization.name);
 
-    // Prepare employment agreement data
-    const employmentData: EmploymentAgreementData = {
-      user_id: user.id,
-      organization_id: profile.organization_id,
-      employee_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
-      job_title: profile.job_title || 'Employee',
-      start_date: profile.start_date || new Date().toISOString().split('T')[0],
-      salary: profile.annual_gross_salary?.toString() || '0',
-      organization_name: profile.organizations.name || 'Company',
-      organization_address: `${profile.organizations.business_address || ''}, ${profile.organizations.business_city || ''}, ${profile.organizations.business_state || ''} ${profile.organizations.business_postal_code || ''}`.trim()
+    // STEP 1: Quick setup verification (fast checks without API calls)
+    console.log('🔍 Running complete setup verification...');
+    const setupCheck = quickSetupCheck();
+    
+    if (!setupCheck.valid) {
+      const errorMessage = `Configuration issues detected: ${setupCheck.issues.join('; ')}`;
+      const recommendations = `Recommendations: ${setupCheck.recommendations.join('; ')}`;
+      console.error('❌ Setup verification failed:', errorMessage);
+      console.error('💡', recommendations);
+      throw new Error(`${errorMessage}. ${recommendations}`);
+    }
+
+    // STEP 2: API verification (actual access checks)
+    const accessToken = await getGoogleAccessToken();
+    const verificationResult = await verifyBothIDs(accessToken);
+    
+    console.log('📊 Verification Results:', JSON.stringify(verificationResult, null, 2));
+    
+    if (!verificationResult.templateDoc.accessible) {
+      throw new Error(`Template document issue: ${verificationResult.templateDoc.error}`);
+    }
+    
+    if (!verificationResult.sharedDrive.accessible) {
+      throw new Error(`Shared Drive issue: ${verificationResult.sharedDrive.error}`);
+    }
+    
+    console.log('✅ All verifications passed, proceeding with Employment Agreement generation...');
+
+    // Check if a recent Employment Agreement document already exists (within last 24 hours)
+    const { data: existingDoc } = await supabase
+      .from('employment_agreements')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('organization_id', profileData.organization_id)
+      .eq('document_type', 'employment_agreement')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    // If document exists and is recent, return it
+    if (existingDoc && new Date(existingDoc.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)) {
+      console.log('📄 Returning existing recent document:', existingDoc.file_name);
+      
+      // Get signed URL for download
+      const { data: signedUrl } = await supabase.storage
+        .from('employment-agreements')
+        .createSignedUrl(existingDoc.file_path, 60 * 60); // 1 hour expiry
+
+      return new Response(JSON.stringify({
+        success: true,
+        document: {
+          id: existingDoc.id,
+          file_name: existingDoc.file_name,
+          file_path: existingDoc.file_path,
+          download_url: signedUrl?.signedUrl,
+          created_at: existingDoc.created_at,
+          is_signed: existingDoc.is_signed,
+          generation_method: existingDoc.generation_method
+        }
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Prepare Employment Agreement data for placeholder replacement
+    const employmentData = {
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      job_title: profileData.job_title,
+      name: organization.name,
+      legal_name: organization.legal_name,
+      business_address: organization.business_address,
+      business_city: organization.business_city,
+      business_state: organization.business_state,
+      business_postal_code: organization.business_postal_code,
+      currentDate: new Date().toISOString()
     };
 
-    // Generate PDF using Google Docs
-    const pdfBuffer = await generateEmploymentAgreementPDF(employmentData);
-    
-    // Generate unique filename
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `employment-agreement-${employmentData.employee_name.replace(/\s+/g, '-')}-${timestamp}.pdf`;
-    const filePath = `${employmentData.organization_id}/${fileName}`;
+    console.log('🔄 Generating PDF with verified Shared Drive workflow...');
 
-    // Upload to Supabase Storage
+    // Get template document ID from secrets (already verified)
+    const templateDocId = Deno.env.get('DEFAULT_EMPLOYMENT_AGREEMENT_DOC_ID') || Deno.env.get('DEFAULT_GOOGLE_DOC_ID');
+
+    // Generate the Employment Agreement PDF using verified workflow
+    const pdfBuffer = await generateAgreementPDF(employmentData, templateDocId);
+    console.log('✅ Employment Agreement PDF generated successfully, size:', pdfBuffer.byteLength);
+
+    // Create file name and path
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `Employment_Agreement_${organization.name.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}.pdf`;
+    const filePath = `${profileData.organization_id}/${user.id}/${fileName}`;
+
+    // Upload to Supabase storage
+    console.log('📤 Uploading PDF to storage bucket...');
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('employment-agreements')
       .upload(filePath, pdfBuffer, {
         contentType: 'application/pdf',
+        cacheControl: '3600',
         upsert: false
       });
 
     if (uploadError) {
       console.error('❌ Storage upload error:', uploadError);
-      throw new Error(`Failed to upload document: ${uploadError.message}`);
+      // Fallback to direct download if storage fails
+      return new Response(pdfBuffer, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${fileName}"`
+        }
+      });
     }
 
-    console.log('✅ Document uploaded to storage:', filePath);
+    console.log('✅ PDF uploaded to storage:', uploadData.path);
 
-    // Get download URL
-    const { data: urlData } = await supabase.storage
-      .from('employment-agreements')
-      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    // Determine generation method
+    const generationMethod = 'verified_shared_drive_workflow';
 
-    // Save document metadata to database
-    const { data: docRecord, error: docError } = await supabase
+    // Create database record
+    const { data: documentRecord, error: dbError } = await supabase
       .from('employment_agreements')
       .insert({
-        user_id: employmentData.user_id,
-        organization_id: employmentData.organization_id,
+        user_id: user.id,
+        organization_id: profileData.organization_id,
+        document_type: 'employment_agreement',
         file_name: fileName,
         file_path: filePath,
         file_size: pdfBuffer.byteLength,
-        generation_method: 'google_docs_template',
-        metadata: {
-          employee_name: employmentData.employee_name,
-          job_title: employmentData.job_title,
-          generated_at: new Date().toISOString()
-        }
+        mime_type: 'application/pdf',
+        generation_method: generationMethod,
+        document_version: 1,
+        is_signed: false,
+        metadata: employmentData
       })
       .select()
       .single();
 
-    if (docError) {
-      console.error('❌ Database insert error:', docError);
-      throw new Error(`Failed to save document record: ${docError.message}`);
+    if (dbError) {
+      console.error('❌ Database insertion error:', dbError);
+      // Continue anyway - storage upload was successful
     }
 
-    console.log('✅ Employment agreement generated successfully');
+    console.log('✅ Database record created:', documentRecord?.id);
 
-    const responseData = {
+    // Get signed URL for download
+    const { data: signedUrl } = await supabase.storage
+      .from('employment-agreements')
+      .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
+
+    // Return document metadata and download URL
+    return new Response(JSON.stringify({
       success: true,
       document: {
-        id: docRecord.id,
-        file_name: docRecord.file_name,
-        file_path: docRecord.file_path,
-        download_url: urlData?.signedUrl,
-        created_at: docRecord.created_at,
-        is_signed: docRecord.is_signed,
-        generation_method: docRecord.generation_method
+        id: documentRecord?.id,
+        file_name: fileName,
+        file_path: filePath,
+        download_url: signedUrl?.signedUrl,
+        created_at: documentRecord?.created_at,
+        is_signed: false,
+        generation_method: generationMethod
       }
-    };
-
-    return new Response(JSON.stringify(responseData), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
 
   } catch (error) {
-    console.error('💥 Employment agreement generation failed:', error);
+    console.error('💥 Error in generate-employment-agreement function:', error);
     
+    // Enhanced error messages for common configuration issues
+    let errorMessage = error.message;
+    let errorDetails = 'Failed to generate Employment Agreement due to configuration issues.';
+    
+    if (error.message.includes('Configuration issues detected')) {
+      errorDetails = 'Setup verification failed. Please check your environment configuration and ensure all required secrets are properly set.';
+    } else if (error.message.includes('Template document issue')) {
+      errorDetails = 'The configured template document cannot be accessed. Please verify the DEFAULT_EMPLOYMENT_AGREEMENT_DOC_ID or DEFAULT_GOOGLE_DOC_ID is correct and the service account has proper permissions.';
+    } else if (error.message.includes('Shared Drive issue')) {
+      errorDetails = 'The configured Shared Drive cannot be accessed. Please verify the GOOGLE_SHARED_DRIVE_ID is correct and the service account has Editor permissions on the Shared Drive.';
+    } else if (error.message.includes('access denied') || error.message.includes('permission')) {
+      errorDetails = 'Access denied to Google Drive resources. Please check that the service account has proper permissions.';
+    } else if (error.message.includes('Rate limited')) {
+      errorDetails = 'Google API rate limit exceeded. Please try again in a few moments.';
+    }
+
     return new Response(JSON.stringify({
-      success: false,
-      error: error.message,
-      details: 'Employment agreement generation failed'
+      error: errorMessage,
+      details: errorDetails
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
     });
   }
 });
-
-async function generateEmploymentAgreementPDF(data: EmploymentAgreementData): Promise<Uint8Array> {
-  console.log('🔄 Generating PDF from Google Docs template...');
-  
-  const templateDocId = Deno.env.get('DEFAULT_EMPLOYMENT_AGREEMENT_DOC_ID');
-  if (!templateDocId) {
-    throw new Error('Employment agreement template document ID not configured');
-  }
-
-  // Get Google access token
-  const accessToken = await getGoogleAccessToken();
-  
-  // Prepare replacements for the template
-  const replacements = {
-    '{{EMPLOYEE_NAME}}': data.employee_name,
-    '{{JOB_TITLE}}': data.job_title,
-    '{{START_DATE}}': formatDate(data.start_date),
-    '{{ANNUAL_SALARY}}': formatCurrency(data.salary),
-    '{{ORGANIZATION_NAME}}': data.organization_name,
-    '{{ORGANIZATION_ADDRESS}}': data.organization_address,
-    '{{CURRENT_DATE}}': formatDate(new Date().toISOString()),
-  };
-
-  // Generate PDF using Google Docs
-  const pdfBuffer = await generatePDFFromTemplate(accessToken, templateDocId, replacements);
-  
-  console.log('✅ PDF generated successfully, size:', pdfBuffer.byteLength);
-  return pdfBuffer;
-}
-
-async function getGoogleAccessToken(): Promise<string> {
-  const serviceAccountKey = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY');
-  if (!serviceAccountKey) {
-    throw new Error('Google service account key not configured');
-  }
-
-  const credentials = JSON.parse(serviceAccountKey);
-  const jwt = await createJWT(credentials);
-  return await exchangeJWTForAccessToken(jwt);
-}
-
-async function createJWT(credentials: any): Promise<string> {
-  const header = {
-    alg: 'RS256',
-    typ: 'JWT'
-  };
-
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now
-  };
-
-  const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  const payloadB64 = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  
-  const data = `${headerB64}.${payloadB64}`;
-  const signature = await signRSA256(data, credentials.private_key);
-  
-  return `${data}.${signature}`;
-}
-
-async function signRSA256(data: string, privateKey: string): Promise<string> {
-  const key = privateKey
-    .replace(/-----BEGIN PRIVATE KEY-----/, '')
-    .replace(/-----END PRIVATE KEY-----/, '')
-    .replace(/\n/g, '');
-  
-  const binaryKey = Uint8Array.from(atob(key), c => c.charCodeAt(0));
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryKey,
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-256',
-    },
-    false,
-    ['sign']
-  );
-  
-  const encoder = new TextEncoder();
-  const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    cryptoKey,
-    encoder.encode(data)
-  );
-  
-  return btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
-async function exchangeJWTForAccessToken(jwt: string): Promise<string> {
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to get access token: ${error}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
-
-async function generatePDFFromTemplate(accessToken: string, templateDocId: string, replacements: Record<string, string>): Promise<Uint8Array> {
-  // Create a copy of the template
-  const copyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${templateDocId}/copy`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: `Employment Agreement - ${new Date().toISOString()}`
-    }),
-  });
-
-  if (!copyResponse.ok) {
-    throw new Error(`Failed to copy template: ${await copyResponse.text()}`);
-  }
-
-  const copyData = await copyResponse.json();
-  const docId = copyData.id;
-
-  try {
-    // Replace placeholders in the document
-    const requests = Object.entries(replacements).map(([placeholder, value]) => ({
-      replaceAllText: {
-        containsText: {
-          text: placeholder,
-          matchCase: false,
-        },
-        replaceText: value,
-      },
-    }));
-
-    if (requests.length > 0) {
-      const updateResponse = await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ requests }),
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error(`Failed to update document: ${await updateResponse.text()}`);
-      }
-    }
-
-    // Export as PDF
-    const exportResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${docId}/export?mimeType=application/pdf`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!exportResponse.ok) {
-      throw new Error(`Failed to export PDF: ${await exportResponse.text()}`);
-    }
-
-    const pdfBuffer = new Uint8Array(await exportResponse.arrayBuffer());
-    return pdfBuffer;
-
-  } finally {
-    // Clean up the temporary document
-    try {
-      await fetch(`https://www.googleapis.com/drive/v3/files/${docId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-    } catch (error) {
-      console.warn('Failed to delete temporary document:', error);
-    }
-  }
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-}
-
-function formatCurrency(amount: string): string {
-  const num = parseFloat(amount) || 0;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(num);
-}
