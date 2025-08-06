@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Users, Clock } from 'lucide-react';
 
@@ -58,7 +59,7 @@ export function BrandingSection() {
               </div>
               <div>
                 <h3 className="font-semibold text-foreground">Payroll & Compliance</h3>
-                <p className="text-muted-foreground">Track working hours and attendance seamlessly</p>
+                <p className="text-muted-foreground">From PF, ESI, and TDS to labor laws—we handle it all, so you don't have to.</p>
               </div>
             </div>
           </div>
