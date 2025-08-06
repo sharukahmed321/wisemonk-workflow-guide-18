@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Users, Clock } from 'lucide-react';
 
@@ -58,7 +57,7 @@ export function BrandingSection() {
                 <Clock className="w-3 h-3 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">Time & Attendance</h3>
+                <h3 className="font-semibold text-foreground">Payroll & Compliance</h3>
                 <p className="text-muted-foreground">Track working hours and attendance seamlessly</p>
               </div>
             </div>
