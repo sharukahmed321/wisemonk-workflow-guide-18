@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, CheckCircle, TrendingUp, TrendingDown, Clock } from "lucide-react";
@@ -80,7 +81,7 @@ export function KPICards() {
       {kpiData.map((kpi, index) => <Card key={index} className="">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 p-5">
             <div className="space-y-0.5">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 {kpi.title}
               </CardTitle>
             </div>
@@ -91,7 +92,7 @@ export function KPICards() {
           
           <CardContent className="p-5 pt-0">
             <div className="space-y-0.5">
-              <div className="text-xl font-bold text-foreground">{kpi.value}</div>
+              <div className="text-xl text-foreground">{kpi.value}</div>
               
             </div>
           </CardContent>
