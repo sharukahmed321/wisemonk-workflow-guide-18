@@ -38,7 +38,7 @@ export function BrandingSection() {
               Your trusted partner to hire and pay in India
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Streamline your HR processes with our comprehensive employee management platform.
+              We enable the global companies to onboard, manage, and pay full-time employees in India—without setting up a local entity.
             </p>
           </div>
           
