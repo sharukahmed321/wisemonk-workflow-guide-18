@@ -14,7 +14,7 @@ interface KPIData {
   link?: string;
 }
 const kpiData: KPIData[] = [{
-  title: "Total Employees",
+  title: "Total employees",
   value: "247",
   change: "+8 this month",
   changeValue: "+3.3%",
@@ -78,7 +78,7 @@ export function KPICards() {
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 {kpi.title}
               </CardTitle>
-              {kpi.description}
+              {index === 0 ? null : kpi.description}
             </div>
             <div className="p-1.5 rounded-lg bg-primary/10">
               <kpi.icon className="h-3.5 w-3.5 text-primary" />
@@ -86,10 +86,11 @@ export function KPICards() {
           </CardHeader>
           
           <CardContent className="p-5 pt-0">
-            <div className="space-y-0.5">
-              <div className="text-xl font-bold text-foreground">{kpi.value}</div>
-              
-            </div>
+            {index !== 0 && (
+              <div className="space-y-0.5">
+                <div className="text-xl font-bold text-foreground">{kpi.value}</div>
+              </div>
+            )}
           </CardContent>
         </Card>)}
     </div>;
