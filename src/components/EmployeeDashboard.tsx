@@ -187,11 +187,11 @@ function EmployeePreboarding() {
 
   const fetchEmployeeRecord = async () => {
     try {
-      // Fetch the specific employee record
+      // Fetch the specific employee record by employee_id
       const { data, error } = await supabase
         .from('employees')
         .select('id, employee_id, first_name, last_name, status, start_date, user_id')
-        .eq('id', employeeId)
+        .eq('employee_id', employeeId)
         .single();
 
       if (error) {

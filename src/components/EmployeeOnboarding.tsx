@@ -121,8 +121,28 @@ export function EmployeeOnboarding() {
 
   const handleContinueOnboarding = () => {
     if (employee && (employee.status === 'Invited' || employee.status === 'Preboarding')) {
-      navigate(`/dashboard/preboarding/${employee.id}`);
+      navigate(`/dashboard/preboarding/${employee.employee_id}`);
     }
+  };
+
+  const calculateProgress = () => {
+    const completedSteps = steps.filter(s => s.status === 'completed').length;
+    return Math.round((completedSteps / steps.length) * 100);
+  };
+
+  const getDueDate = () => {
+    if (employee && employee.start_date) {
+      const startDate = new Date(employee.start_date);
+      const dueDate = new Date(startDate);
+      dueDate.setDate(startDate.getDate() - 7); // Due 7 days before start date
+      return dueDate;
+    }
+    return null;
+  };
+
+  const isOverdue = () => {
+    const dueDate = getDueDate();
+    return dueDate && new Date() > dueDate;
   };
 
   if (loading) {
@@ -142,24 +162,58 @@ export function EmployeeOnboarding() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Onboarding Steps</h1>
-        <p className="text-muted-foreground">Track your progress through the onboarding process</p>
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl font-bold text-foreground">Welcome to WiseMonk</h1>
+        <p className="text-lg text-muted-foreground">Let's get you ready for your first day</p>
       </div>
 
-      {/* Continue Onboarding Button */}
+      {/* Main Preboarding Card */}
       {employee && (employee.status === 'Invited' || employee.status === 'Preboarding') && (
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-foreground">Continue Your Onboarding</h3>
-                <p className="text-sm text-muted-foreground">Complete your remaining onboarding steps</p>
+        <Card className="mx-auto max-w-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardContent className="p-8">
+            <div className="text-center space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-foreground">Complete Your Preboarding</h2>
+                <p className="text-muted-foreground">Finish setting up your profile and documents</p>
               </div>
-              <Button onClick={handleContinueOnboarding}>
-                <FileText className="w-4 h-4 mr-2" />
+              
+              <div className="space-y-4">
+                <div className="bg-background/80 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-medium">Progress</span>
+                    <span className="font-bold text-primary">{calculateProgress()}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-3">
+                    <div 
+                      className="bg-primary h-3 rounded-full transition-all duration-500 ease-in-out" 
+                      style={{ width: `${calculateProgress()}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-sm text-success">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Progress saved</span>
+                  </div>
+                </div>
+
+                {getDueDate() && (
+                  <div className={`text-sm ${isOverdue() ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {isOverdue() ? 'Overdue' : 'Due'}: {getDueDate()?.toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <Button 
+                onClick={handleContinueOnboarding}
+                size="lg"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              >
                 Continue
               </Button>
             </div>
