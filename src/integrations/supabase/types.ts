@@ -53,6 +53,11 @@ export type Database = {
           address_line_1: string | null
           address_line_2: string | null
           age: number | null
+          annual_basic: number | null
+          annual_gross_salary: number | null
+          annual_hra: number | null
+          annual_lta: number | null
+          annual_special_allowance: number | null
           avatar_url: string | null
           birthday: string | null
           city: string | null
@@ -71,6 +76,12 @@ export type Database = {
           job_description: string | null
           job_title: string
           last_name: string
+          mfbp: number | null
+          monthly_basic: number | null
+          monthly_gross: number | null
+          monthly_hra: number | null
+          monthly_lta: number | null
+          monthly_special_allowance: number | null
           organization_id: string | null
           phone: string | null
           pincode: string | null
@@ -82,12 +93,18 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
           work_location: string | null
+          yfbp: number | null
         }
         Insert: {
           aadhaar_number?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
           age?: number | null
+          annual_basic?: number | null
+          annual_gross_salary?: number | null
+          annual_hra?: number | null
+          annual_lta?: number | null
+          annual_special_allowance?: number | null
           avatar_url?: string | null
           birthday?: string | null
           city?: string | null
@@ -106,6 +123,12 @@ export type Database = {
           job_description?: string | null
           job_title: string
           last_name: string
+          mfbp?: number | null
+          monthly_basic?: number | null
+          monthly_gross?: number | null
+          monthly_hra?: number | null
+          monthly_lta?: number | null
+          monthly_special_allowance?: number | null
           organization_id?: string | null
           phone?: string | null
           pincode?: string | null
@@ -117,12 +140,18 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           work_location?: string | null
+          yfbp?: number | null
         }
         Update: {
           aadhaar_number?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
           age?: number | null
+          annual_basic?: number | null
+          annual_gross_salary?: number | null
+          annual_hra?: number | null
+          annual_lta?: number | null
+          annual_special_allowance?: number | null
           avatar_url?: string | null
           birthday?: string | null
           city?: string | null
@@ -141,6 +170,12 @@ export type Database = {
           job_description?: string | null
           job_title?: string
           last_name?: string
+          mfbp?: number | null
+          monthly_basic?: number | null
+          monthly_gross?: number | null
+          monthly_hra?: number | null
+          monthly_lta?: number | null
+          monthly_special_allowance?: number | null
           organization_id?: string | null
           phone?: string | null
           pincode?: string | null
@@ -152,6 +187,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           work_location?: string | null
+          yfbp?: number | null
         }
         Relationships: [
           {
