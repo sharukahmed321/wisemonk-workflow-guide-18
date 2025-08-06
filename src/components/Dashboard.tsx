@@ -191,7 +191,7 @@ export function Dashboard() {
                   }} />
                 } />
                 <Route path="people" element={<People />} />
-                <Route path="people/:id" element={<EmployeeProfilePage />} />
+                <Route path="people/:employeeId" element={<EmployeeProfilePage />} />
                 <Route path="people/add" element={<AddEmployeeTwoStepForm onSuccess={() => navigate('/dashboard/people')} />} />
                 <Route path="preboarding/:employeeId" element={<PreboardingPage />} />
                 <Route path="teams" element={<PlaceholderPage title="Teams" />} />

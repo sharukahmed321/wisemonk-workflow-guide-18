@@ -7,7 +7,7 @@ import { EmailVerificationGuard } from './EmailVerificationGuard';
 import { EmployeeHeader } from './EmployeeHeader';
 import { PreboardingFlow } from './PreboardingFlow';
 import { EmployeeSidebar } from './EmployeeSidebar';
-import { EmployeeProfile } from './EmployeeProfile';
+import EmployeeProfileCard from './EmployeeProfileCard';
 import { EmployeeOnboarding } from './EmployeeOnboarding';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -268,7 +268,7 @@ export function EmployeeDashboard() {
             <main className="flex-1 overflow-auto bg-gradient-to-br from-background to-muted/20">
               <Routes>
                 <Route index element={<EmployeeHome />} />
-                <Route path="profile" element={<EmployeeProfile />} />
+                <Route path="profile" element={<EmployeeProfileCard />} />
                 <Route path="onboarding" element={<EmployeeOnboarding />} />
                 <Route path="preboarding/:employeeId" element={<EmployeePreboarding />} />
                 {/* Redirect any other paths back to employee home */}
