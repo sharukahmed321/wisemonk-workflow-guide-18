@@ -3,15 +3,11 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Calendar as CalendarIcon, UserCheck, MapPin, Home, Building } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { DateOfBirthPicker } from '@/components/ui/date-of-birth-picker';
+import { User, MapPin } from 'lucide-react';
 import { createAddressValidator, createCityValidator, createStateValidator, createPostalCodeValidator } from "@/lib/validationUtils";
 
 const personalDetailsSchema = z.object({
@@ -39,10 +35,6 @@ export function PersonalDetailsStep({
   onComplete,
   onPrevious
 }: PersonalDetailsStepProps) {
-  const [calendarMonth, setCalendarMonth] = React.useState<Date>(() => {
-    return data.dateOfBirth || new Date(1990, 0);
-  });
-
   const form = useForm<PersonalDetailsData>({
     resolver: zodResolver(personalDetailsSchema),
     defaultValues: data
@@ -51,25 +43,6 @@ export function PersonalDetailsStep({
   const onSubmit = (formData: PersonalDetailsData) => {
     onComplete(formData);
   };
-
-  // Generate years from 1950 to current year
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1950 + 1 }, (_, i) => currentYear - i);
-  
-  const months = [
-    { value: 0, label: 'January' },
-    { value: 1, label: 'February' },
-    { value: 2, label: 'March' },
-    { value: 3, label: 'April' },
-    { value: 4, label: 'May' },
-    { value: 5, label: 'June' },
-    { value: 6, label: 'July' },
-    { value: 7, label: 'August' },
-    { value: 8, label: 'September' },
-    { value: 9, label: 'October' },
-    { value: 10, label: 'November' },
-    { value: 11, label: 'December' }
-  ];
 
   return (
     <div className="space-y-6">
@@ -122,97 +95,19 @@ export function PersonalDetailsStep({
               control={form.control} 
               name="dateOfBirth" 
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     DOB *
                   </FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "h-11 justify-start text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <div className="p-3 space-y-3">
-                        <div className="flex gap-2">
-                          <Select
-                            value={calendarMonth.getFullYear().toString()}
-                            onValueChange={(year) => {
-                              const newDate = new Date(parseInt(year), calendarMonth.getMonth(), 1);
-                              setCalendarMonth(newDate);
-                              
-                              // Update the field value if there's an existing date
-                              if (field.value) {
-                                const updatedDate = new Date(parseInt(year), field.value.getMonth(), field.value.getDate());
-                                field.onChange(updatedDate);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue placeholder="Year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {years.map((year) => (
-                                <SelectItem key={year} value={year.toString()}>
-                                  {year}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          
-                          <Select
-                            value={calendarMonth.getMonth().toString()}
-                            onValueChange={(month) => {
-                              const newDate = new Date(calendarMonth.getFullYear(), parseInt(month), 1);
-                              setCalendarMonth(newDate);
-                              
-                              // Update the field value if there's an existing date
-                              if (field.value) {
-                                const updatedDate = new Date(field.value.getFullYear(), parseInt(month), field.value.getDate());
-                                field.onChange(updatedDate);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue placeholder="Month" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {months.map((month) => (
-                                <SelectItem key={month.value} value={month.value.toString()}>
-                                  {month.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => {
-                            field.onChange(date);
-                            if (date) {
-                              setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-                            }
-                          }}
-                          disabled={date => date > new Date() || date < new Date("1950-01-01")}
-                          month={calendarMonth}
-                          onMonthChange={setCalendarMonth}
-                          initialFocus
-                          className={cn("p-0 pointer-events-auto")}
-                        />
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl>
+                    <DateOfBirthPicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select your date of birth"
+                      dateFormat="DD/MM/YYYY"
+                      className="h-11"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} 
