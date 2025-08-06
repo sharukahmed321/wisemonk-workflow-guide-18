@@ -206,6 +206,81 @@ export type Database = {
           },
         ]
       }
+      employment_agreements: {
+        Row: {
+          created_at: string | null
+          document_type: string
+          document_version: number | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          generation_method: string | null
+          id: string
+          is_signed: boolean | null
+          metadata: Json | null
+          mime_type: string | null
+          organization_id: string
+          signed_at: string | null
+          signed_by: string | null
+          signing_completed_at: string | null
+          signing_sent_at: string | null
+          updated_at: string | null
+          user_id: string
+          zoho_sign_document_id: string | null
+          zoho_sign_error: string | null
+          zoho_sign_request_id: string | null
+          zoho_sign_status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_type?: string
+          document_version?: number | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          generation_method?: string | null
+          id?: string
+          is_signed?: boolean | null
+          metadata?: Json | null
+          mime_type?: string | null
+          organization_id: string
+          signed_at?: string | null
+          signed_by?: string | null
+          signing_completed_at?: string | null
+          signing_sent_at?: string | null
+          updated_at?: string | null
+          user_id: string
+          zoho_sign_document_id?: string | null
+          zoho_sign_error?: string | null
+          zoho_sign_request_id?: string | null
+          zoho_sign_status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: string
+          document_version?: number | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          generation_method?: string | null
+          id?: string
+          is_signed?: boolean | null
+          metadata?: Json | null
+          mime_type?: string | null
+          organization_id?: string
+          signed_at?: string | null
+          signed_by?: string | null
+          signing_completed_at?: string | null
+          signing_sent_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+          zoho_sign_document_id?: string | null
+          zoho_sign_error?: string | null
+          zoho_sign_request_id?: string | null
+          zoho_sign_status?: string | null
+        }
+        Relationships: []
+      }
       msa_documents: {
         Row: {
           created_at: string | null
