@@ -49,7 +49,7 @@ export function BrandingSection() {
               </div>
               <div>
                 <h3 className="font-semibold text-foreground">Employer of Record (EOR)</h3>
-                <p className="text-muted-foreground">Efficiently manage your workforce and employee data</p>
+                <p className="text-muted-foreground">Hire full-time employees in India legally and compliantly</p>
               </div>
             </div>
             
