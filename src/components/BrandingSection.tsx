@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Users, Clock } from 'lucide-react';
-import wisemonkLogo from '../assets/wisemonk-logo.jpg';
 
 export function BrandingSection() {
   return (
@@ -14,7 +13,7 @@ export function BrandingSection() {
       
       <div className="relative z-10 max-w-lg w-full">
         <div className="flex items-center gap-4 mb-8">
-          <img src={wisemonkLogo} alt="Wisemonk" className="w-12 h-12 object-cover" />
+          <img src="/lovable-uploads/9acffbb3-df26-455c-8489-4395709d810d.png" alt="Wisemonk" className="w-12 h-12 object-cover" />
           <h1 className="text-3xl font-bold text-foreground">Wisemonk</h1>
         </div>
         
