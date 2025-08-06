@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, CheckCircle, TrendingUp, TrendingDown, Clock } from "lucide-react";
+
 interface KPIData {
   title: string;
   value: string;
@@ -13,6 +14,7 @@ interface KPIData {
   description?: string;
   link?: string;
 }
+
 const kpiData: KPIData[] = [{
   title: "Total Employees",
   value: "247",
@@ -50,6 +52,7 @@ const kpiData: KPIData[] = [{
   description: "Average daily working hours per employee",
   link: "/dashboard/time"
 }];
+
 export function KPICards() {
   const getTrendColor = (trend: 'up' | 'down' | 'neutral') => {
     switch (trend) {
@@ -61,6 +64,7 @@ export function KPICards() {
         return 'text-muted-foreground';
     }
   };
+
   const getTrendIcon = (trend: 'up' | 'down' | 'neutral') => {
     switch (trend) {
       case 'up':
@@ -71,6 +75,7 @@ export function KPICards() {
         return null;
     }
   };
+
   return <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {kpiData.map((kpi, index) => <Card key={index} className="">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 p-5">
@@ -78,7 +83,6 @@ export function KPICards() {
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 {kpi.title}
               </CardTitle>
-              {kpi.description}
             </div>
             <div className="p-1.5 rounded-lg bg-primary/10">
               <kpi.icon className="h-3.5 w-3.5 text-primary" />
