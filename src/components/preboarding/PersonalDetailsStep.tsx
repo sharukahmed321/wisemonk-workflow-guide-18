@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,6 +39,10 @@ export function PersonalDetailsStep({
   onComplete,
   onPrevious
 }: PersonalDetailsStepProps) {
+  const [calendarMonth, setCalendarMonth] = React.useState<Date>(() => {
+    return data.dateOfBirth || new Date(1990, 0);
+  });
+
   const form = useForm<PersonalDetailsData>({
     resolver: zodResolver(personalDetailsSchema),
     defaultValues: data
@@ -140,11 +145,16 @@ export function PersonalDetailsStep({
                       <div className="p-3 space-y-3">
                         <div className="flex gap-2">
                           <Select
-                            value={field.value ? field.value.getFullYear().toString() : ""}
+                            value={calendarMonth.getFullYear().toString()}
                             onValueChange={(year) => {
-                              const currentDate = field.value || new Date();
-                              const newDate = new Date(parseInt(year), currentDate.getMonth(), currentDate.getDate());
-                              field.onChange(newDate);
+                              const newDate = new Date(parseInt(year), calendarMonth.getMonth(), 1);
+                              setCalendarMonth(newDate);
+                              
+                              // Update the field value if there's an existing date
+                              if (field.value) {
+                                const updatedDate = new Date(parseInt(year), field.value.getMonth(), field.value.getDate());
+                                field.onChange(updatedDate);
+                              }
                             }}
                           >
                             <SelectTrigger className="w-24">
@@ -160,11 +170,16 @@ export function PersonalDetailsStep({
                           </Select>
                           
                           <Select
-                            value={field.value ? field.value.getMonth().toString() : ""}
+                            value={calendarMonth.getMonth().toString()}
                             onValueChange={(month) => {
-                              const currentDate = field.value || new Date();
-                              const newDate = new Date(currentDate.getFullYear(), parseInt(month), currentDate.getDate());
-                              field.onChange(newDate);
+                              const newDate = new Date(calendarMonth.getFullYear(), parseInt(month), 1);
+                              setCalendarMonth(newDate);
+                              
+                              // Update the field value if there's an existing date
+                              if (field.value) {
+                                const updatedDate = new Date(field.value.getFullYear(), parseInt(month), field.value.getDate());
+                                field.onChange(updatedDate);
+                              }
                             }}
                           >
                             <SelectTrigger className="w-32">
@@ -183,11 +198,17 @@ export function PersonalDetailsStep({
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            if (date) {
+                              setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+                            }
+                          }}
                           disabled={date => date > new Date() || date < new Date("1950-01-01")}
+                          month={calendarMonth}
+                          onMonthChange={setCalendarMonth}
                           initialFocus
                           className={cn("p-0 pointer-events-auto")}
-                          defaultMonth={field.value || new Date(1990, 0)}
                         />
                       </div>
                     </PopoverContent>
