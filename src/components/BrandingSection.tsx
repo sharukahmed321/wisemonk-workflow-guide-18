@@ -3,6 +3,15 @@ import React from 'react';
 import { Users, Clock } from 'lucide-react';
 
 export function BrandingSection() {
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    console.error('Image failed to load:', e.currentTarget.src);
+    console.error('Error event:', e);
+  };
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    console.log('Image loaded successfully:', e.currentTarget.src);
+  };
+
   return (
     <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center px-8 py-8 bg-gradient-to-br from-brand-50 via-background to-purple-50 relative overflow-hidden">
       {/* Background decorative elements */}
@@ -13,7 +22,13 @@ export function BrandingSection() {
       
       <div className="relative z-10 max-w-lg w-full">
         <div className="flex items-center gap-4 mb-8">
-          <img src="/lovable-uploads/0748a3d4-1f22-484d-96dc-85520406b146.png" alt="Wisemonk" className="w-12 h-12 object-cover" />
+          <img 
+            src="/lovable-uploads/0748a3d4-1f22-484d-96dc-85520406b146.png" 
+            alt="Wisemonk" 
+            className="w-12 h-12 object-cover" 
+            onError={handleImageError}
+            onLoad={handleImageLoad}
+          />
           <h1 className="text-3xl font-bold text-foreground">Wisemonk</h1>
         </div>
         
