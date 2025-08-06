@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Users, Clock } from 'lucide-react';
 import wisemonkLogo from '../assets/wisemonk-logo.jpg';
@@ -20,7 +21,7 @@ export function BrandingSection() {
         <div className="space-y-8">
           <div>
             <h2 className="text-2xl font-semibold text-foreground mb-4">
-              Intelligent HR solutions for modern teams
+              Your trusted partner to hire and pay in India
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
               Streamline your HR processes with our comprehensive employee management platform.
