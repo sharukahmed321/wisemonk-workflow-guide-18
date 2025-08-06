@@ -48,7 +48,7 @@ export function BrandingSection() {
                 <Users className="w-3 h-3 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">Employee Management</h3>
+                <h3 className="font-semibold text-foreground">Employer of Record (EOR)</h3>
                 <p className="text-muted-foreground">Efficiently manage your workforce and employee data</p>
               </div>
             </div>
