@@ -121,7 +121,7 @@ export function Birthdays() {
           ))
         ) : (
           <p className="text-xs text-muted-foreground text-center py-3">
-            No upcoming birthdays
+            No upcoming birthdays. We'll remind you when it's time to celebrate
           </p>
         )}
       </CardContent>
