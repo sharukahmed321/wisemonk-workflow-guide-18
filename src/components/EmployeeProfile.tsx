@@ -1,24 +1,73 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, Calendar, Building } from 'lucide-react';
-import { mockEmployees } from '@/data/employees';
-import { mockEmployeeDocuments } from '@/data/employeeDocuments';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DocumentsSection } from '@/components/documents/DocumentsSection';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useEmployee } from '@/hooks/useEmployee';
 
 export default function EmployeeProfile() {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const permissions = usePermissions();
+  const { employee, loading, error } = useEmployee(employeeId);
   
-  const employee = mockEmployees.find(emp => emp.employeeId === employeeId);
-  const employeeDocuments = mockEmployeeDocuments.filter(doc => doc.employeeId === employeeId);
-  
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+        <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 lg:space-y-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/dashboard/people')}
+            className="mb-4 md:mb-6"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to People
+          </Button>
+          
+          <Card>
+            <CardContent className="p-4 sm:p-6 md:p-8">
+              <div className="flex flex-col md:flex-row gap-4 md:gap-8">
+                <Skeleton className="h-16 w-16 sm:h-20 w-20 md:h-24 w-24 rounded-full" />
+                <div className="flex-1 space-y-4">
+                  <Skeleton className="h-8 w-64" />
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-32" />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <h1 className="text-2xl font-bold text-foreground mb-2">Error Loading Employee</h1>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={() => navigate('/dashboard/people')}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to People
+        </Button>
+      </div>
+    );
+  }
+
   if (!employee) {
     return (
       <div className="p-6 text-center">
@@ -216,7 +265,7 @@ export default function EmployeeProfile() {
 
           <TabsContent value="documents" className="mt-6">
             <DocumentsSection 
-              documents={employeeDocuments} 
+              documents={[]} 
               employeeId={employee.employeeId}
             />
           </TabsContent>
