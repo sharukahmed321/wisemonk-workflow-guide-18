@@ -157,6 +157,24 @@ export function AddEmployeeForm({
     try {
       const employeeId = generateEmployeeId();
       
+      // Get current user information to track who added the employee
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No authenticated session found');
+      }
+
+      // Get current user's profile to capture who is adding the employee
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('user_id', session.user.id)
+        .single();
+
+      if (profileError || !currentUserProfile) {
+        console.error('❌ Error fetching current user profile:', profileError);
+        throw new Error('Failed to get current user information');
+      }
+      
       // Map gender from Male/Female to Son/Daughter
       const genderMapping = {
         'Male': 'Son',
@@ -180,6 +198,8 @@ export function AddEmployeeForm({
           birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
           gender: genderMapping[data.gender], // Map to Son/Daughter
           organization_id: userOrganizationId, // Include organization ID
+          added_by_user_id: session.user.id, // Track who added the employee
+          added_by_email: currentUserProfile.email, // Store client's email
         });
 
       if (error) throw error;

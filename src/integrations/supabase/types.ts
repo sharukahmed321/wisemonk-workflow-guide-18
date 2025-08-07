@@ -50,6 +50,8 @@ export type Database = {
       employees: {
         Row: {
           aadhaar_number: string | null
+          added_by_email: string | null
+          added_by_user_id: string | null
           address_line_1: string | null
           address_line_2: string | null
           age: number | null
@@ -68,6 +70,8 @@ export type Database = {
           department: string
           email: string
           employee_id: string
+          employment_agreement_generated_at: string | null
+          employment_agreement_url: string | null
           employment_type: string
           father_name: string | null
           first_name: string
@@ -89,6 +93,7 @@ export type Database = {
           pincode: string | null
           salary: number | null
           seniority: string | null
+          signing_sent_at: string | null
           start_date: string
           state: string | null
           status: string | null
@@ -96,9 +101,15 @@ export type Database = {
           user_id: string | null
           work_location: string | null
           yfbp: number | null
+          zoho_sign_document_id: string | null
+          zoho_sign_error: string | null
+          zoho_sign_request_id: string | null
+          zoho_sign_status: string | null
         }
         Insert: {
           aadhaar_number?: string | null
+          added_by_email?: string | null
+          added_by_user_id?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
           age?: number | null
@@ -117,6 +128,8 @@ export type Database = {
           department: string
           email: string
           employee_id: string
+          employment_agreement_generated_at?: string | null
+          employment_agreement_url?: string | null
           employment_type: string
           father_name?: string | null
           first_name: string
@@ -138,6 +151,7 @@ export type Database = {
           pincode?: string | null
           salary?: number | null
           seniority?: string | null
+          signing_sent_at?: string | null
           start_date: string
           state?: string | null
           status?: string | null
@@ -145,9 +159,15 @@ export type Database = {
           user_id?: string | null
           work_location?: string | null
           yfbp?: number | null
+          zoho_sign_document_id?: string | null
+          zoho_sign_error?: string | null
+          zoho_sign_request_id?: string | null
+          zoho_sign_status?: string | null
         }
         Update: {
           aadhaar_number?: string | null
+          added_by_email?: string | null
+          added_by_user_id?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
           age?: number | null
@@ -166,6 +186,8 @@ export type Database = {
           department?: string
           email?: string
           employee_id?: string
+          employment_agreement_generated_at?: string | null
+          employment_agreement_url?: string | null
           employment_type?: string
           father_name?: string | null
           first_name?: string
@@ -187,6 +209,7 @@ export type Database = {
           pincode?: string | null
           salary?: number | null
           seniority?: string | null
+          signing_sent_at?: string | null
           start_date?: string
           state?: string | null
           status?: string | null
@@ -194,6 +217,10 @@ export type Database = {
           user_id?: string | null
           work_location?: string | null
           yfbp?: number | null
+          zoho_sign_document_id?: string | null
+          zoho_sign_error?: string | null
+          zoho_sign_request_id?: string | null
+          zoho_sign_status?: string | null
         }
         Relationships: [
           {

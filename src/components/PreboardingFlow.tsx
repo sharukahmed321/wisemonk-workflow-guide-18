@@ -164,21 +164,56 @@ export function PreboardingFlow({
         throw error;
       }
 
+      // Clear localStorage
       localStorage.removeItem(`preboarding-${employeeId}`);
-      setIsLoading(false);
-      toast({
-        title: "Preboarding completed!",
-        description: "Welcome to the team! Your preboarding is now complete."
-      });
+      
+      console.log('✅ Preboarding completed successfully');
+      
+      // Trigger Zoho Sign for employment agreement
+      console.log('🔄 Sending employment agreement for signing...');
+      try {
+        const { data: zohoResponse, error: zohoError } = await supabase.functions.invoke(
+          'send-employment-for-signing',
+          {
+            body: { employeeId }
+          }
+        );
+
+        if (zohoError) {
+          console.error('❌ Error sending for signing:', zohoError);
+          // Don't throw error - preboarding is still complete
+          toast({
+            title: "Preboarding completed!",
+            description: "Welcome to the team! Note: There was an issue sending the agreement for signing.",
+            variant: "default"
+          });
+        } else {
+          console.log('✅ Employment agreement sent for signing:', zohoResponse);
+          toast({
+            title: "Preboarding completed!",
+            description: "Welcome to the team! Your employment agreement has been sent for signing."
+          });
+        }
+      } catch (signError) {
+        console.error('❌ Failed to send for signing:', signError);
+        // Don't throw error - preboarding is still complete
+        toast({
+          title: "Preboarding completed!",
+          description: "Welcome to the team! Your preboarding is now complete."
+        });
+      }
+      
+      // Call the completion callback
       onComplete?.();
     } catch (error) {
       console.error('Error completing preboarding:', error);
-      setIsLoading(false);
       toast({
         title: "Error",
         description: "Failed to complete preboarding. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   const handlePrevious = () => {

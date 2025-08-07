@@ -210,7 +210,7 @@ serve(async (req) => {
     // Determine generation method
     const generationMethod = 'verified_shared_drive_workflow';
 
-    // Create database record
+     // Create database record
     const { data: documentRecord, error: dbError } = await supabase
       .from('employment_agreements')
       .insert({
@@ -228,6 +228,21 @@ serve(async (req) => {
       })
       .select()
       .single();
+
+    // Also update the employees table with the agreement URL after getting signed URL
+    const { data: signedUrlData } = await supabase.storage
+      .from('employment-agreements')
+      .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7 days expiry for employment agreement
+
+    if (signedUrlData?.signedUrl) {
+      await supabase
+        .from('employees')
+        .update({
+          employment_agreement_url: signedUrlData.signedUrl,
+          employment_agreement_generated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+    }
 
     if (dbError) {
       console.error('❌ Database insertion error:', dbError);
