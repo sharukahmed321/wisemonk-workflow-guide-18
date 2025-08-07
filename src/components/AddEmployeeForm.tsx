@@ -174,33 +174,31 @@ export function AddEmployeeForm({
         console.error('❌ Error fetching current user profile:', profileError);
         throw new Error('Failed to get current user information');
       }
-      
-      // Map gender from Male/Female to Son/Daughter
-      const genderMapping = {
-        'Male': 'Son',
-        'Female': 'Daughter'
-      };
-      
+        const employeeData = {
+          employee_id: employeeId,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          job_title: data.jobTitle,
+          department: data.department,
+          employment_type: data.employmentType,
+          annual_gross_salary: data.salary, // Use annual_gross_salary for trigger calculation
+          salary: data.salary, // Also set legacy salary field for backward compatibility
+          start_date: data.startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+          status: 'Invited', // Proper status for new employees
+          birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
+          gender: genderMapping[data.gender], // Map to Son/Daughter
+          organization_id: userOrganizationId, // Include organization ID
+          added_by_user_id: session.user.id, // Track who added the employee
+          added_by_email: clientEmail, // Store client's email
+        };
+
+        console.log('Inserting employee data:', employeeData);
+
         const { error } = await supabase
           .from('employees')
-          .insert({
-            employee_id: employeeId,
-            first_name: data.firstName,
-            last_name: data.lastName,
-            email: data.email,
-            phone: data.phone,
-            job_title: data.jobTitle,
-            department: data.department,
-            employment_type: data.employmentType,
-            annual_gross_salary: data.salary, // Use annual_gross_salary for trigger calculation
-            start_date: data.startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-            status: 'Invited', // Proper status for new employees
-            birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
-            gender: genderMapping[data.gender], // Map to Son/Daughter
-            organization_id: userOrganizationId, // Include organization ID
-            added_by_user_id: session.user.id, // Track who added the employee
-            added_by_email: currentUserProfile.email, // Store client's email
-          });
+          .insert(employeeData);
 
       if (error) throw error;
 
