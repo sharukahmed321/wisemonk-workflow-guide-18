@@ -157,23 +157,45 @@ export function AddEmployeeForm({
     try {
       const employeeId = generateEmployeeId();
       
-      // Get current user information to track who added the employee
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No authenticated session found');
+      console.log('Form submission started with data:', { salary: data.salary, employeeId });
+
+      // Get current session and user information
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('Session error:', sessionError);
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "Please log in again to add employees."
+        });
+        setIsSubmitting(false);
+        return;
       }
 
-      // Get current user's profile to capture who is adding the employee
+      console.log('Session found:', { userId: session.user.id, email: session.user.email });
+
+      // Get current user's profile to store in added_by_email
       const { data: currentUserProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, first_name, last_name')
         .eq('user_id', session.user.id)
         .single();
 
-      if (profileError || !currentUserProfile) {
-        console.error('❌ Error fetching current user profile:', profileError);
-        throw new Error('Failed to get current user information');
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        // Fallback to session email if profile fetch fails
+        console.log('Using session email as fallback:', session.user.email);
       }
+
+      const clientEmail = currentUserProfile?.email || session.user.email;
+      console.log('Client email to store:', clientEmail);
+      
+      // Map gender from Male/Female to Son/Daughter
+      const genderMapping = {
+        'Male': 'Son',
+        'Female': 'Daughter'
+      };
+
         const employeeData = {
           employee_id: employeeId,
           first_name: data.firstName,
