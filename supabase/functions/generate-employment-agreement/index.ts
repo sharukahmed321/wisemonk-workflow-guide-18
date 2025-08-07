@@ -40,14 +40,11 @@ serve(async (req) => {
 
     console.log('🔄 Generating Employment Agreement for user:', user.id);
 
-    // Fetch user data with organization info (same approach as MSA)
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
+    // Fetch employee data and organization details
+    const { data: employeeData, error: employeeError } = await supabase
+      .from('employees')
       .select(`
-        first_name,
-        last_name,
-        job_title,
-        organization_id,
+        *,
         organizations (
           id,
           name,
@@ -55,37 +52,94 @@ serve(async (req) => {
           business_address,
           business_city,
           business_state,
-          business_postal_code
+          business_postal_code,
+          country,
+          phone,
+          website
         )
       `)
       .eq('user_id', user.id)
       .single();
 
-    if (profileError || !profileData) {
-      console.error('❌ Error fetching profile data:', profileError);
-      throw new Error('Failed to fetch user profile data');
+    if (employeeError || !employeeData) {
+      console.error('❌ Error fetching employee data:', employeeError);
+      throw new Error('Failed to fetch employee data. Please ensure you have an employee record.');
     }
 
-    if (!profileData.organizations) {
-      throw new Error('No organization found for user');
+    if (!employeeData.organizations) {
+      throw new Error('No organization found for employee');
     }
 
-    const organization = profileData.organizations;
-    console.log('✅ Fetched user data for:', profileData.first_name, profileData.last_name);
+    const organization = employeeData.organizations;
+    console.log('✅ Fetched employee data for:', employeeData.first_name, employeeData.last_name);
     console.log('✅ Organization:', organization.name);
 
-    // Prepare employment data for placeholder replacement
+    // Prepare comprehensive employment data for placeholder replacement
     const employmentData = {
-      first_name: profileData.first_name,
-      last_name: profileData.last_name,
-      job_title: profileData.job_title,
+      // Employee data
+      id: employeeData.id,
+      employee_id: employeeData.employee_id,
+      first_name: employeeData.first_name,
+      last_name: employeeData.last_name,
+      full_name: employeeData.full_name || `${employeeData.first_name} ${employeeData.last_name}`,
+      email: employeeData.email,
+      phone: employeeData.phone,
+      job_title: employeeData.job_title,
+      job_description: employeeData.job_description,
+      department: employeeData.department,
+      employment_type: employeeData.employment_type,
+      manager_details: employeeData.manager_details || '',
+      work_location: employeeData.work_location,
+      
+      // Salary data
+      annual_gross_salary: employeeData.annual_gross_salary,
+      annual_basic: employeeData.annual_basic,
+      annual_hra: employeeData.annual_hra,
+      annual_lta: employeeData.annual_lta,
+      annual_special_allowance: employeeData.annual_special_allowance,
+      yfbp: employeeData.yfbp,
+      monthly_gross: employeeData.monthly_gross,
+      monthly_basic: employeeData.monthly_basic,
+      monthly_hra: employeeData.monthly_hra,
+      monthly_lta: employeeData.monthly_lta,
+      monthly_special_allowance: employeeData.monthly_special_allowance,
+      mfbp: employeeData.mfbp,
+      bonus: employeeData.bonus || 0,
+      
+      // Date fields
+      start_date: employeeData.start_date,
+      joining_date: employeeData.start_date, // Use start_date as joining_date
+      last_date: employeeData.last_date,
+      agreement_date: employeeData.agreement_date,
+      
+      // Personal details
+      date_of_birth: employeeData.date_of_birth,
+      age: employeeData.age,
+      gender: employeeData.gender,
+      father_name: employeeData.father_name,
+      aadhaar_number: employeeData.aadhaar_number,
+      
+      // Address
+      address_line_1: employeeData.address_line_1,
+      address_line_2: employeeData.address_line_2,
+      city: employeeData.city,
+      state: employeeData.state,
+      pincode: employeeData.pincode,
+      
+      // Organization data
       name: organization.name,
       legal_name: organization.legal_name,
       business_address: organization.business_address,
       business_city: organization.business_city,
       business_state: organization.business_state,
       business_postal_code: organization.business_postal_code,
+      company_phone: organization.phone,
+      company_website: organization.website,
+      country: organization.country,
+      
+      // System fields
       currentDate: new Date().toISOString(),
+      organization_id: employeeData.organization_id,
     };
 
     // STEP 1: Quick setup verification (fast checks without API calls)
@@ -127,7 +181,7 @@ serve(async (req) => {
     // Create file name and path
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `Employment_Agreement_${organization.name.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}.pdf`;
-    const filePath = `${profileData.organization_id}/${user.id}/${fileName}`;
+    const filePath = `${employeeData.organization_id}/${user.id}/${fileName}`;
 
     // Upload to Supabase storage
     console.log('📤 Uploading PDF to storage bucket...');
@@ -161,7 +215,7 @@ serve(async (req) => {
       .from('employment_agreements')
       .insert({
         user_id: user.id,
-        organization_id: profileData.organization_id,
+        organization_id: employeeData.organization_id,
         document_type: 'employment_agreement',
         file_name: fileName,
         file_path: filePath,
