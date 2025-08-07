@@ -115,46 +115,6 @@ serve(async (req) => {
     }
     
     console.log('✅ All verifications passed, proceeding with Employment Agreement generation...');
-
-    // Check if a recent Employment Agreement document already exists (within last 24 hours)
-    const { data: existingDoc } = await supabase
-      .from('employment_agreements')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('organization_id', profileData.organization_id)
-      .eq('document_type', 'employment_agreement')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    // If document exists and is recent, return it
-    if (existingDoc && new Date(existingDoc.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)) {
-      console.log('📄 Returning existing recent document:', existingDoc.file_name);
-      
-      // Get signed URL for download
-      const { data: signedUrl } = await supabase.storage
-        .from('employment-agreements')
-        .createSignedUrl(existingDoc.file_path, 60 * 60); // 1 hour expiry
-
-      return new Response(JSON.stringify({
-        success: true,
-        document: {
-          id: existingDoc.id,
-          file_name: existingDoc.file_name,
-          file_path: existingDoc.file_path,
-          download_url: signedUrl?.signedUrl,
-          created_at: existingDoc.created_at,
-          is_signed: existingDoc.is_signed,
-          generation_method: existingDoc.generation_method
-        }
-      }), {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      });
-    }
-
     console.log('🔄 Generating PDF with verified Shared Drive workflow...');
 
     // Get template document ID from secrets (already verified)
