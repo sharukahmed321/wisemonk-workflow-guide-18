@@ -49,7 +49,7 @@ export function DateOfBirthPicker({
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
-    return value || new Date(1990, 0, 1);
+    return value && isValid(value) ? new Date(value.getFullYear(), value.getMonth(), 1) : new Date(1990, 0, 1);
   });
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -136,8 +136,13 @@ export function DateOfBirthPicker({
   };
 
   const handleYearChange = (year: string) => {
-    const newDate = new Date(parseInt(year), calendarMonth.getMonth(), 1);
-    setCalendarMonth(newDate);
+    if (calendarMonth instanceof Date && isValid(calendarMonth)) {
+      const newDate = new Date(parseInt(year), calendarMonth.getMonth(), 1);
+      setCalendarMonth(newDate);
+    } else {
+      const newDate = new Date(parseInt(year), 0, 1);
+      setCalendarMonth(newDate);
+    }
     
     // Update the selected date if there is one
     if (value) {
@@ -149,8 +154,13 @@ export function DateOfBirthPicker({
   };
 
   const handleMonthChange = (month: string) => {
-    const newDate = new Date(calendarMonth.getFullYear(), parseInt(month), 1);
-    setCalendarMonth(newDate);
+    if (calendarMonth instanceof Date && isValid(calendarMonth)) {
+      const newDate = new Date(calendarMonth.getFullYear(), parseInt(month), 1);
+      setCalendarMonth(newDate);
+    } else {
+      const newDate = new Date(new Date().getFullYear(), parseInt(month), 1);
+      setCalendarMonth(newDate);
+    }
     
     // Update the selected date if there is one
     if (value) {
@@ -162,11 +172,13 @@ export function DateOfBirthPicker({
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
-    const newMonth = direction === 'prev' 
-      ? new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1)
-      : new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
-    
-    setCalendarMonth(newMonth);
+    if (calendarMonth instanceof Date && isValid(calendarMonth)) {
+      const newMonth = direction === 'prev' 
+        ? new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1)
+        : new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+      
+      setCalendarMonth(newMonth);
+    }
   };
 
   const isValidDateOfBirth = (date: Date): boolean => {
@@ -231,7 +243,7 @@ export function DateOfBirthPicker({
               
               <div className="flex gap-2">
                 <Select
-                  value={calendarMonth.getMonth().toString()}
+                  value={(calendarMonth instanceof Date && isValid(calendarMonth)) ? calendarMonth.getMonth().toString() : "0"}
                   onValueChange={handleMonthChange}
                   disabled={disabled}
                 >
@@ -248,7 +260,7 @@ export function DateOfBirthPicker({
                 </Select>
                 
                 <Select
-                  value={calendarMonth.getFullYear().toString()}
+                  value={(calendarMonth instanceof Date && isValid(calendarMonth)) ? calendarMonth.getFullYear().toString() : new Date().getFullYear().toString()}
                   onValueChange={handleYearChange}
                   disabled={disabled}
                 >
@@ -282,7 +294,12 @@ export function DateOfBirthPicker({
               selected={value}
               onSelect={handleCalendarSelect}
               month={calendarMonth}
-              onMonthChange={setCalendarMonth}
+              onMonthChange={(month) => {
+                // Ensure month is always a Date object
+                if (month instanceof Date && isValid(month)) {
+                  setCalendarMonth(month);
+                }
+              }}
               disabled={(date) => !isValidDateOfBirth(date) || disabled}
               initialFocus
               className="p-0 pointer-events-auto"
