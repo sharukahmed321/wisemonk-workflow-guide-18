@@ -61,6 +61,13 @@ export function CompensationReviewStep({
   ];
 
   const onSubmit = (data: CompensationReviewData) => {
+    // Validate contract employees have end date
+    if (data.employmentType === 'Contract' && !employeeData.lastDate) {
+      form.setError('employmentType', {
+        message: 'Contract employees must have an end date specified in the previous step'
+      });
+      return;
+    }
     onNext(data);
   };
 
@@ -215,6 +222,12 @@ export function CompensationReviewStep({
                       <span className="font-medium text-muted-foreground">Start Date:</span>
                       <p>{employeeData.startDate ? format(employeeData.startDate, "PPP") : 'Not specified'}</p>
                     </div>
+                    {employeeData.lastDate && (
+                      <div>
+                        <span className="font-medium text-muted-foreground">End Date:</span>
+                        <p>{format(employeeData.lastDate, "PPP")}</p>
+                      </div>
+                    )}
                     <div>
                       <span className="font-medium text-muted-foreground">Work Location:</span>
                       <p className="capitalize">{employeeData.workLocation}</p>

@@ -29,8 +29,22 @@ const employeeSchema = z.object({
   employmentType: z.enum(['Full-time', 'Part-time', 'Contract']),
   salary: z.number().min(0, 'Salary must be a positive number'),
   startDate: z.date(),
+  lastDate: z.date().optional(),
   birthday: z.date().optional(),
   gender: z.enum(['Male', 'Female'], { message: 'Gender is required' }),
+}).refine((data) => {
+  // If employment type is Contract, last date should be provided
+  if (data.employmentType === 'Contract' && !data.lastDate) {
+    return false;
+  }
+  // If last date is provided, it should be after start date
+  if (data.lastDate && data.lastDate <= data.startDate) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Contract employees must have an end date that is after the start date",
+  path: ["lastDate"],
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -60,6 +74,7 @@ export function AddEmployeeForm({
       department: '',
       employmentType: 'Full-time' as const,
       salary: 0,
+      lastDate: undefined,
       gender: undefined,
       birthday: undefined,
     }
@@ -210,6 +225,7 @@ export function AddEmployeeForm({
           annual_gross_salary: data.salary, // Use annual_gross_salary for trigger calculation
           salary: data.salary, // Also set legacy salary field for backward compatibility
           start_date: data.startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+          last_date: data.lastDate ? data.lastDate.toISOString().split('T')[0] : null, // Contract end date
           status: 'Invited', // Proper status for new employees
           birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
           gender: genderMapping[data.gender], // Map to Son/Daughter
@@ -545,6 +561,35 @@ export function AddEmployeeForm({
                         </Popover>
                         <FormMessage />
                       </FormItem>} />
+
+                   {form.watch('employmentType') === 'Contract' && (
+                     <FormField control={form.control} name="lastDate" render={({
+                       field
+                     }) => <FormItem className="flex flex-col">
+                           <FormLabel>End Date *</FormLabel>
+                           <Popover>
+                             <PopoverTrigger asChild>
+                               <FormControl>
+                                 <Button variant="outline" className={cn("h-11 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                   {field.value ? format(field.value, "PPP") : <span>Pick end date</span>}
+                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                 </Button>
+                               </FormControl>
+                             </PopoverTrigger>
+                             <PopoverContent className="w-auto p-0" align="start">
+                               <Calendar 
+                                 mode="single" 
+                                 selected={field.value} 
+                                 onSelect={field.onChange} 
+                                 disabled={(date) => form.getValues('startDate') ? date <= form.getValues('startDate') : false}
+                                 initialFocus 
+                                 className={cn("p-3 pointer-events-auto")} 
+                               />
+                             </PopoverContent>
+                           </Popover>
+                           <FormMessage />
+                         </FormItem>} />
+                   )}
                 </div>
               </div>
 

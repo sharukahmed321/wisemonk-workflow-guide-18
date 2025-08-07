@@ -88,7 +88,7 @@ export type Database = {
           monthly_hra: number | null
           monthly_lta: number | null
           monthly_special_allowance: number | null
-          organization_id: string | null
+          organization_id: string
           phone: string | null
           pincode: string | null
           salary: number | null
@@ -146,7 +146,7 @@ export type Database = {
           monthly_hra?: number | null
           monthly_lta?: number | null
           monthly_special_allowance?: number | null
-          organization_id?: string | null
+          organization_id: string
           phone?: string | null
           pincode?: string | null
           salary?: number | null
@@ -204,7 +204,7 @@ export type Database = {
           monthly_hra?: number | null
           monthly_lta?: number | null
           monthly_special_allowance?: number | null
-          organization_id?: string | null
+          organization_id?: string
           phone?: string | null
           pincode?: string | null
           salary?: number | null

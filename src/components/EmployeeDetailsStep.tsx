@@ -31,6 +31,7 @@ const employeeDetailsSchema = z.object({
   jobTitle: createJobTitleValidator(100),
   seniority: z.enum(['junior', 'mid-level', 'senior']),
   startDate: z.date(),
+  lastDate: z.date().optional(),
   workLocation: z.enum(['remote', 'office', 'hybrid']),
   jobDescription: z.string().optional()
 });
@@ -57,6 +58,7 @@ export function EmployeeDetailsStep({
       jobTitle: defaultValues?.jobTitle || '',
       seniority: defaultValues?.seniority || 'junior',
       startDate: defaultValues?.startDate,
+      lastDate: defaultValues?.lastDate,
       workLocation: defaultValues?.workLocation || 'remote',
       jobDescription: defaultValues?.jobDescription || ''
     }
