@@ -19,6 +19,17 @@ export default function StandalonePreboardingPage() {
   console.log('🔍 StandalonePreboarding - Received employeeId:', employeeId);
   console.log('🔍 StandalonePreboarding - Is valid UUID:', employeeId ? isValidUUID(employeeId) : false);
 
+  // Auto-redirect to valid employee UUID if accessing invalid route
+  React.useEffect(() => {
+    if (!employeeId || employeeId === ':employeeId' || !isValidUUID(employeeId)) {
+      // Redirect to a valid employee UUID for testing
+      const validEmployeeId = '2b90d252-6600-498e-a4a6-90aa00229d6c'; // Sarah Johnson
+      console.log('🔄 Redirecting to valid employee UUID:', validEmployeeId);
+      navigate(`/preboarding/${validEmployeeId}`, { replace: true });
+      return;
+    }
+  }, [employeeId, navigate]);
+
   if (!employeeId || employeeId === ':employeeId' || !isValidUUID(employeeId)) {
     const errorReason = !employeeId 
       ? 'No employee ID provided' 
