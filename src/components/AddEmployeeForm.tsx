@@ -181,26 +181,26 @@ export function AddEmployeeForm({
         'Female': 'Daughter'
       };
       
-      const { error } = await supabase
-        .from('employees')
-        .insert({
-          employee_id: employeeId,
-          first_name: data.firstName,
-          last_name: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          job_title: data.jobTitle,
-          department: data.department,
-          employment_type: data.employmentType,
-          salary: data.salary,
-          start_date: data.startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-          status: 'Active', // Default status for new employees
-          birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
-          gender: genderMapping[data.gender], // Map to Son/Daughter
-          organization_id: userOrganizationId, // Include organization ID
-          added_by_user_id: session.user.id, // Track who added the employee
-          added_by_email: currentUserProfile.email, // Store client's email
-        });
+        const { error } = await supabase
+          .from('employees')
+          .insert({
+            employee_id: employeeId,
+            first_name: data.firstName,
+            last_name: data.lastName,
+            email: data.email,
+            phone: data.phone,
+            job_title: data.jobTitle,
+            department: data.department,
+            employment_type: data.employmentType,
+            annual_gross_salary: data.salary, // Use annual_gross_salary for trigger calculation
+            start_date: data.startDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+            status: 'Invited', // Proper status for new employees
+            birthday: data.birthday ? data.birthday.toISOString().split('T')[0] : null,
+            gender: genderMapping[data.gender], // Map to Son/Daughter
+            organization_id: userOrganizationId, // Include organization ID
+            added_by_user_id: session.user.id, // Track who added the employee
+            added_by_email: currentUserProfile.email, // Store client's email
+          });
 
       if (error) throw error;
 
