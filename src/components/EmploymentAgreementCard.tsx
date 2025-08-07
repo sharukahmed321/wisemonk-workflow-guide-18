@@ -8,10 +8,11 @@ import { useEmploymentAgreement } from '@/hooks/useEmploymentAgreement';
 
 interface EmploymentAgreementCardProps {
   onGenerated?: () => void;
+  employeeId?: string;
 }
 
-export function EmploymentAgreementCard({ onGenerated }: EmploymentAgreementCardProps) {
-  const { generateAgreement, isGenerating, error, document, isGenerated, downloadDocument } = useEmploymentAgreement();
+export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentAgreementCardProps) {
+  const { generateAgreement, isGenerating, error, document, isGenerated, downloadDocument } = useEmploymentAgreement(employeeId);
 
   const handleGenerate = async () => {
     const generatedDocument = await generateAgreement();

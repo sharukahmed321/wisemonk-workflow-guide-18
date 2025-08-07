@@ -22,7 +22,7 @@ interface UseEmploymentAgreementReturn {
   downloadDocument: (document: EmploymentAgreementDocument) => void;
 }
 
-export function useEmploymentAgreement(): UseEmploymentAgreementReturn {
+export function useEmploymentAgreement(employeeId?: string): UseEmploymentAgreementReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [document, setDocument] = useState<EmploymentAgreementDocument | null>(null);
@@ -45,6 +45,7 @@ export function useEmploymentAgreement(): UseEmploymentAgreementReturn {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
+        body: employeeId ? { employeeId } : undefined,
       });
 
       if (error) {

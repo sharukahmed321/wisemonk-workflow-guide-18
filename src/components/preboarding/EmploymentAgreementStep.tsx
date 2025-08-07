@@ -20,9 +20,10 @@ interface EmploymentAgreementStepProps {
   data: EmploymentAgreementData;
   onComplete: (data: EmploymentAgreementData) => void;
   onPrevious: () => void;
+  employeeId?: string;
 }
 
-export function EmploymentAgreementStep({ data, onComplete, onPrevious }: EmploymentAgreementStepProps) {
+export function EmploymentAgreementStep({ data, onComplete, onPrevious, employeeId }: EmploymentAgreementStepProps) {
   const [agreedToTerms, setAgreedToTerms] = useState(data.agreedToTerms);
   const [digitalSignature, setDigitalSignature] = useState(data.digitalSignature);
   const [documentGenerated, setDocumentGenerated] = useState(data.documentGenerated || false);
@@ -64,7 +65,7 @@ export function EmploymentAgreementStep({ data, onComplete, onPrevious }: Employ
       </div>
 
       {/* Document Generation */}
-      <EmploymentAgreementCard onGenerated={handleDocumentGenerated} />
+      <EmploymentAgreementCard onGenerated={handleDocumentGenerated} employeeId={employeeId} />
 
       {/* Agreement Content - Only show after document is generated */}
       {documentGenerated && (

@@ -40,8 +40,21 @@ serve(async (req) => {
 
     console.log('🔄 Generating Employment Agreement for user:', user.id);
 
+    // Check if employeeId is provided in request body (for preboarding)
+    let requestBody = {};
+    try {
+      const text = await req.text();
+      if (text) {
+        requestBody = JSON.parse(text);
+      }
+    } catch (e) {
+      // No body or invalid JSON, continue with empty body
+    }
+
+    const { employeeId } = requestBody as { employeeId?: string };
+
     // Fetch employee data and organization details
-    const { data: employeeData, error: employeeError } = await supabase
+    let employeeQuery = supabase
       .from('employees')
       .select(`
         *,
@@ -57,9 +70,18 @@ serve(async (req) => {
           phone,
           website
         )
-      `)
-      .eq('user_id', user.id)
-      .single();
+      `);
+
+    // Use employeeId if provided (preboarding), otherwise use user_id (linked employee)
+    if (employeeId) {
+      employeeQuery = employeeQuery.eq('id', employeeId);
+      console.log('🔍 Querying by employee ID:', employeeId);
+    } else {
+      employeeQuery = employeeQuery.eq('user_id', user.id);
+      console.log('🔍 Querying by user ID:', user.id);
+    }
+
+    const { data: employeeData, error: employeeError } = await employeeQuery.single();
 
     if (employeeError || !employeeData) {
       console.error('❌ Error fetching employee data:', employeeError);

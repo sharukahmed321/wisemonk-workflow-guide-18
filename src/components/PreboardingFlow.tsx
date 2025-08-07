@@ -105,15 +105,45 @@ export function PreboardingFlow({
     isCompleted: completedSteps.has(3),
     isCurrent: currentStep === 3
   }];
-  const handleStepComplete = (step: number, data: any) => {
+  const handleStepComplete = async (step: number, data: any) => {
     setCompletedSteps(prev => new Set([...prev, step]));
 
     // Update the specific step data
     if (step === 1) {
+      const personalDetails = data;
       setPreboardingData(prev => ({
         ...prev,
-        personalDetails: data
+        personalDetails: personalDetails
       }));
+
+      // Save personal details to database immediately and link user
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('employees')
+            .update({
+              full_name: personalDetails.fullName,
+              father_name: personalDetails.fatherName,
+              date_of_birth: personalDetails.dateOfBirth.toISOString().split('T')[0],
+              aadhaar_number: personalDetails.aadhaarNumber,
+              address_line_1: personalDetails.addressLine1,
+              address_line_2: personalDetails.addressLine2,
+              city: personalDetails.city,
+              state: personalDetails.state,
+              pincode: personalDetails.pincode,
+              user_id: user.id // Link user to employee record
+            })
+            .eq('id', employeeId);
+        }
+      } catch (error) {
+        console.error('Error saving personal details:', error);
+        toast({
+          title: "Warning",
+          description: "Personal details saved locally but couldn't update database.",
+          variant: "destructive"
+        });
+      }
     } else if (step === 2) {
       setPreboardingData(prev => ({
         ...prev,
@@ -128,6 +158,7 @@ export function PreboardingFlow({
         }
       }));
     }
+    
     if (step < 3) {
       setCurrentStep(step + 1);
       toast({
@@ -267,7 +298,7 @@ export function PreboardingFlow({
             
             {currentStep === 2 && <BackgroundVerificationStep data={preboardingData.backgroundVerification} onComplete={data => handleStepComplete(2, data)} onPrevious={handlePrevious} />}
             
-            {currentStep === 3 && <EmploymentAgreementStep data={preboardingData.employmentAgreement} onComplete={data => handleStepComplete(3, data)} onPrevious={handlePrevious} />}
+            {currentStep === 3 && <EmploymentAgreementStep data={preboardingData.employmentAgreement} onComplete={data => handleStepComplete(3, data)} onPrevious={handlePrevious} employeeId={employeeId} />}
           </CardContent>
         </Card>
       </div>
