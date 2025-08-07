@@ -116,31 +116,31 @@ export function PreboardingFlow({
         personalDetails: personalDetails
       }));
 
-      // Save personal details to database immediately and link user
+      // Save personal details to database using service role edge function
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase
-            .from('employees')
-            .update({
-              full_name: personalDetails.fullName,
-              father_name: personalDetails.fatherName,
-              date_of_birth: personalDetails.dateOfBirth.toISOString().split('T')[0],
-              aadhaar_number: personalDetails.aadhaarNumber,
-              address_line_1: personalDetails.addressLine1,
-              address_line_2: personalDetails.addressLine2,
-              city: personalDetails.city,
-              state: personalDetails.state,
-              pincode: personalDetails.pincode,
-              user_id: user.id // Link user to employee record
-            })
-            .eq('id', employeeId);
+        console.log('💾 Saving personal details to database...');
+        const { data: response, error } = await supabase.functions.invoke('update-preboarding-data', {
+          body: { 
+            employeeId, 
+            personalDetails, 
+            stepNumber: 1 
+          }
+        });
+
+        if (error) {
+          throw error;
         }
+
+        console.log('✅ Personal details saved successfully:', response);
+        toast({
+          title: "Success",
+          description: "Personal details saved successfully!",
+        });
       } catch (error) {
-        console.error('Error saving personal details:', error);
+        console.error('❌ Error saving personal details:', error);
         toast({
           title: "Warning",
-          description: "Personal details saved locally but couldn't update database.",
+          description: "Personal details saved locally but couldn't update database. You can continue and we'll retry later.",
           variant: "destructive"
         });
       }
@@ -174,26 +174,22 @@ export function PreboardingFlow({
     setIsLoading(true);
 
     try {
-      // Save personal details to the employee record
-      const { error } = await supabase
-        .from('employees')
-        .update({
-          full_name: preboardingData.personalDetails.fullName,
-          father_name: preboardingData.personalDetails.fatherName,
-          date_of_birth: preboardingData.personalDetails.dateOfBirth.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
-          aadhaar_number: preboardingData.personalDetails.aadhaarNumber,
-          address_line_1: preboardingData.personalDetails.addressLine1,
-          address_line_2: preboardingData.personalDetails.addressLine2,
-          city: preboardingData.personalDetails.city,
-          state: preboardingData.personalDetails.state,
-          pincode: preboardingData.personalDetails.pincode,
-          status: 'Active'
-        })
-        .eq('id', employeeId);
+      // Final save of all preboarding data and mark employee as active
+      console.log('🏁 Completing preboarding process...');
+      const { data: response, error } = await supabase.functions.invoke('update-preboarding-data', {
+        body: { 
+          employeeId, 
+          personalDetails: preboardingData.personalDetails, 
+          stepNumber: 'complete',
+          finalizeStatus: true
+        }
+      });
 
       if (error) {
         throw error;
       }
+
+      console.log('✅ Preboarding data finalized:', response);
 
       // Clear localStorage
       localStorage.removeItem(`preboarding-${employeeId}`);
