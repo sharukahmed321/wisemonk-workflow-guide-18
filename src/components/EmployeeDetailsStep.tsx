@@ -25,6 +25,9 @@ const employeeDetailsSchema = z.object({
     .min(1, 'Phone number is required')
     .refine(val => val.trim().length > 0, 'Phone number cannot be only whitespace')
     .transform(val => val.trim()),
+  gender: z.enum(['Male', 'Female'], {
+    message: 'Please select a gender',
+  }),
   jobTitle: createJobTitleValidator(100),
   seniority: z.enum(['junior', 'mid-level', 'senior']),
   startDate: z.date(),
@@ -50,6 +53,7 @@ export function EmployeeDetailsStep({
       lastName: defaultValues?.lastName || '',
       email: defaultValues?.email || '',
       phone: defaultValues?.phone || '',
+      gender: defaultValues?.gender,
       jobTitle: defaultValues?.jobTitle || '',
       seniority: defaultValues?.seniority || 'junior',
       startDate: defaultValues?.startDate,
@@ -67,6 +71,14 @@ export function EmployeeDetailsStep({
   }, {
     value: 'senior',
     label: 'Senior'
+  }];
+
+  const genderOptions = [{
+    value: 'Male',
+    label: 'Male'
+  }, {
+    value: 'Female',
+    label: 'Female'
   }];
 
   const workLocationOptions = [{
@@ -97,7 +109,7 @@ export function EmployeeDetailsStep({
           {/* Personal Information */}
           <div>
             <h4 className="font-medium text-foreground mb-4">Personal Information</h4>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <FormField 
                 control={form.control} 
                 name="firstName" 
@@ -121,6 +133,31 @@ export function EmployeeDetailsStep({
                     <FormControl>
                       <Input placeholder="Enter last name" className="h-11" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} 
+              />
+
+              <FormField 
+                control={form.control} 
+                name="gender" 
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gender</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {genderOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )} 

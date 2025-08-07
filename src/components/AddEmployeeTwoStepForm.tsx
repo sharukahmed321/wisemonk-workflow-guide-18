@@ -255,6 +255,14 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
         // Step 2: Create employee record
         console.log('👤 Step 2: Creating employee record...');
+        
+        // Map gender to the database format (Male -> Son, Female -> Daughter)
+        const genderMapping = {
+          'Male': 'Son',
+          'Female': 'Daughter'
+        };
+        const mappedGender = employeeData.gender ? genderMapping[employeeData.gender as keyof typeof genderMapping] : undefined;
+        
         const { data: employee, error: employeeError } = await supabase
           .from('employees')
           .insert({
@@ -263,13 +271,15 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
             last_name: employeeData.lastName,
             email: employeeData.email,
             phone: employeeData.phone,
+            gender: mappedGender,
             job_title: employeeData.jobTitle,
             seniority: employeeData.seniority,
             work_location: employeeData.workLocation,
             job_description: employeeData.jobDescription,
             department: data.department, // Using actual form data
             employment_type: data.employmentType, // Using actual form data
-            salary: data.salary,
+            annual_gross_salary: data.salary, // Map to annual_gross_salary to trigger calculations
+            salary: data.salary, // Keep for backward compatibility
             currency: data.currency,
             start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             status: 'Invited',
