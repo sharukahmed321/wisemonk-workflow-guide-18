@@ -284,7 +284,9 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
             start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             status: 'Invited',
             organization_id: organizationId,
-            user_id: null // No user_id until they sign up
+            user_id: null, // No user_id until they sign up
+            added_by_user_id: user.id, // Track who added the employee
+            added_by_email: user.email // Track the email of who added the employee
           })
           .select()
           .single();
