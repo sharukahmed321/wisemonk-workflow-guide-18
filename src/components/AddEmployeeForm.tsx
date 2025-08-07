@@ -60,6 +60,8 @@ export function AddEmployeeForm({
       department: '',
       employmentType: 'Full-time' as const,
       salary: 0,
+      gender: undefined,
+      birthday: undefined,
     }
   });
 
