@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { DocumentUploadCard } from './DocumentUploadCard';
 import { Shield, FileText, CreditCard, Receipt, Award } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface BackgroundVerificationData {
   documents: {
@@ -17,11 +19,13 @@ interface BackgroundVerificationStepProps {
   data: BackgroundVerificationData;
   onComplete: (data: BackgroundVerificationData) => void;
   onPrevious: () => void;
+  employeeId: string;
 }
 
-export function BackgroundVerificationStep({ data, onComplete, onPrevious }: BackgroundVerificationStepProps) {
+export function BackgroundVerificationStep({ data, onComplete, onPrevious, employeeId }: BackgroundVerificationStepProps) {
   const [documents, setDocuments] = useState(data.documents);
   const [uploadStatus, setUploadStatus] = useState(data.uploadStatus);
+  const { toast } = useToast();
 
   const documentTypes = [
     {
@@ -47,14 +51,26 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious }: Bac
     }
   ];
 
-  const handleFileUpload = (documentType: string, file: File) => {
+  const handleFileUpload = async (documentType: string, file: File) => {
     setUploadStatus(prev => ({
       ...prev,
       [documentType]: 'uploading'
     }));
 
-    // Simulate upload process
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('employeeId', employeeId);
+      formData.append('documentType', documentType);
+
+      const { data, error } = await supabase.functions.invoke('upload-employee-document', {
+        body: formData
+      });
+
+      if (error) {
+        throw error;
+      }
+
       setDocuments(prev => ({
         ...prev,
         [documentType]: file
@@ -64,7 +80,24 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious }: Bac
         ...prev,
         [documentType]: 'success'
       }));
-    }, 2000);
+      
+      toast({
+        title: "Document uploaded successfully",
+        description: `${documentType} has been uploaded and is pending verification.`,
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadStatus(prev => ({
+        ...prev,
+        [documentType]: 'error'
+      }));
+      
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload document. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFileRemove = (documentType: string) => {

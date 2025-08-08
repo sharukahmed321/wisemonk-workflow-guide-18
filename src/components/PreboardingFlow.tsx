@@ -292,7 +292,7 @@ export function PreboardingFlow({
           <CardContent className="p-8">
             {currentStep === 1 && <PersonalDetailsStep data={preboardingData.personalDetails} onComplete={data => handleStepComplete(1, data)} onPrevious={handlePrevious} />}
             
-            {currentStep === 2 && <BackgroundVerificationStep data={preboardingData.backgroundVerification} onComplete={data => handleStepComplete(2, data)} onPrevious={handlePrevious} />}
+            {currentStep === 2 && <BackgroundVerificationStep data={preboardingData.backgroundVerification} onComplete={data => handleStepComplete(2, data)} onPrevious={handlePrevious} employeeId={employeeId} />}
             
             {currentStep === 3 && <EmploymentAgreementStep data={preboardingData.employmentAgreement} onComplete={data => handleStepComplete(3, data)} onPrevious={handlePrevious} employeeId={employeeId} />}
           </CardContent>

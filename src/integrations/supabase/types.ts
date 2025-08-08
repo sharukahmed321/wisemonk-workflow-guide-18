@@ -68,6 +68,8 @@ export type Database = {
           currency: string | null
           date_of_birth: string | null
           department: string
+          documents_uploaded_at: string | null
+          documents_verification_status: string | null
           email: string
           employee_id: string
           employment_agreement_generated_at: string | null
@@ -89,8 +91,11 @@ export type Database = {
           monthly_lta: number | null
           monthly_special_allowance: number | null
           organization_id: string
+          pan_card_url: string | null
           phone: string | null
           pincode: string | null
+          previous_offer_letter_url: string | null
+          previous_payslips_url: string | null
           salary: number | null
           seniority: string | null
           signing_sent_at: string | null
@@ -126,6 +131,8 @@ export type Database = {
           currency?: string | null
           date_of_birth?: string | null
           department: string
+          documents_uploaded_at?: string | null
+          documents_verification_status?: string | null
           email: string
           employee_id: string
           employment_agreement_generated_at?: string | null
@@ -147,8 +154,11 @@ export type Database = {
           monthly_lta?: number | null
           monthly_special_allowance?: number | null
           organization_id: string
+          pan_card_url?: string | null
           phone?: string | null
           pincode?: string | null
+          previous_offer_letter_url?: string | null
+          previous_payslips_url?: string | null
           salary?: number | null
           seniority?: string | null
           signing_sent_at?: string | null
@@ -184,6 +194,8 @@ export type Database = {
           currency?: string | null
           date_of_birth?: string | null
           department?: string
+          documents_uploaded_at?: string | null
+          documents_verification_status?: string | null
           email?: string
           employee_id?: string
           employment_agreement_generated_at?: string | null
@@ -205,8 +217,11 @@ export type Database = {
           monthly_lta?: number | null
           monthly_special_allowance?: number | null
           organization_id?: string
+          pan_card_url?: string | null
           phone?: string | null
           pincode?: string | null
+          previous_offer_letter_url?: string | null
+          previous_payslips_url?: string | null
           salary?: number | null
           seniority?: string | null
           signing_sent_at?: string | null
