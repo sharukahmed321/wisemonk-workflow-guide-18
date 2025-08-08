@@ -58,12 +58,12 @@ serve(async (req) => {
       console.log('✅ Successfully updated employee data:', data);
     }
 
-    // Handle final completion - update status to Active
+    // Handle final completion - update status to Onboarding
     if (stepNumber === 'complete' && finalizeStatus) {
       const { data, error } = await supabaseAdmin
         .from('employees')
         .update({
-          status: 'Active',
+          status: 'Onboarding',
           updated_at: new Date().toISOString()
         })
         .eq('id', employeeId)
@@ -74,7 +74,7 @@ serve(async (req) => {
         throw new Error(`Failed to finalize employee status: ${error.message}`);
       }
 
-      console.log('✅ Employee status updated to Active:', data);
+      console.log('✅ Employee status updated to Onboarding:', data);
     }
 
     return new Response(
