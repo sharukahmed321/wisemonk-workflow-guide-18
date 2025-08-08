@@ -297,19 +297,9 @@ export function EmployeeOnboardingFlow({
             {/* Navigation Footer */}
             <div className="border-t bg-muted/20 px-6 py-4">
               <div className="flex items-center justify-between">
-                <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1} className="flex items-center gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Previous
-                </Button>
+                
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Progress: {getStepProgress()}%</span>
-                  <div className="h-2 w-24 rounded-full bg-muted">
-                    <div className="h-2 rounded-full bg-primary transition-all duration-300" style={{
-                    width: `${getStepProgress()}%`
-                  }} />
-                  </div>
-                </div>
+                
 
                 <Button onClick={handleNext} disabled={!canProceed} className="flex items-center gap-2">
                   {isLastStep ? <>
