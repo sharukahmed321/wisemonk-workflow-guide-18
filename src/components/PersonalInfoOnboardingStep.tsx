@@ -1,199 +1,125 @@
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useOnboardingContext } from './EmployeeOnboardingFlow';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Calendar } from './ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
-import { CalendarIcon, User, Phone, Heart } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { useOnboardingContext, PersonalInfoData } from './EmployeeOnboardingFlow';
-import { FileUploadZone } from './FileUploadZone';
-
-const personalInfoSchema = z.object({
-  profilePicture: z.instanceof(File).optional(),
-  phoneNumber: z.string().min(1, 'Phone number is required').regex(/^\d{10}$/, 'Please enter a valid 10-digit phone number'),
-  genderIdentity: z.string().min(1, 'Please select your gender identity'),
-  dateOfBirth: z.date().optional()
-}) satisfies z.ZodType<PersonalInfoData>;
-
-type PersonalInfoForm = z.infer<typeof personalInfoSchema>;
-
-const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other'];
+import { DateOfBirthPicker } from './ui/date-of-birth-picker';
+import { Upload, User, Phone, Calendar, Users } from 'lucide-react';
 
 export function PersonalInfoOnboardingStep() {
-  const {
-    data,
-    updatePersonalInfo
-  } = useOnboardingContext();
+  const { data, updatePersonalInfo, errors } = useOnboardingContext();
 
-  const form = useForm<PersonalInfoForm>({
-    resolver: zodResolver(personalInfoSchema),
-    defaultValues: data.personalInfo
-  });
-
-  const handleFormChange = (field: keyof PersonalInfoData, value: any) => {
-    updatePersonalInfo({
-      [field]: value
-    });
-    form.setValue(field as keyof PersonalInfoForm, value);
-  };
-
-  const handleFileUpload = (file: File | null) => {
-    handleFormChange('profilePicture', file || undefined);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      updatePersonalInfo({ profilePicture: file });
+    }
   };
 
   return (
-    <div className="space-y-8">
-      {/* Profile Picture Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 pb-2 border-b border-border/40">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <User className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">Profile Picture</h3>
-          </div>
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <User className="w-8 h-8 text-primary" />
         </div>
-        
-        <FileUploadZone 
-          onFileSelect={handleFileUpload} 
-          accept={{
-            'image/*': ['.jpg', '.jpeg', '.png']
-          }} 
-          maxSize={5 * 1024 * 1024} 
-          currentFile={data.personalInfo.profilePicture} 
-          placeholder="Choose File or drag and drop" 
-          description="JPG or PNG, max 5MB" 
-          showPreview 
-        />
+        <h3 className="text-2xl font-semibold text-foreground mb-2">Personal Information</h3>
+        <p className="text-muted-foreground">
+          Complete your profile with basic personal details
+        </p>
       </div>
 
-      {/* Contact Information Section */}
       <div className="space-y-6">
-        <div className="flex items-center gap-3 pb-2 border-b border-border/40">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Phone className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">Contact Information</h3>
+        {/* Profile Picture Upload */}
+        <div className="space-y-2">
+          <Label htmlFor="profilePicture" className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            Profile Picture (Optional)
+          </Label>
+          <div className="flex items-center gap-4">
+            {data.personalInfo.profilePicture && (
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                <img 
+                  src={URL.createObjectURL(data.personalInfo.profilePicture)} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <Input
+              id="profilePicture"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="flex-1"
+            />
           </div>
         </div>
 
-        <Form {...form}>
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Phone Number */}
-            <FormField 
-              control={form.control} 
-              name="phoneNumber" 
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground">
-                    Phone Number <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter 10-digit phone number" 
-                      className="h-11 bg-background border-input" 
-                      {...field} 
-                      onChange={e => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        field.onChange(value);
-                        handleFormChange('phoneNumber', value);
-                      }} 
-                      maxLength={10} 
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )} 
-            />
+        {/* Phone Number */}
+        <div className="space-y-2">
+          <Label htmlFor="phoneNumber" className="flex items-center gap-2">
+            <Phone className="w-4 h-4" />
+            Phone Number *
+          </Label>
+          <Input
+            id="phoneNumber"
+            type="tel"
+            placeholder="Enter your phone number"
+            value={data.personalInfo.phoneNumber}
+            onChange={(e) => updatePersonalInfo({ phoneNumber: e.target.value })}
+            className={errors.phoneNumber ? "border-destructive" : ""}
+          />
+          {errors.phoneNumber && (
+            <p className="text-sm text-destructive">{errors.phoneNumber}</p>
+          )}
+        </div>
 
-            {/* Gender Identity */}
-            <FormField 
-              control={form.control} 
-              name="genderIdentity" 
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground">
-                    Gender Identity <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <Select 
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleFormChange('genderIdentity', value);
-                    }} 
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-11 bg-background border-input">
-                        <SelectValue placeholder="Select your gender identity" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {GENDER_OPTIONS.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )} 
-            />
+        {/* Gender Identity */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Gender Identity *
+          </Label>
+          <Select
+            value={data.personalInfo.genderIdentity}
+            onValueChange={(value) => updatePersonalInfo({ genderIdentity: value })}
+          >
+            <SelectTrigger className={errors.genderIdentity ? "border-destructive" : ""}>
+              <SelectValue placeholder="Select your gender identity" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+              <SelectItem value="non-binary">Non-binary</SelectItem>
+              <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.genderIdentity && (
+            <p className="text-sm text-destructive">{errors.genderIdentity}</p>
+          )}
+        </div>
 
-            {/* Date of Birth */}
-            <FormField 
-              control={form.control} 
-              name="dateOfBirth" 
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-foreground">
-                    Date of Birth
-                  </FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "h-11 w-full justify-start text-left font-normal bg-background border-input",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(field.value, "PPP") : "Select your date of birth"}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={(date) => {
-                          field.onChange(date);
-                          handleFormChange('dateOfBirth', date);
-                        }}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )} 
-            />
-          </div>
-        </Form>
+        {/* Date of Birth */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Date of Birth (Optional)
+          </Label>
+          <DateOfBirthPicker
+            value={data.personalInfo.dateOfBirth}
+            onChange={(date) => updatePersonalInfo({ dateOfBirth: date })}
+            placeholder="Select your date of birth"
+            dateFormat="DD/MM/YYYY"
+            className={errors.dateOfBirth ? "border-destructive" : ""}
+          />
+          {errors.dateOfBirth && (
+            <p className="text-sm text-destructive">{errors.dateOfBirth}</p>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -72,11 +72,13 @@ const STEPS = [{
   description: 'Provide your banking and EPF information',
   timeEstimate: '5 minutes'
 }];
+
 interface EmployeeOnboardingFlowProps {
   employeeId: string;
   employeeName: string;
   onComplete: () => void;
 }
+
 export function EmployeeOnboardingFlow({
   employeeId,
   employeeName,
@@ -176,9 +178,7 @@ export function EmployeeOnboardingFlow({
         if (!data.personalInfo.genderIdentity) {
           newErrors.genderIdentity = 'Gender identity is required';
         }
-        if (!data.personalInfo.dateOfBirth) {
-          newErrors.dateOfBirth = 'Date of birth is required';
-        }
+        // Removed dateOfBirth validation - it's now truly optional
         break;
       case 2:
         // Documents are optional, so no validation needed
@@ -215,6 +215,7 @@ export function EmployeeOnboardingFlow({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCompletedSteps(prev => new Set([...prev, currentStep]));
