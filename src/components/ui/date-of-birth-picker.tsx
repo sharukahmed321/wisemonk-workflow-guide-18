@@ -48,9 +48,14 @@ export function DateOfBirthPicker({
 }: DateOfBirthPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
-    return value && isValid(value) ? new Date(value.getFullYear(), value.getMonth(), 1) : new Date(1990, 0, 1);
-  });
+const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
+  if (value && isValid(value)) {
+    return new Date(value.getFullYear(), value.getMonth(), 1);
+  }
+  // Default to around 25 years ago instead of 1990
+  const defaultYear = new Date().getFullYear() - 25;
+  return new Date(defaultYear, 0, 1);
+});
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Generate years array
