@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +9,7 @@ import { PreboardingFlow } from './PreboardingFlow';
 import { EmployeeSidebar } from './EmployeeSidebar';
 import EmployeeProfileCard from './EmployeeProfileCard';
 import { EmployeeOnboarding } from './EmployeeOnboarding';
+import { EmployeeOnboardingFlow } from './EmployeeOnboardingFlow';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Calendar, AlertCircle } from 'lucide-react';
@@ -45,6 +47,13 @@ function EmployeeHome() {
     window.location.reload();
   };
 
+  const handleOnboardingComplete = () => {
+    // Mock completion - in real app would update employee status to "Active"
+    console.log('Employee onboarding completed!');
+    // Refresh data after onboarding completion
+    window.location.reload();
+  };
+
   if (loading) {
     return (
       <div className="p-6 md:p-8 space-y-6 md:space-y-8 w-full">
@@ -67,6 +76,17 @@ function EmployeeHome() {
           onComplete={handlePreboardingComplete}
         />
       </div>
+    );
+  }
+
+  // Show onboarding flow for employees with "Onboarding" status
+  if (employee && employee.status === 'Onboarding') {
+    return (
+      <EmployeeOnboardingFlow
+        employeeId={employee.id}
+        employeeName={`${employee.first_name} ${employee.last_name}`}
+        onComplete={handleOnboardingComplete}
+      />
     );
   }
 
