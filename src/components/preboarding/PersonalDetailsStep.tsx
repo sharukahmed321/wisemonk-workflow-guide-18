@@ -101,7 +101,7 @@ export function PersonalDetailsStep({
                   </FormLabel>
                   <FormControl>
                     <DateOfBirthPicker
-                      value={field.value}
+                      value={field.value || null} 
                       onChange={field.onChange}
                       placeholder="Select your date of birth"
                       dateFormat="DD/MM/YYYY"
