@@ -22,12 +22,24 @@ export function useEmployee(employeeId: string | undefined) {
       setLoading(true);
       setError(null);
 
-      // First, try to fetch from employees table
-      const { data: employeeData, error: employeeError } = await supabase
+      // First, try to fetch from employees table by UUID (id)
+      let { data: employeeData, error: employeeError } = await supabase
         .from('employees')
         .select('*')
-        .eq('employee_id', employeeId)
+        .eq('id', employeeId)
         .maybeSingle();
+
+      // If not found by UUID, try by employee_id
+      if (!employeeData && !employeeError) {
+        const { data: employeeDataById, error: employeeErrorById } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('employee_id', employeeId)
+          .maybeSingle();
+        
+        employeeData = employeeDataById;
+        employeeError = employeeErrorById;
+      }
 
       if (employeeError) {
         console.error('Error fetching employee:', employeeError);
