@@ -10,7 +10,28 @@ import { DateOfBirthPicker } from './ui/date-of-birth-picker';
 import { Upload, User, Phone, Calendar, Users } from 'lucide-react';
 
 export function PersonalInfoOnboardingStep() {
-  const { data, updatePersonalInfo, errors } = useOnboardingContext();
+  // Check if we're within the onboarding context
+  let context;
+  try {
+    context = useOnboardingContext();
+  } catch (error) {
+    // If not within OnboardingProvider, show error message
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-destructive" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Configuration Error</h3>
+          <p className="text-muted-foreground">
+            This component must be used within the Employee Onboarding Flow.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { data, updatePersonalInfo, errors } = context;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
