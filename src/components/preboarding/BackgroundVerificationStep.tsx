@@ -8,9 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 
 interface BackgroundVerificationData {
   documents: {
-    pan_card?: File;
-    previous_payslips?: File;
-    previous_offer_letter?: File;
+    panCard?: File;
+    previousPayslips?: File;
+    previousOfferLetter?: File;
   };
   uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
 }
@@ -29,21 +29,21 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
 
   const documentTypes = [
     {
-      key: 'pan_card',
+      key: 'panCard',
       title: 'PAN Card',
       description: 'Upload a clear copy of your PAN card',
       icon: CreditCard,
       required: true
     },
     {
-      key: 'previous_payslips',
+      key: 'previousPayslips',
       title: 'Previous Payslips',
       description: 'Upload your last 3 months payslips',
       icon: Receipt,
       required: true
     },
     {
-      key: 'previous_offer_letter',
+      key: 'previousOfferLetter',
       title: 'Previous Offer Letter',
       description: 'Upload your previous company offer letter',
       icon: Award,
@@ -61,7 +61,9 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
       const formData = new FormData();
       formData.append('file', file);
       formData.append('employeeId', employeeId);
-      formData.append('documentType', documentType);
+      // Convert camelCase to snake_case for backend
+      const backendDocumentType = documentType.replace(/([A-Z])/g, '_$1').toLowerCase();
+      formData.append('documentType', backendDocumentType);
 
       const { data, error } = await supabase.functions.invoke('upload-employee-document', {
         body: formData

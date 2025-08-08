@@ -43,9 +43,9 @@ export function PreboardingFlow({
     backgroundVerification: {
       documents: {},
       uploadStatus: {
-        pan_card: 'pending',
-        previous_payslips: 'pending',
-        previous_offer_letter: 'pending'
+        panCard: 'pending',
+        previousPayslips: 'pending',
+        previousOfferLetter: 'pending'
       }
     },
     employmentAgreement: {
