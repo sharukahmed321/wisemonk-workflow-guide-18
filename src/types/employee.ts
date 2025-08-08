@@ -24,6 +24,10 @@ export interface Employee {
   // Preboarding-specific fields
   joiningDate?: string;
   preboardingStatus?: PreboardingStatus;
+  // Document URLs from preboarding
+  panCardUrl?: string;
+  previousPayslipsUrl?: string;
+  previousOfferLetterUrl?: string;
 }
 
 export interface PreboardingData {

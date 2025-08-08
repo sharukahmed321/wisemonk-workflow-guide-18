@@ -10,6 +10,56 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DocumentsSection } from '@/components/documents/DocumentsSection';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useEmployee } from '@/hooks/useEmployee';
+import { EmployeeDocument } from '@/data/employeeDocuments';
+
+// Helper function to transform employee document URLs into EmployeeDocument format
+const transformEmployeeDocuments = (employee: any): EmployeeDocument[] => {
+  const documents: EmployeeDocument[] = [];
+  
+  if (employee.panCardUrl) {
+    documents.push({
+      id: `pan-${employee.id}`,
+      employeeId: employee.employeeId,
+      name: 'PAN Card',
+      type: 'pdf',
+      category: 'KYC',
+      status: 'uploaded',
+      uploadDate: new Date().toISOString().split('T')[0],
+      fileUrl: employee.panCardUrl,
+      required: true,
+    });
+  }
+  
+  if (employee.previousPayslipsUrl) {
+    documents.push({
+      id: `payslips-${employee.id}`,
+      employeeId: employee.employeeId,
+      name: 'Previous Payslips',
+      type: 'pdf',
+      category: 'Personal',
+      status: 'uploaded',
+      uploadDate: new Date().toISOString().split('T')[0],
+      fileUrl: employee.previousPayslipsUrl,
+      required: true,
+    });
+  }
+  
+  if (employee.previousOfferLetterUrl) {
+    documents.push({
+      id: `offer-letter-${employee.id}`,
+      employeeId: employee.employeeId,
+      name: 'Previous Offer Letter',
+      type: 'pdf',
+      category: 'Personal',
+      status: 'uploaded',
+      uploadDate: new Date().toISOString().split('T')[0],
+      fileUrl: employee.previousOfferLetterUrl,
+      required: true,
+    });
+  }
+  
+  return documents;
+};
 
 export default function EmployeeProfile() {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -265,7 +315,7 @@ export default function EmployeeProfile() {
 
           <TabsContent value="documents" className="mt-6">
             <DocumentsSection 
-              documents={[]} 
+              documents={transformEmployeeDocuments(employee)} 
               employeeId={employee.employeeId}
             />
           </TabsContent>

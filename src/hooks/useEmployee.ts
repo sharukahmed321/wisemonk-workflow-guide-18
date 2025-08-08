@@ -64,6 +64,10 @@ export function useEmployee(employeeId: string | undefined) {
           status: employeeData.status as any,
           avatar: employeeData.avatar_url,
           birthday: employeeData.birthday ? new Date(employeeData.birthday).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : undefined,
+          // Include document URLs for preboarding documents
+          panCardUrl: employeeData.pan_card_url,
+          previousPayslipsUrl: employeeData.previous_payslips_url,
+          previousOfferLetterUrl: employeeData.previous_offer_letter_url,
         };
 
         setEmployee(transformedEmployee);
