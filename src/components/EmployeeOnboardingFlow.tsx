@@ -298,9 +298,19 @@ export function EmployeeOnboardingFlow({
             {/* Navigation Footer */}
             <div className="border-t bg-muted/20 px-6 py-4">
               <div className="flex items-center justify-between">
-                
-
-                
+                {currentStep > 1 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handlePrevious}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                ) : (
+                  <div></div>
+                )}
 
                 <Button onClick={handleNext} disabled={!canProceed} className="flex items-center gap-2">
                   {isLastStep ? <>
