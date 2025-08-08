@@ -23,7 +23,7 @@ const bankDetailsSchema = z.object({
   panNumber: z.string()
     .min(1, 'PAN number is required')
     .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Please enter a valid PAN number'),
-  cancelledCheque: z.instanceof(File, { message: 'Bank proof document is required' }),
+  cancelledCheque: z.instanceof(File).optional(),
   hasUAN: z.boolean(),
   uanNumber: z.string().optional(),
 }).refine((data) => {

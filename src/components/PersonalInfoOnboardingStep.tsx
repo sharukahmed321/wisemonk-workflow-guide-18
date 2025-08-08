@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
-import { CalendarIcon, Upload, X } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useOnboardingContext, PersonalInfoData } from './EmployeeOnboardingFlow';
@@ -22,9 +22,7 @@ const personalInfoSchema = z.object({
     .min(1, 'Phone number is required')
     .regex(/^\d{10}$/, 'Please enter a valid 10-digit phone number'),
   genderIdentity: z.string().min(1, 'Please select your gender identity'),
-  dateOfBirth: z.date({
-    required_error: 'Date of birth is required',
-  }),
+  dateOfBirth: z.date().optional(),
 });
 
 const GENDER_OPTIONS = [
