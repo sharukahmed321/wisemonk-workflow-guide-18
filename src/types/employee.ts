@@ -40,9 +40,9 @@ export interface PreboardingData {
   };
   backgroundVerification: {
     documents: {
-      panCard?: File;
-      previousPayslips?: File;
-      previousOfferLetter?: File;
+      pan_card?: File;
+      previous_payslips?: File;
+      previous_offer_letter?: File;
     };
     uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
   };

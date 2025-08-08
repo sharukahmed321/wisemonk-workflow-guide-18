@@ -8,9 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 
 interface BackgroundVerificationData {
   documents: {
-    panCard?: File;
-    previousPayslips?: File;
-    previousOfferLetter?: File;
+    pan_card?: File;
+    previous_payslips?: File;
+    previous_offer_letter?: File;
   };
   uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
 }
@@ -29,21 +29,21 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
 
   const documentTypes = [
     {
-      key: 'panCard',
+      key: 'pan_card',
       title: 'PAN Card',
       description: 'Upload a clear copy of your PAN card',
       icon: CreditCard,
       required: true
     },
     {
-      key: 'previousPayslips',
+      key: 'previous_payslips',
       title: 'Previous Payslips',
       description: 'Upload your last 3 months payslips',
       icon: Receipt,
       required: true
     },
     {
-      key: 'previousOfferLetter',
+      key: 'previous_offer_letter',
       title: 'Previous Offer Letter',
       description: 'Upload your previous company offer letter',
       icon: Award,
