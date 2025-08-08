@@ -10,46 +10,36 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { CreditCard, Building2, Shield, FileCheck } from 'lucide-react';
 import { useOnboardingContext, BankDetailsData } from './EmployeeOnboardingFlow';
 import { FileUploadZone } from './FileUploadZone';
-
 const bankDetailsSchema = z.object({
   bankName: z.string().min(1, 'Bank name is required'),
-  accountNumber: z.string()
-    .min(1, 'Account number is required')
-    .regex(/^\d{9,18}$/, 'Please enter a valid account number'),
-  ifscCode: z.string()
-    .min(1, 'IFSC code is required')
-    .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Please enter a valid IFSC code'),
-  panNumber: z.string()
-    .min(1, 'PAN number is required')
-    .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Please enter a valid PAN number'),
+  accountNumber: z.string().min(1, 'Account number is required').regex(/^\d{9,18}$/, 'Please enter a valid account number'),
+  ifscCode: z.string().min(1, 'IFSC code is required').regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Please enter a valid IFSC code'),
+  panNumber: z.string().min(1, 'PAN number is required').regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Please enter a valid PAN number'),
   cancelledCheque: z.instanceof(File).optional(),
   hasUAN: z.boolean(),
-  uanNumber: z.string().optional(),
+  uanNumber: z.string().optional()
 }) satisfies z.ZodType<BankDetailsData>;
-
 type BankDetailsForm = z.infer<typeof bankDetailsSchema>;
-
 export function BankDetailsStep() {
-  const { data, updateBankDetails } = useOnboardingContext();
-  
+  const {
+    data,
+    updateBankDetails
+  } = useOnboardingContext();
   const form = useForm<BankDetailsForm>({
     resolver: zodResolver(bankDetailsSchema),
-    defaultValues: data.bankDetails,
+    defaultValues: data.bankDetails
   });
-
   const handleFormChange = (field: keyof BankDetailsData, value: any) => {
-    updateBankDetails({ [field]: value });
+    updateBankDetails({
+      [field]: value
+    });
     form.setValue(field as keyof BankDetailsForm, value);
   };
-
   const handleFileUpload = (file: File | null) => {
     handleFormChange('cancelledCheque', file || undefined);
   };
-
   const watchedHasUAN = form.watch('hasUAN');
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold text-foreground mb-2">
           Banking & EPF Information
@@ -70,98 +60,60 @@ export function BankDetailsStep() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="bankName"
-                render={({ field }) => (
-                  <FormItem>
+              <FormField control={form.control} name="bankName" render={({
+              field
+            }) => <FormItem>
                     <FormLabel>Bank Name *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g., State Bank of India"
-                        className="h-11"
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleFormChange('bankName', e.target.value);
-                        }}
-                      />
+                      <Input placeholder="e.g., State Bank of India" className="h-11" {...field} onChange={e => {
+                  field.onChange(e);
+                  handleFormChange('bankName', e.target.value);
+                }} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </FormItem>} />
 
-              <FormField
-                control={form.control}
-                name="accountNumber"
-                render={({ field }) => (
-                  <FormItem>
+              <FormField control={form.control} name="accountNumber" render={({
+              field
+            }) => <FormItem>
                     <FormLabel>Account Number *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Enter account number"
-                        className="h-11"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          field.onChange(value);
-                          handleFormChange('accountNumber', value);
-                        }}
-                      />
+                      <Input placeholder="Enter account number" className="h-11" {...field} onChange={e => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  field.onChange(value);
+                  handleFormChange('accountNumber', value);
+                }} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </FormItem>} />
 
-              <FormField
-                control={form.control}
-                name="ifscCode"
-                render={({ field }) => (
-                  <FormItem>
+              <FormField control={form.control} name="ifscCode" render={({
+              field
+            }) => <FormItem>
                     <FormLabel>IFSC Code *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g., SBIN0001234"
-                        className="h-11"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value.toUpperCase();
-                          field.onChange(value);
-                          handleFormChange('ifscCode', value);
-                        }}
-                        maxLength={11}
-                      />
+                      <Input placeholder="e.g., SBIN0001234" className="h-11" {...field} onChange={e => {
+                  const value = e.target.value.toUpperCase();
+                  field.onChange(value);
+                  handleFormChange('ifscCode', value);
+                }} maxLength={11} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </FormItem>} />
 
-              <FormField
-                control={form.control}
-                name="panNumber"
-                render={({ field }) => (
-                  <FormItem>
+              <FormField control={form.control} name="panNumber" render={({
+              field
+            }) => <FormItem>
                     <FormLabel>PAN Number *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g., ABCDE1234F"
-                        className="h-11"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value.toUpperCase();
-                          field.onChange(value);
-                          handleFormChange('panNumber', value);
-                        }}
-                        maxLength={10}
-                      />
+                      <Input placeholder="e.g., ABCDE1234F" className="h-11" {...field} onChange={e => {
+                  const value = e.target.value.toUpperCase();
+                  field.onChange(value);
+                  handleFormChange('panNumber', value);
+                }} maxLength={10} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </FormItem>} />
             </div>
 
             {/* Bank Proof Document */}
@@ -173,43 +125,32 @@ export function BankDetailsStep() {
               <p className="text-sm text-muted-foreground mb-3">
                 Upload a cancelled cheque, bank passbook page, or account statement
               </p>
-              <FileUploadZone
-                onFileSelect={handleFileUpload}
-                currentFile={data.bankDetails.cancelledCheque}
-                placeholder="Upload bank proof"
-                description="PDF, JPG, PNG up to 5MB"
-                accept={{
-                  'application/pdf': ['.pdf'],
-                  'image/*': ['.jpg', '.jpeg', '.png']
-                }}
-              />
+              <FileUploadZone onFileSelect={handleFileUpload} currentFile={data.bankDetails.cancelledCheque} placeholder="Upload bank proof" description="PDF, JPG, PNG up to 5MB" accept={{
+              'application/pdf': ['.pdf'],
+              'image/*': ['.jpg', '.jpeg', '.png']
+            }} />
             </div>
           </div>
 
           {/* EPF Details Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <Shield className="h-5 w-5 text-primary" />
+              
               <h4 className="font-semibold text-foreground">EPF (Employee Provident Fund)</h4>
             </div>
 
-            <FormField
-              control={form.control}
-              name="hasUAN"
-              render={({ field }) => (
-                <FormItem>
+            <FormField control={form.control} name="hasUAN" render={({
+            field
+          }) => <FormItem>
                   <div className="flex items-center gap-3">
                     <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={(checked) => {
-                          field.onChange(checked);
-                          handleFormChange('hasUAN', checked);
-                          if (!checked) {
-                            handleFormChange('uanNumber', '');
-                          }
-                        }}
-                      />
+                      <Switch checked={field.value} onCheckedChange={checked => {
+                  field.onChange(checked);
+                  handleFormChange('hasUAN', checked);
+                  if (!checked) {
+                    handleFormChange('uanNumber', '');
+                  }
+                }} />
                     </FormControl>
                     <div>
                       <FormLabel className="text-base font-medium">
@@ -220,71 +161,27 @@ export function BankDetailsStep() {
                       </p>
                     </div>
                   </div>
-                </FormItem>
-              )}
-            />
+                </FormItem>} />
 
-            {watchedHasUAN && (
-              <FormField
-                control={form.control}
-                name="uanNumber"
-                render={({ field }) => (
-                  <FormItem>
+            {watchedHasUAN && <FormField control={form.control} name="uanNumber" render={({
+            field
+          }) => <FormItem>
                     <FormLabel>UAN Number *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Enter 12-digit UAN number"
-                        className="h-11"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          field.onChange(value);
-                          handleFormChange('uanNumber', value);
-                        }}
-                        maxLength={12}
-                      />
+                      <Input placeholder="Enter 12-digit UAN number" className="h-11" {...field} onChange={e => {
+                const value = e.target.value.replace(/\D/g, '');
+                field.onChange(value);
+                handleFormChange('uanNumber', value);
+              }} maxLength={12} />
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+                  </FormItem>} />}
           </div>
         </div>
       </Form>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border bg-muted/20 p-4">
-          <h4 className="font-medium text-foreground mb-2">Banking Information</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Used for monthly salary deposits</li>
-            <li>• IFSC code format: ABCD0123456</li>
-            <li>• PAN is mandatory for tax deductions</li>
-            <li>• Bank proof verifies account ownership</li>
-          </ul>
-        </div>
+      
 
-        <div className="rounded-lg border bg-muted/20 p-4">
-          <h4 className="font-medium text-foreground mb-2">About UAN & EPF</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• UAN links all your EPF accounts</li>
-            <li>• New UAN will be generated if you don't have one</li>
-            <li>• 12% of basic salary goes to EPF</li>
-            <li>• EPF helps build your retirement corpus</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <CreditCard className="h-4 w-4 text-primary" />
-          <h4 className="font-medium text-primary">Security Notice</h4>
-        </div>
-        <p className="text-sm text-primary/80">
-          Your banking and financial information is protected with bank-grade encryption. 
-          This data is only used for salary processing and statutory compliance.
-        </p>
-      </div>
-    </div>
-  );
+      
+    </div>;
 }
