@@ -1,4 +1,3 @@
-
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -32,7 +31,7 @@ export interface BankDetailsData {
   panNumber: string;
   cancelledCheque?: File;
   hasUAN: boolean;
-  uanNumber: string;
+  uanNumber?: string;
 }
 
 export interface OnboardingData {

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,27 +25,21 @@ const bankDetailsSchema = z.object({
   cancelledCheque: z.instanceof(File).optional(),
   hasUAN: z.boolean(),
   uanNumber: z.string().optional(),
-}).refine((data) => {
-  if (data.hasUAN) {
-    return data.uanNumber && /^\d{12}$/.test(data.uanNumber);
-  }
-  return true;
-}, {
-  message: 'Please enter a valid 12-digit UAN number',
-  path: ['uanNumber'],
-});
+}) satisfies z.ZodType<BankDetailsData>;
+
+type BankDetailsForm = z.infer<typeof bankDetailsSchema>;
 
 export function BankDetailsStep() {
   const { data, updateBankDetails } = useOnboardingContext();
   
-  const form = useForm<BankDetailsData>({
+  const form = useForm<BankDetailsForm>({
     resolver: zodResolver(bankDetailsSchema),
     defaultValues: data.bankDetails,
   });
 
   const handleFormChange = (field: keyof BankDetailsData, value: any) => {
     updateBankDetails({ [field]: value });
-    form.setValue(field, value);
+    form.setValue(field as keyof BankDetailsForm, value);
   };
 
   const handleFileUpload = (file: File | null) => {

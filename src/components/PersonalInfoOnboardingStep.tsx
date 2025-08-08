@@ -23,7 +23,9 @@ const personalInfoSchema = z.object({
     .regex(/^\d{10}$/, 'Please enter a valid 10-digit phone number'),
   genderIdentity: z.string().min(1, 'Please select your gender identity'),
   dateOfBirth: z.date().optional(),
-});
+}) satisfies z.ZodType<PersonalInfoData>;
+
+type PersonalInfoForm = z.infer<typeof personalInfoSchema>;
 
 const GENDER_OPTIONS = [
   'Male',
@@ -36,14 +38,14 @@ const GENDER_OPTIONS = [
 export function PersonalInfoOnboardingStep() {
   const { data, updatePersonalInfo } = useOnboardingContext();
   
-  const form = useForm<PersonalInfoData>({
+  const form = useForm<PersonalInfoForm>({
     resolver: zodResolver(personalInfoSchema),
     defaultValues: data.personalInfo,
   });
 
   const handleFormChange = (field: keyof PersonalInfoData, value: any) => {
     updatePersonalInfo({ [field]: value });
-    form.setValue(field, value);
+    form.setValue(field as keyof PersonalInfoForm, value);
   };
 
   const handleFileUpload = (file: File | null) => {
