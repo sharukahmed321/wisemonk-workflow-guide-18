@@ -2,7 +2,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  Home, User, ClipboardList
+  Home, User, FileCheck, Settings
 } from 'lucide-react';
 import {
   Sidebar,
@@ -18,9 +18,9 @@ import {
 import { Logo } from './Logo';
 
 const navigationItems = [
-  { id: 'home', label: 'Home', icon: Home, url: '/dashboard' },
+  { id: 'home', label: 'My Dashboard', icon: Home, url: '/dashboard' },
   { id: 'profile', label: 'My Profile', icon: User, url: '/dashboard/profile' },
-  { id: 'onboarding', label: 'Onboarding Steps', icon: ClipboardList, url: '/dashboard/onboarding' }
+  { id: 'onboarding', label: 'Onboarding Steps', icon: FileCheck, url: '/dashboard/onboarding' }
 ];
 
 export function EmployeeSidebar() {
@@ -40,7 +40,10 @@ export function EmployeeSidebar() {
           <div className="flex items-center gap-2">
             <Logo />
             {state !== "collapsed" && (
-              <span className="font-bold text-lg text-foreground">Wisemonk</span>
+              <div>
+                <span className="font-bold text-lg text-foreground">Wisemonk</span>
+                <p className="text-xs text-muted-foreground">Employee Portal</p>
+              </div>
             )}
           </div>
         </div>

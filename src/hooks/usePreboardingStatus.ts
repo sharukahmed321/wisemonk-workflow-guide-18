@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +45,7 @@ export function usePreboardingStatus(): PreboardingStatus {
   const fetchEmployeeAndProgress = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Fetch employee data
       const { data: employeeData, error: employeeError } = await supabase
@@ -52,6 +54,7 @@ export function usePreboardingStatus(): PreboardingStatus {
         .eq('user_id', user?.id)
         .single();
 
+      // Don't treat "no employee record" as an error for regular users
       if (employeeError && employeeError.code !== 'PGRST116') {
         throw employeeError;
       }
@@ -106,8 +109,8 @@ export function usePreboardingStatus(): PreboardingStatus {
   // Determine if employee needs preboarding
   const needsPreboarding = employee?.status === 'Invited' || employee?.status === 'Preboarding';
   
-  // Hide org content for employees in preboarding status
-  const shouldHideOrgContent = needsPreboarding;
+  // Hide org content for employees in preboarding status or if no employee record exists
+  const shouldHideOrgContent = needsPreboarding || !employee;
   
   const progress = calculateProgress();
   const dueDate = calculateDueDate();

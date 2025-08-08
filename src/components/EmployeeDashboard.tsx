@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +10,7 @@ import EmployeeProfileCard from './EmployeeProfileCard';
 import { EmployeeOnboarding } from './EmployeeOnboarding';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Calendar } from 'lucide-react';
+import { Calendar, AlertCircle } from 'lucide-react';
 import { usePreboardingStatus } from '@/hooks/usePreboardingStatus';
 import { PreboardingAlert } from './PreboardingAlert';
 import { EmployeeQuickActions } from './EmployeeQuickActions';
@@ -31,8 +30,16 @@ interface EmployeeRecord {
 
 // Main dashboard content for employees
 function EmployeeHome() {
+  const { user } = useAuth();
   const { needsPreboarding, progress, employee, shouldHideOrgContent, dueDate, loading, error } = usePreboardingStatus();
   
+  useEffect(() => {
+    document.title = "My Dashboard | Wisemonk";
+    return () => {
+      document.title = "Wisemonk";
+    };
+  }, []);
+
   const handlePreboardingComplete = () => {
     // Refresh data after preboarding completion
     window.location.reload();
@@ -50,21 +57,8 @@ function EmployeeHome() {
     );
   }
 
-  if (error || !employee) {
-    return (
-      <div className="p-6 md:p-8 space-y-6 md:space-y-8 w-full">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-destructive">Access Error</CardTitle>
-            <CardDescription>{error || 'No employee record found. Please contact your administrator.'}</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
   // Show preboarding flow for invited/preboarding employees
-  if (needsPreboarding) {
+  if (needsPreboarding && employee) {
     return (
       <div className="p-6">
         <PreboardingFlow
@@ -76,44 +70,62 @@ function EmployeeHome() {
     );
   }
 
-  // Main dashboard layout for active employees
+  // Show welcome message for users without employee records or those not in preboarding
+  const displayName = employee ? `${employee.first_name}` : user?.user_metadata?.first_name || 'there';
+
   return (
     <div className="p-6 md:p-8 space-y-6 md:space-y-8 w-full">
       {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Welcome back, {employee.first_name}!</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Welcome back, {displayName}!</h1>
         <p className="text-muted-foreground">Here's your personal dashboard overview.</p>
       </div>
 
-      {/* Conditional Preboarding Alert */}
+      {/* Show preboarding alert if user needs preboarding */}
       {needsPreboarding && employee && (
         <PreboardingAlert employee={employee} progress={progress} dueDate={dueDate} />
       )}
 
-      {/* Main Dashboard Grid */}
-      {!shouldHideOrgContent && (
-        <div className="grid gap-6 md:gap-8 grid-cols-1 lg:grid-cols-2">
-          {/* Left Column - Celebrations */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <h2 className="text-xl font-semibold text-foreground">Celebrations</h2>
+      {/* Show notice for users without employee records */}
+      {!employee && !loading && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-blue-600" />
+              <CardTitle className="text-blue-900">Getting Started</CardTitle>
             </div>
-            
-            <div className="space-y-4">
-              <Birthdays />
-              <WorkAnniversaries />
-              <PublicHolidays />
-            </div>
-          </div>
+          </CardHeader>
+          <CardContent>
+            <CardDescription className="text-blue-700">
+              Your employee profile is being set up. Once your administrator completes your employee record, 
+              you'll see more personalized content here. If you have any questions, please contact your administrator.
+            </CardDescription>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Right Column - Quick Actions */}
-          <div className="space-y-6">
-            <EmployeeQuickActions />
-            <EmployeeStatusCards />
+      {/* Main Dashboard Grid - Show celebrations and quick actions for all users */}
+      <div className="grid gap-6 md:gap-8 grid-cols-1 lg:grid-cols-2">
+        {/* Left Column - Celebrations */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar className="w-5 h-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold text-foreground">Celebrations</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <Birthdays />
+            <WorkAnniversaries />
+            <PublicHolidays />
           </div>
         </div>
-      )}
+
+        {/* Right Column - Quick Actions */}
+        <div className="space-y-6">
+          <EmployeeQuickActions />
+          <EmployeeStatusCards />
+        </div>
+      </div>
     </div>
   );
 }
