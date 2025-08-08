@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +14,20 @@ interface EmploymentAgreementCardProps {
 export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentAgreementCardProps) {
   const { generateAgreement, isGenerating, error, document, isGenerated, downloadDocument } = useEmploymentAgreement(employeeId);
 
+  const hasNotifiedRef = useRef(false);
+
+  useEffect(() => {
+    if (isGenerated && onGenerated && !hasNotifiedRef.current) {
+      onGenerated();
+      hasNotifiedRef.current = true;
+    }
+  }, [isGenerated, onGenerated]);
+
   const handleGenerate = async () => {
     const generatedDocument = await generateAgreement();
-    if (generatedDocument && onGenerated) {
+    if (generatedDocument && onGenerated && !hasNotifiedRef.current) {
       onGenerated();
+      hasNotifiedRef.current = true;
     }
   };
 
@@ -26,7 +36,6 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
       downloadDocument(document);
     }
   };
-
   return (
     <Card>
       <CardHeader>

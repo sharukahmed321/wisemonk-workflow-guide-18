@@ -39,18 +39,17 @@ export function EmploymentAgreementStep({ data, onComplete, onPrevious, employee
   };
 
   const handleComplete = () => {
-    if (agreedToTerms && digitalSignature && documentGenerated) {
+    if (documentGenerated) {
       onComplete({
         agreedToTerms,
         digitalSignature,
-        signatureDate: new Date(),
+        signatureDate: digitalSignature ? new Date() : undefined,
         completedAt: new Date(),
-        documentGenerated
+        documentGenerated,
       });
     }
   };
-
-  const isComplete = agreedToTerms && digitalSignature && documentGenerated;
+  const isComplete = documentGenerated;
 
   return (
     <div className="space-y-6">
