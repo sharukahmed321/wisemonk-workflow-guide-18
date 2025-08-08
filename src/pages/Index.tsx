@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandingSection } from '../components/BrandingSection';
 import { AuthSection } from '../components/AuthSection';
 import { OnboardingFlow } from '../components/OnboardingFlow';
@@ -10,6 +10,7 @@ import { supabase } from '../integrations/supabase/client';
 
 const Index = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, loading, isEmailVerified, session } = useAuth();
   const [appState, setAppState] = useState<'auth' | 'onboarding' | 'dashboard'>('auth');
   
@@ -66,7 +67,7 @@ const Index = () => {
         // Default to dashboard on error
         setAppState('dashboard');
         if (!location.pathname.startsWith('/dashboard')) {
-          window.history.pushState({}, '', '/dashboard');
+          navigate('/dashboard', { replace: true });
         }
         return;
       }
@@ -90,7 +91,7 @@ const Index = () => {
       if (role === 'employee' && hasOrganization) {
         setAppState('dashboard');
         if (!location.pathname.startsWith('/dashboard/people')) {
-          window.history.pushState({}, '', '/dashboard/people');
+          navigate('/dashboard/people', { replace: true });
         }
         return;
       }
@@ -102,7 +103,7 @@ const Index = () => {
         // Profile is complete, go to dashboard
         setAppState('dashboard');
         if (!location.pathname.startsWith('/dashboard')) {
-          window.history.pushState({}, '', '/dashboard');
+          navigate('/dashboard', { replace: true });
         }
       }
     } catch (error) {
@@ -110,7 +111,7 @@ const Index = () => {
       // Default to dashboard on error
       setAppState('dashboard');
       if (!location.pathname.startsWith('/dashboard')) {
-        window.history.pushState({}, '', '/dashboard');
+        navigate('/dashboard', { replace: true });
       }
     }
   };
@@ -139,7 +140,7 @@ const Index = () => {
           <AuthSection 
             onSignInComplete={() => {
               setAppState('dashboard');
-              window.history.pushState({}, '', '/dashboard');
+              navigate('/dashboard', { replace: true });
             }}
             onSignUpComplete={() => {
               console.log('onSignUpComplete called - checking user onboarding status');
@@ -149,10 +150,10 @@ const Index = () => {
             onPasswordUpdateComplete={() => {
               console.log('Password updated successfully, redirecting to login');
               // Clear all URL parameters to prevent recovery mode from persisting
-              window.history.replaceState({}, '', window.location.pathname);
+              navigate('/', { replace: true });
               // Force a small delay to ensure state cleanup
               setTimeout(() => {
-                window.history.pushState({}, '', '/?tab=signin');
+                navigate('/?tab=signin', { replace: true });
                 setAppState('auth');
               }, 100);
             }}
@@ -169,7 +170,7 @@ const Index = () => {
           <BrandingSection />
           <OnboardingFlow onComplete={() => {
             setAppState('dashboard');
-            window.history.pushState({}, '', '/dashboard');
+            navigate('/dashboard', { replace: true });
           }} />
         </div>
       </div>
