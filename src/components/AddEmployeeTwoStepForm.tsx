@@ -282,7 +282,9 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
             salary: data.salary, // Keep for backward compatibility
             currency: data.currency,
             start_date: employeeData.startDate ? employeeData.startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            last_date: employeeData.lastDate ? employeeData.lastDate.toISOString().split('T')[0] : null, // Contract end date
+            last_date: employeeData.lastDate ? 
+              employeeData.lastDate.toISOString().split('T')[0] : 
+              new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default: today + 5 days
             status: 'Invited',
             organization_id: organizationId,
             user_id: null, // No user_id until they sign up
