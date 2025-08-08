@@ -313,13 +313,14 @@ export function EmployeeOnboardingFlow({
                 )}
 
                 <Button onClick={handleNext} disabled={!canProceed} className="flex items-center gap-2">
-                  {isLastStep ? <>
-                      <CheckCircle className="h-4 w-4" />
-                      Complete Onboarding
-                    </> : <>
+                  {isLastStep ? (
+                    <>Submit</>
+                  ) : (
+                    <>
                       Next
                       <ArrowRight className="h-4 w-4" />
-                    </>}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
