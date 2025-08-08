@@ -13,6 +13,7 @@ interface FileUploadZoneProps {
   description?: string;
   showPreview?: boolean;
   className?: string;
+  required?: boolean;
 }
 
 export function FileUploadZone({
@@ -23,20 +24,24 @@ export function FileUploadZone({
   placeholder = "Click to upload or drag and drop",
   description = "PDF, JPG, PNG up to 5MB",
   showPreview = false,
-  className
+  className,
+  required = false
 }: FileUploadZoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     
     const file = files[0];
+    setError(null);
     
     // Validate file size
     if (file.size > maxSize) {
-      alert(`File size must be less than ${Math.round(maxSize / 1024 / 1024)}MB`);
+      const errorMsg = `File size must be less than ${Math.round(maxSize / 1024 / 1024)}MB`;
+      setError(errorMsg);
       return;
     }
     
@@ -47,7 +52,8 @@ export function FileUploadZone({
     );
     
     if (!isValidType) {
-      alert(`Please upload a valid file type: ${acceptedTypes.join(', ')}`);
+      const errorMsg = `Please upload a valid file type: ${acceptedTypes.join(', ')}`;
+      setError(errorMsg);
       return;
     }
 
@@ -87,6 +93,7 @@ export function FileUploadZone({
   const removeFile = () => {
     onFileSelect(null);
     setPreview(null);
+    setError(null);
     if (inputRef.current) {
       inputRef.current.value = '';
     }
@@ -101,6 +108,7 @@ export function FileUploadZone({
   };
 
   const isImage = currentFile?.type.startsWith('image/');
+  const hasError = error || (required && !currentFile);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -109,6 +117,7 @@ export function FileUploadZone({
           className={cn(
             "relative border-2 border-dashed rounded-lg transition-colors cursor-pointer hover:border-primary/50",
             dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25",
+            hasError ? "border-destructive" : "",
             "p-6"
           )}
           onDragEnter={handleDrag}
@@ -178,6 +187,12 @@ export function FileUploadZone({
             </Button>
           </div>
         </div>
+      )}
+      
+      {error && (
+        <p className="text-sm font-medium text-destructive">
+          {error}
+        </p>
       )}
     </div>
   );

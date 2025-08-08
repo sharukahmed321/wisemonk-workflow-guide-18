@@ -87,9 +87,7 @@ export function EmployeeOnboardingFlow({
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   // Initialize with empty data
   const [data, setData] = useState<OnboardingData>({
@@ -108,7 +106,6 @@ export function EmployeeOnboardingFlow({
     }
   });
 
-  // Auto-save to localStorage
   useEffect(() => {
     const saved = localStorage.getItem(`onboarding-${employeeId}`);
     if (saved) {
@@ -167,7 +164,9 @@ export function EmployeeOnboardingFlow({
 
   // Validation functions
   const validateStep = (step: number): boolean => {
+    console.log(`Validating step ${step}:`, data);
     const newErrors: Record<string, string> = {};
+    
     switch (step) {
       case 1:
         if (!data.personalInfo.phoneNumber) {
@@ -178,12 +177,12 @@ export function EmployeeOnboardingFlow({
         if (!data.personalInfo.genderIdentity) {
           newErrors.genderIdentity = 'Gender identity is required';
         }
-        // Removed dateOfBirth validation - it's now truly optional
         break;
       case 2:
         // Documents are optional, so no validation needed
         break;
       case 3:
+        console.log('Validating bank details:', data.bankDetails);
         if (!data.bankDetails.bankName) {
           newErrors.bankName = 'Bank name is required';
         }
@@ -207,16 +206,19 @@ export function EmployeeOnboardingFlow({
         }
         if (data.bankDetails.hasUAN && !data.bankDetails.uanNumber) {
           newErrors.uanNumber = 'UAN number is required when UAN is selected';
-        } else if (data.bankDetails.hasUAN && !/^\d{12}$/.test(data.bankDetails.uanNumber)) {
+        } else if (data.bankDetails.hasUAN && data.bankDetails.uanNumber && !/^\d{12}$/.test(data.bankDetails.uanNumber)) {
           newErrors.uanNumber = 'Please enter a valid 12-digit UAN number';
         }
         break;
     }
+    
+    console.log('Validation errors:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleNext = () => {
+    console.log('Attempting to proceed from step:', currentStep);
     if (validateStep(currentStep)) {
       setCompletedSteps(prev => new Set([...prev, currentStep]));
       if (currentStep < 3) {
@@ -224,6 +226,8 @@ export function EmployeeOnboardingFlow({
       } else {
         handleComplete();
       }
+    } else {
+      console.log('Validation failed, cannot proceed');
     }
   };
   const handlePrevious = () => {
@@ -232,7 +236,6 @@ export function EmployeeOnboardingFlow({
     }
   };
   const handleComplete = () => {
-    // Clear saved data on completion
     localStorage.removeItem(`onboarding-${employeeId}`);
     toast({
       title: "Onboarding Complete!",
@@ -261,7 +264,6 @@ export function EmployeeOnboardingFlow({
   return <OnboardingContext.Provider value={contextValue}>
       <div className="min-h-screen bg-muted/30 px-4 py-6">
         <div className="mx-auto max-w-4xl space-y-8">
-          {/* Header */}
           <div className="text-center">
             <h1 className="text-3xl font-bold text-foreground">Welcome to WiseMonk, {employeeName}!</h1>
             <p className="mt-2 text-muted-foreground">
@@ -269,7 +271,6 @@ export function EmployeeOnboardingFlow({
             </p>
           </div>
 
-          {/* Progress Indicator */}
           <OnboardingStepIndicator steps={STEPS.map((step, index) => ({
           number: step.number,
           title: step.title,
@@ -277,13 +278,11 @@ export function EmployeeOnboardingFlow({
           isCurrent: currentStep === step.number
         }))} />
 
-          {/* Main Card */}
           <Card className="mx-auto max-w-3xl">
             <CardHeader className="border-b">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl">{currentStepData.title}</CardTitle>
-                  
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Step {currentStep} of {STEPS.length}
@@ -295,7 +294,6 @@ export function EmployeeOnboardingFlow({
               {renderCurrentStep()}
             </CardContent>
 
-            {/* Navigation Footer */}
             <div className="border-t bg-muted/20 px-6 py-4">
               <div className="flex items-center justify-between">
                 {currentStep > 1 ? (
