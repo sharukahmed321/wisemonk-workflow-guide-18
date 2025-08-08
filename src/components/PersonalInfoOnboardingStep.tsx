@@ -17,15 +17,19 @@ export function PersonalInfoOnboardingStep() {
   } catch (error) {
     // If not within OnboardingProvider, show error message
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-destructive" />
+      <div className="absolute top-4 right-4 z-50">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 max-w-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-destructive/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-destructive" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-1">Configuration Error</h3>
+              <p className="text-xs text-muted-foreground">
+                This component must be used within the Employee Onboarding Flow.
+              </p>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">Configuration Error</h3>
-          <p className="text-muted-foreground">
-            This component must be used within the Employee Onboarding Flow.
-          </p>
         </div>
       </div>
     );
