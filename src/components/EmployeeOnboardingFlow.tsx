@@ -15,7 +15,6 @@ export interface PersonalInfoData {
   genderIdentity: string;
   dateOfBirth?: Date;
 }
-
 export interface DocumentData {
   graduationCert?: File;
   relievingLetter?: File;
@@ -23,7 +22,6 @@ export interface DocumentData {
   resume?: File;
   passport?: File;
 }
-
 export interface BankDetailsData {
   bankName: string;
   accountNumber: string;
@@ -33,7 +31,6 @@ export interface BankDetailsData {
   hasUAN: boolean;
   uanNumber?: string;
 }
-
 export interface OnboardingData {
   personalInfo: PersonalInfoData;
   documentCollection: DocumentData;
@@ -49,9 +46,7 @@ interface OnboardingContextType {
   errors: Record<string, string>;
   setErrors: (errors: Record<string, string>) => void;
 }
-
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
-
 export const useOnboardingContext = () => {
   const context = useContext(OnboardingContext);
   if (!context) {
@@ -61,44 +56,44 @@ export const useOnboardingContext = () => {
 };
 
 // Step configuration
-const STEPS = [
-  {
-    number: 1,
-    title: 'Personal Information',
-    description: 'Complete your profile with basic personal details',
-    timeEstimate: '3 minutes'
-  },
-  {
-    number: 2,
-    title: 'Document Collection',
-    description: 'Upload your professional documents',
-    timeEstimate: '10 minutes'
-  },
-  {
-    number: 3,
-    title: 'Bank & EPF Details',
-    description: 'Provide your banking and EPF information',
-    timeEstimate: '5 minutes'
-  }
-];
-
+const STEPS = [{
+  number: 1,
+  title: 'Personal Information',
+  description: 'Complete your profile with basic personal details',
+  timeEstimate: '3 minutes'
+}, {
+  number: 2,
+  title: 'Document Collection',
+  description: 'Upload your professional documents',
+  timeEstimate: '10 minutes'
+}, {
+  number: 3,
+  title: 'Bank & EPF Details',
+  description: 'Provide your banking and EPF information',
+  timeEstimate: '5 minutes'
+}];
 interface EmployeeOnboardingFlowProps {
   employeeId: string;
   employeeName: string;
   onComplete: () => void;
 }
-
-export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }: EmployeeOnboardingFlowProps) {
+export function EmployeeOnboardingFlow({
+  employeeId,
+  employeeName,
+  onComplete
+}: EmployeeOnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
+
   // Initialize with empty data
   const [data, setData] = useState<OnboardingData>({
     personalInfo: {
       phoneNumber: '',
-      genderIdentity: '',
+      genderIdentity: ''
     },
     documentCollection: {},
     bankDetails: {
@@ -107,7 +102,7 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
       ifscCode: '',
       panNumber: '',
       hasUAN: false,
-      uanNumber: '',
+      uanNumber: ''
     }
   });
 
@@ -125,7 +120,6 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
       }
     }
   }, [employeeId]);
-
   useEffect(() => {
     const dataToSave = {
       data,
@@ -138,22 +132,31 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
   // Context value
   const contextValue: OnboardingContextType = {
     data,
-    updatePersonalInfo: (info) => {
+    updatePersonalInfo: info => {
       setData(prev => ({
         ...prev,
-        personalInfo: { ...prev.personalInfo, ...info }
+        personalInfo: {
+          ...prev.personalInfo,
+          ...info
+        }
       }));
     },
-    updateDocuments: (docs) => {
+    updateDocuments: docs => {
       setData(prev => ({
         ...prev,
-        documentCollection: { ...prev.documentCollection, ...docs }
+        documentCollection: {
+          ...prev.documentCollection,
+          ...docs
+        }
       }));
     },
-    updateBankDetails: (details) => {
+    updateBankDetails: details => {
       setData(prev => ({
         ...prev,
-        bankDetails: { ...prev.bankDetails, ...details }
+        bankDetails: {
+          ...prev.bankDetails,
+          ...details
+        }
       }));
     },
     errors,
@@ -163,7 +166,6 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
   // Validation functions
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
-    
     switch (step) {
       case 1:
         if (!data.personalInfo.phoneNumber) {
@@ -210,11 +212,9 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
         }
         break;
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCompletedSteps(prev => new Set([...prev, currentStep]));
@@ -225,29 +225,23 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
       }
     }
   };
-
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
-
   const handleComplete = () => {
     // Clear saved data on completion
     localStorage.removeItem(`onboarding-${employeeId}`);
-    
     toast({
       title: "Onboarding Complete!",
-      description: "Welcome to the team! Your account is now fully set up.",
+      description: "Welcome to the team! Your account is now fully set up."
     });
-    
     onComplete();
   };
-
   const getStepProgress = () => {
-    return Math.round(((currentStep - 1) / (STEPS.length - 1)) * 100);
+    return Math.round((currentStep - 1) / (STEPS.length - 1) * 100);
   };
-
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
@@ -260,13 +254,10 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
         return null;
     }
   };
-
   const currentStepData = STEPS[currentStep - 1];
   const isLastStep = currentStep === STEPS.length;
   const canProceed = Object.keys(errors).length === 0;
-
-  return (
-    <OnboardingContext.Provider value={contextValue}>
+  return <OnboardingContext.Provider value={contextValue}>
       <div className="min-h-screen bg-muted/30 px-4 py-6">
         <div className="mx-auto max-w-4xl space-y-8">
           {/* Header */}
@@ -278,14 +269,12 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
           </div>
 
           {/* Progress Indicator */}
-          <OnboardingStepIndicator 
-            steps={STEPS.map((step, index) => ({
-              number: step.number,
-              title: step.title,
-              isCompleted: completedSteps.has(step.number),
-              isCurrent: currentStep === step.number
-            }))}
-          />
+          <OnboardingStepIndicator steps={STEPS.map((step, index) => ({
+          number: step.number,
+          title: step.title,
+          isCompleted: completedSteps.has(step.number),
+          isCurrent: currentStep === step.number
+        }))} />
 
           {/* Main Card */}
           <Card className="mx-auto max-w-3xl">
@@ -293,9 +282,7 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl">{currentStepData.title}</CardTitle>
-                  <CardDescription className="mt-1">
-                    {currentStepData.description} • Estimated time: {currentStepData.timeEstimate}
-                  </CardDescription>
+                  
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Step {currentStep} of {STEPS.length}
@@ -310,12 +297,7 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
             {/* Navigation Footer */}
             <div className="border-t bg-muted/20 px-6 py-4">
               <div className="flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 1}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1} className="flex items-center gap-2">
                   <ArrowLeft className="h-4 w-4" />
                   Previous
                 </Button>
@@ -323,35 +305,25 @@ export function EmployeeOnboardingFlow({ employeeId, employeeName, onComplete }:
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>Progress: {getStepProgress()}%</span>
                   <div className="h-2 w-24 rounded-full bg-muted">
-                    <div 
-                      className="h-2 rounded-full bg-primary transition-all duration-300"
-                      style={{ width: `${getStepProgress()}%` }}
-                    />
+                    <div className="h-2 rounded-full bg-primary transition-all duration-300" style={{
+                    width: `${getStepProgress()}%`
+                  }} />
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleNext}
-                  disabled={!canProceed}
-                  className="flex items-center gap-2"
-                >
-                  {isLastStep ? (
-                    <>
+                <Button onClick={handleNext} disabled={!canProceed} className="flex items-center gap-2">
+                  {isLastStep ? <>
                       <CheckCircle className="h-4 w-4" />
                       Complete Onboarding
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       Next
                       <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
+                    </>}
                 </Button>
               </div>
             </div>
           </Card>
         </div>
       </div>
-    </OnboardingContext.Provider>
-  );
+    </OnboardingContext.Provider>;
 }
