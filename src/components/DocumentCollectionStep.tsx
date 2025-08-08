@@ -3,6 +3,7 @@ import { GraduationCap, FileText, Receipt, FileUser, Plane } from 'lucide-react'
 import { Label } from './ui/label';
 import { useOnboardingContext } from './EmployeeOnboardingFlow';
 import { FileUploadZone } from './FileUploadZone';
+
 const DOCUMENTS = [{
   key: 'graduationCert' as const,
   title: 'Certificate of Graduation/Diploma',
@@ -29,23 +30,26 @@ const DOCUMENTS = [{
   description: 'Copy of your passport (if available)',
   icon: Plane
 }];
+
 export function DocumentCollectionStep() {
   const {
     data,
     updateDocuments
   } = useOnboardingContext();
+
   const handleFileChange = (documentKey: keyof typeof data.documentCollection, file: File | null) => {
     updateDocuments({
       [documentKey]: file || undefined
     });
   };
+
   return <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-lg font-semibold text-foreground mb-2">
           Upload Your Professional Documents
         </h3>
         <p className="text-muted-foreground">
-          These documents help us verify your background and set up your employee records. 
+          These documents help us verify your background and set up your records. 
           All uploads are optional but recommended for a complete profile.
         </p>
       </div>
@@ -75,8 +79,6 @@ export function DocumentCollectionStep() {
             </div>;
       })}
       </div>
-
-      
 
       
     </div>;
