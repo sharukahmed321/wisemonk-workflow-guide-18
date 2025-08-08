@@ -40,15 +40,7 @@ export function BankDetailsStep() {
   };
   const watchedHasUAN = form.watch('hasUAN');
   return <div className="space-y-6">
-      <div className="text-center">
-        <h3 className="text-lg font-semibold text-foreground mb-2">
-          Banking & EPF Information
-        </h3>
-        <p className="text-muted-foreground">
-          This information is required for salary processing and EPF contributions. 
-          All details are securely encrypted and handled according to privacy regulations.
-        </p>
-      </div>
+      
 
       <Form {...form}>
         <div className="space-y-6">
