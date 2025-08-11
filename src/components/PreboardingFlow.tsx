@@ -104,22 +104,22 @@ export function PreboardingFlow({
         ...preboardingData.backgroundVerification,
         payslips: {
           payslip1: {
-            fileName: preboardingData.backgroundVerification.payslips.payslip1?.fileName,
-            fileSize: preboardingData.backgroundVerification.payslips.payslip1?.fileSize,
-            uploadedUrl: preboardingData.backgroundVerification.payslips.payslip1?.uploadedUrl,
-            status: preboardingData.backgroundVerification.payslips.payslip1?.status || 'pending'
+            fileName: preboardingData.backgroundVerification.payslips?.payslip1?.fileName,
+            fileSize: preboardingData.backgroundVerification.payslips?.payslip1?.fileSize,
+            uploadedUrl: preboardingData.backgroundVerification.payslips?.payslip1?.uploadedUrl,
+            status: preboardingData.backgroundVerification.payslips?.payslip1?.status || 'pending'
           },
           payslip2: {
-            fileName: preboardingData.backgroundVerification.payslips.payslip2?.fileName,
-            fileSize: preboardingData.backgroundVerification.payslips.payslip2?.fileSize,
-            uploadedUrl: preboardingData.backgroundVerification.payslips.payslip2?.uploadedUrl,
-            status: preboardingData.backgroundVerification.payslips.payslip2?.status || 'pending'
+            fileName: preboardingData.backgroundVerification.payslips?.payslip2?.fileName,
+            fileSize: preboardingData.backgroundVerification.payslips?.payslip2?.fileSize,
+            uploadedUrl: preboardingData.backgroundVerification.payslips?.payslip2?.uploadedUrl,
+            status: preboardingData.backgroundVerification.payslips?.payslip2?.status || 'pending'
           },
           payslip3: {
-            fileName: preboardingData.backgroundVerification.payslips.payslip3?.fileName,
-            fileSize: preboardingData.backgroundVerification.payslips.payslip3?.fileSize,
-            uploadedUrl: preboardingData.backgroundVerification.payslips.payslip3?.uploadedUrl,
-            status: preboardingData.backgroundVerification.payslips.payslip3?.status || 'pending'
+            fileName: preboardingData.backgroundVerification.payslips?.payslip3?.fileName,
+            fileSize: preboardingData.backgroundVerification.payslips?.payslip3?.fileSize,
+            uploadedUrl: preboardingData.backgroundVerification.payslips?.payslip3?.uploadedUrl,
+            status: preboardingData.backgroundVerification.payslips?.payslip3?.status || 'pending'
           }
         }
       }
