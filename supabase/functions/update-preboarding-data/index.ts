@@ -32,6 +32,29 @@ serve(async (req) => {
     );
 
     if (stepNumber === 1 && personalDetails) {
+      // Check if another employee already has this Aadhaar number
+      const { data: existingEmployee } = await supabaseAdmin
+        .from('employees')
+        .select('id, aadhaar_number')
+        .eq('aadhaar_number', personalDetails.aadhaarNumber)
+        .neq('id', employeeId)
+        .single();
+
+      if (existingEmployee) {
+        console.error('❌ Aadhaar number already exists for another employee');
+        return new Response(
+          JSON.stringify({ 
+            error: 'This Aadhaar number is already registered with another employee. Please check and enter the correct Aadhaar number.',
+            success: false,
+            code: 'DUPLICATE_AADHAAR'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          },
+        );
+      }
+
       // Update personal details
       const { data, error } = await supabaseAdmin
         .from('employees')
@@ -52,6 +75,22 @@ serve(async (req) => {
 
       if (error) {
         console.error('❌ Error updating employee data:', error);
+        
+        // Handle specific constraint violations
+        if (error.code === '23505' && error.message.includes('aadhaar_number')) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'This Aadhaar number is already registered. Please check and enter the correct Aadhaar number.',
+              success: false,
+              code: 'DUPLICATE_AADHAAR'
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400,
+            },
+          );
+        }
+        
         throw new Error(`Failed to update employee data: ${error.message}`);
       }
 
