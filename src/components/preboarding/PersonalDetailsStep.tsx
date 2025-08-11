@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { DateOfBirthPicker } from './DateOfBirthPicker';
+import { DateOfBirthPicker } from '@/components/ui/date-of-birth-picker';
 import { useToast } from "@/components/ui/use-toast"
 
 interface PersonalDetails {
@@ -25,38 +26,51 @@ interface PersonalDetails {
 }
 
 interface PersonalDetailsStepProps {
-  onNext: (data: PersonalDetails) => void;
-  onBack: () => void;
-  initialData?: PersonalDetails;
+  data: {
+    fullName: string;
+    fatherName: string;
+    dateOfBirth?: Date;
+    aadhaarNumber: string;
+    addressLine1: string;
+    addressLine2: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  onComplete: (data: any) => void;
+  onPrevious: () => void;
 }
 
-export function PersonalDetailsStep({ onNext, onBack, initialData }: PersonalDetailsStepProps) {
-  const [formData, setFormData] = useState<PersonalDetails>({
-    firstName: initialData?.firstName || '',
-    lastName: initialData?.lastName || '',
-    dateOfBirth: initialData?.dateOfBirth || null,
-    gender: initialData?.gender || '',
-    aadhaarNumber: initialData?.aadhaarNumber || '',
-    panNumber: initialData?.panNumber || '',
-    mobileNumber: initialData?.mobileNumber || '',
-    emergencyContact: initialData?.emergencyContact || '',
+export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDetailsStepProps) {
+  const [formData, setFormData] = useState({
+    fullName: data?.fullName || '',
+    fatherName: data?.fatherName || '',
+    dateOfBirth: data?.dateOfBirth || undefined,
+    aadhaarNumber: data?.aadhaarNumber || '',
+    addressLine1: data?.addressLine1 || '',
+    addressLine2: data?.addressLine2 || '',
+    city: data?.city || '',
+    state: data?.state || '',
+    pincode: data?.pincode || ''
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { toast } = useToast()
 
-  useEffect(() => {
-    // Set initial data when it changes
-    if (initialData) {
-      setFormData(initialData);
-    }
-  }, [initialData]);
-
   const isFormValid = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    }
+    if (!formData.fatherName.trim()) {
+      newErrors.fatherName = "Father's name is required";
+    }
     if (!formData.dateOfBirth) {
       newErrors.dateOfBirth = "Date of Birth is required";
+    }
+    if (!formData.aadhaarNumber || formData.aadhaarNumber.length !== 12) {
+      newErrors.aadhaarNumber = "Valid 12-digit Aadhaar number is required";
     }
 
     setErrors(newErrors);
@@ -67,12 +81,12 @@ export function PersonalDetailsStep({ onNext, onBack, initialData }: PersonalDet
     event.preventDefault();
 
     if (isFormValid()) {
-      onNext(formData);
+      onComplete(formData);
     } else {
       toast({
         variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: "Please check the form for errors.",
+        title: "Please fill all required fields",
+        description: "Check the form for errors.",
       })
     }
   };
@@ -87,34 +101,40 @@ export function PersonalDetailsStep({ onNext, onBack, initialData }: PersonalDet
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* First Name */}
+          {/* Full Name */}
           <div className="space-y-2">
-            <Label htmlFor="firstName" className="text-sm font-medium text-foreground">
-              First Name *
+            <Label htmlFor="fullName" className="text-sm font-medium text-foreground">
+              Full Name *
             </Label>
             <Input
-              id="firstName"
+              id="fullName"
               type="text"
-              value={formData.firstName}
-              onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+              value={formData.fullName}
+              onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
               className="w-full"
               required
             />
+            {errors.fullName && (
+              <p className="text-sm text-destructive">{errors.fullName}</p>
+            )}
           </div>
 
-          {/* Last Name */}
+          {/* Father's Name */}
           <div className="space-y-2">
-            <Label htmlFor="lastName" className="text-sm font-medium text-foreground">
-              Last Name *
+            <Label htmlFor="fatherName" className="text-sm font-medium text-foreground">
+              Father's Name *
             </Label>
             <Input
-              id="lastName"
+              id="fatherName"
               type="text"
-              value={formData.lastName}
-              onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+              value={formData.fatherName}
+              onChange={(e) => setFormData(prev => ({ ...prev, fatherName: e.target.value }))}
               className="w-full"
               required
             />
+            {errors.fatherName && (
+              <p className="text-sm text-destructive">{errors.fatherName}</p>
+            )}
           </div>
 
           {/* Date of Birth */}
@@ -126,41 +146,22 @@ export function PersonalDetailsStep({ onNext, onBack, initialData }: PersonalDet
               value={formData.dateOfBirth}
               onChange={(date) => setFormData(prev => ({ ...prev, dateOfBirth: date }))}
               placeholder="Select your date of birth"
-              required
             />
             {errors.dateOfBirth && (
               <p className="text-sm text-destructive">{errors.dateOfBirth}</p>
             )}
           </div>
 
-          {/* Gender */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground">Gender *</Label>
-            <RadioGroup
-              value={formData.gender}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
-              className="flex gap-6"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Male" id="male" />
-                <Label htmlFor="male" className="text-sm text-foreground">Male</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Female" id="female" />
-                <Label htmlFor="female" className="text-sm text-foreground">Female</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Other" id="other" />
-                <Label htmlFor="other" className="text-sm text-foreground">Other</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
           {/* Aadhaar Number */}
           <div className="space-y-2">
-            <Label htmlFor="aadhaarNumber" className="text-sm font-medium text-foreground">
-              Aadhaar Number *
-            </Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="aadhaarNumber" className="text-sm font-medium text-foreground">
+                Aadhaar Number *
+              </Label>
+              <div className="text-sm text-muted-foreground">
+                {formData.aadhaarNumber.length}/12
+              </div>
+            </div>
             <Input
               id="aadhaarNumber"
               type="text"
@@ -174,67 +175,88 @@ export function PersonalDetailsStep({ onNext, onBack, initialData }: PersonalDet
               maxLength={12}
               required
             />
-            <div className="text-sm text-muted-foreground">
-              {formData.aadhaarNumber.length}/12
+            {errors.aadhaarNumber && (
+              <p className="text-sm text-destructive">{errors.aadhaarNumber}</p>
+            )}
+          </div>
+
+          {/* Address Line 1 */}
+          <div className="space-y-2">
+            <Label htmlFor="addressLine1" className="text-sm font-medium text-foreground">
+              Address Line 1 *
+            </Label>
+            <Input
+              id="addressLine1"
+              type="text"
+              value={formData.addressLine1}
+              onChange={(e) => setFormData(prev => ({ ...prev, addressLine1: e.target.value }))}
+              placeholder="Street address, apartment, suite, etc."
+              className="w-full"
+              required
+            />
+          </div>
+
+          {/* Address Line 2 */}
+          <div className="space-y-2">
+            <Label htmlFor="addressLine2" className="text-sm font-medium text-foreground">
+              Address Line 2
+            </Label>
+            <Input
+              id="addressLine2"
+              type="text"
+              value={formData.addressLine2}
+              onChange={(e) => setFormData(prev => ({ ...prev, addressLine2: e.target.value }))}
+              placeholder="Additional address information (optional)"
+              className="w-full"
+            />
+          </div>
+
+          {/* City and State */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city" className="text-sm font-medium text-foreground">
+                City *
+              </Label>
+              <Input
+                id="city"
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                className="w-full"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="state" className="text-sm font-medium text-foreground">
+                State *
+              </Label>
+              <Input
+                id="state"
+                type="text"
+                value={formData.state}
+                onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                className="w-full"
+                required
+              />
             </div>
           </div>
 
-          {/* PAN Number */}
+          {/* Pincode */}
           <div className="space-y-2">
-            <Label htmlFor="panNumber" className="text-sm font-medium text-foreground">
-              PAN Number *
+            <Label htmlFor="pincode" className="text-sm font-medium text-foreground">
+              Pincode *
             </Label>
             <Input
-              id="panNumber"
+              id="pincode"
               type="text"
-              value={formData.panNumber}
+              value={formData.pincode}
               onChange={(e) => {
-                const value = e.target.value.toUpperCase().slice(0, 10);
-                setFormData(prev => ({ ...prev, panNumber: value }));
+                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setFormData(prev => ({ ...prev, pincode: value }));
               }}
-              placeholder="Enter PAN number (e.g., ABCDE1234F)"
+              placeholder="Enter 6-digit pincode"
               className="w-full"
-              maxLength={10}
-              required
-            />
-          </div>
-
-          {/* Mobile Number */}
-          <div className="space-y-2">
-            <Label htmlFor="mobileNumber" className="text-sm font-medium text-foreground">
-              Mobile Number *
-            </Label>
-            <Input
-              id="mobileNumber"
-              type="tel"
-              value={formData.mobileNumber}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                setFormData(prev => ({ ...prev, mobileNumber: value }));
-              }}
-              placeholder="Enter 10-digit mobile number"
-              className="w-full"
-              maxLength={10}
-              required
-            />
-          </div>
-
-          {/* Emergency Contact */}
-          <div className="space-y-2">
-            <Label htmlFor="emergencyContact" className="text-sm font-medium text-foreground">
-              Emergency Contact Number *
-            </Label>
-            <Input
-              id="emergencyContact"
-              type="tel"
-              value={formData.emergencyContact}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                setFormData(prev => ({ ...prev, emergencyContact: value }));
-              }}
-              placeholder="Enter 10-digit emergency contact number"
-              className="w-full"
-              maxLength={10}
+              maxLength={6}
               required
             />
           </div>
@@ -244,7 +266,7 @@ export function PersonalDetailsStep({ onNext, onBack, initialData }: PersonalDet
             <Button
               type="button"
               variant="outline"
-              onClick={onBack}
+              onClick={onPrevious}
               className="px-6"
             >
               Back
@@ -252,7 +274,6 @@ export function PersonalDetailsStep({ onNext, onBack, initialData }: PersonalDet
             <Button
               type="submit"
               className="px-6"
-              disabled={!isFormValid()}
             >
               Next
             </Button>
