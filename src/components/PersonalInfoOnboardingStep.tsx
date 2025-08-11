@@ -64,7 +64,7 @@ export function PersonalInfoOnboardingStep() {
             Profile Picture (Optional)
           </Label>
           <div className="flex items-center gap-4">
-            {data.personalInfo.profilePicture && (
+            {data.personalInfo.profilePicture instanceof File && (
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                 <img 
                   src={URL.createObjectURL(data.personalInfo.profilePicture)} 
