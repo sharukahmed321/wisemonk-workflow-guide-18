@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -154,14 +153,9 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
 
           {/* Aadhaar Number */}
           <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="aadhaarNumber" className="text-sm font-medium text-foreground">
-                Aadhaar Number *
-              </Label>
-              <div className="text-sm text-muted-foreground">
-                {formData.aadhaarNumber.length}/12
-              </div>
-            </div>
+            <Label htmlFor="aadhaarNumber" className="text-sm font-medium text-foreground">
+              Aadhaar Number *
+            </Label>
             <Input
               id="aadhaarNumber"
               type="text"
@@ -175,6 +169,9 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               maxLength={12}
               required
             />
+            <div className="text-sm text-muted-foreground">
+              {formData.aadhaarNumber.length}/12
+            </div>
             {errors.aadhaarNumber && (
               <p className="text-sm text-destructive">{errors.aadhaarNumber}</p>
             )}
