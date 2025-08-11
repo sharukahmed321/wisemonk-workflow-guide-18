@@ -152,7 +152,7 @@ export const jobDescriptionAllowed = (value: string): boolean => {
   return /^[A-Za-z0-9\s\-'.,;:()\[\]{}"/&%@#*+=$!?\n\t\r]+$/.test(value);
 };
 
-export const createJobDescriptionValidator = (minLength: number = 10, maxLength: number = 2000) => {
+export const createJobDescriptionValidator = (minLength: number = 10, maxLength: number = 10000) => {
   return z.string()
     .min(1, 'Job description is required')
     .refine(notOnlyWhitespace, 'Job description cannot be only whitespace')
