@@ -173,7 +173,7 @@ export function PasswordUpdateForm({ onSuccess }: PasswordUpdateFormProps) {
                       <div className="grid grid-cols-1 gap-1 text-xs">
                         <div className={`flex items-center gap-1 ${passwordStrength.checks.length ? 'text-green-600' : 'text-gray-400'}`}>
                           {passwordStrength.checks.length ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                          At least 12 characters
+                          At least 8 characters
                         </div>
                         <div className={`flex items-center gap-1 ${passwordStrength.checks.lowercase ? 'text-green-600' : 'text-gray-400'}`}>
                           {passwordStrength.checks.lowercase ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
