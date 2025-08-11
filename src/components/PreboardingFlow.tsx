@@ -42,9 +42,13 @@ export function PreboardingFlow({
     },
     backgroundVerification: {
       documents: {},
+      payslips: {
+        payslip1: { status: 'pending' },
+        payslip2: { status: 'pending' },
+        payslip3: { status: 'pending' }
+      },
       uploadStatus: {
         panCard: 'pending',
-        previousPayslips: 'pending',
         previousOfferLetter: 'pending'
       }
     },

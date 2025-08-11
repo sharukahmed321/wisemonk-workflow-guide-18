@@ -92,6 +92,9 @@ export type Database = {
           monthly_special_allowance: number | null
           organization_id: string
           pan_card_url: string | null
+          payslip_1_url: string | null
+          payslip_2_url: string | null
+          payslip_3_url: string | null
           phone: string | null
           pincode: string | null
           previous_offer_letter_url: string | null
@@ -155,6 +158,9 @@ export type Database = {
           monthly_special_allowance?: number | null
           organization_id: string
           pan_card_url?: string | null
+          payslip_1_url?: string | null
+          payslip_2_url?: string | null
+          payslip_3_url?: string | null
           phone?: string | null
           pincode?: string | null
           previous_offer_letter_url?: string | null
@@ -218,6 +224,9 @@ export type Database = {
           monthly_special_allowance?: number | null
           organization_id?: string
           pan_card_url?: string | null
+          payslip_1_url?: string | null
+          payslip_2_url?: string | null
+          payslip_3_url?: string | null
           phone?: string | null
           pincode?: string | null
           previous_offer_letter_url?: string | null

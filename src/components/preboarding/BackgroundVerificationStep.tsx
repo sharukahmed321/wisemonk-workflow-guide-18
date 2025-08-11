@@ -2,15 +2,20 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { DocumentUploadCard } from './DocumentUploadCard';
-import { Shield, FileText, CreditCard, Receipt, Award } from 'lucide-react';
+import { MultiplePayslipUploadCard } from './MultiplePayslipUploadCard';
+import { Shield, FileText, CreditCard, Award } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface BackgroundVerificationData {
   documents: {
     panCard?: File;
-    previousPayslips?: File;
     previousOfferLetter?: File;
+  };
+  payslips: {
+    payslip1: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
+    payslip2: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
+    payslip3: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
   };
   uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
 }
@@ -24,6 +29,11 @@ interface BackgroundVerificationStepProps {
 
 export function BackgroundVerificationStep({ data, onComplete, onPrevious, employeeId }: BackgroundVerificationStepProps) {
   const [documents, setDocuments] = useState(data.documents);
+  const [payslips, setPayslips] = useState(data.payslips || {
+    payslip1: { status: 'pending' as const },
+    payslip2: { status: 'pending' as const },
+    payslip3: { status: 'pending' as const }
+  });
   const [uploadStatus, setUploadStatus] = useState(data.uploadStatus);
   const { toast } = useToast();
 
@@ -33,13 +43,6 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
       title: 'PAN Card',
       description: 'Upload a clear copy of your PAN card',
       icon: CreditCard,
-      required: true
-    },
-    {
-      key: 'previousPayslips',
-      title: 'Previous Payslips',
-      description: 'Upload your last 3 months payslips',
-      icon: Receipt,
       required: true
     },
     {
@@ -115,16 +118,28 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
     }));
   };
 
+  const handlePayslipUpdate = (payslipNumber: 1 | 2 | 3, data: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' }) => {
+    setPayslips(prev => ({
+      ...prev,
+      [`payslip${payslipNumber}`]: data
+    }));
+  };
+
   const handleContinue = () => {
     const requiredDocs = documentTypes.filter(doc => doc.required);
     const hasAllRequiredDocs = requiredDocs.every(doc => 
       documents[doc.key as keyof typeof documents] && 
       uploadStatus[doc.key] === 'success'
     );
+    
+    const hasAllPayslips = payslips.payslip1.status === 'success' && 
+                          payslips.payslip2.status === 'success' && 
+                          payslips.payslip3.status === 'success';
 
-    if (hasAllRequiredDocs) {
+    if (hasAllRequiredDocs && hasAllPayslips) {
       onComplete({
         documents,
+        payslips,
         uploadStatus
       });
     }
@@ -132,7 +147,10 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
 
   const isComplete = documentTypes
     .filter(doc => doc.required)
-    .every(doc => documents[doc.key as keyof typeof documents] && uploadStatus[doc.key] === 'success');
+    .every(doc => documents[doc.key as keyof typeof documents] && uploadStatus[doc.key] === 'success') &&
+    payslips.payslip1.status === 'success' && 
+    payslips.payslip2.status === 'success' && 
+    payslips.payslip3.status === 'success';
 
   return (
     <div className="space-y-6">
@@ -160,6 +178,12 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
             onFileRemove={() => handleFileRemove(docType.key)}
           />
         ))}
+        
+        <MultiplePayslipUploadCard
+          payslips={payslips}
+          onPayslipUpdate={handlePayslipUpdate}
+          employeeId={employeeId}
+        />
       </div>
 
       <div className="bg-muted/30 rounded-lg p-4 text-sm">

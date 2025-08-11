@@ -99,6 +99,15 @@ Deno.serve(async (req) => {
       case 'previous_payslips':
         updateData.previous_payslips_url = publicUrl;
         break;
+      case 'payslip_1':
+        updateData.payslip_1_url = publicUrl;
+        break;
+      case 'payslip_2':
+        updateData.payslip_2_url = publicUrl;
+        break;
+      case 'payslip_3':
+        updateData.payslip_3_url = publicUrl;
+        break;
       case 'previous_offer_letter':
         updateData.previous_offer_letter_url = publicUrl;
         break;

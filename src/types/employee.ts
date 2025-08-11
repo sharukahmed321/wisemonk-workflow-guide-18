@@ -45,8 +45,12 @@ export interface PreboardingData {
   backgroundVerification: {
     documents: {
       panCard?: File;
-      previousPayslips?: File;
       previousOfferLetter?: File;
+    };
+    payslips: {
+      payslip1: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
+      payslip2: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
+      payslip3: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
     };
     uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
   };
