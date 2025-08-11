@@ -83,6 +83,50 @@ export function PersonalInfoOnboardingStep() {
           </div>
         </div>
 
+        {/* Phone Number */}
+        <div className="space-y-2">
+          <Label htmlFor="phoneNumber" className="flex items-center gap-2">
+            <Phone className="w-4 h-4" />
+            Phone Number *
+          </Label>
+          <Input
+            id="phoneNumber"
+            type="tel"
+            placeholder="Enter 10-digit phone number"
+            value={data.personalInfo.phoneNumber || ''}
+            onChange={(e) => updatePersonalInfo({ phoneNumber: e.target.value })}
+            className={errors.phoneNumber ? 'border-destructive' : ''}
+          />
+          {errors.phoneNumber && (
+            <p className="text-sm text-destructive">{errors.phoneNumber}</p>
+          )}
+        </div>
+
+        {/* Gender Identity */}
+        <div className="space-y-2">
+          <Label htmlFor="genderIdentity" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Gender Identity *
+          </Label>
+          <Select 
+            value={data.personalInfo.genderIdentity || ''} 
+            onValueChange={(value) => updatePersonalInfo({ genderIdentity: value })}
+          >
+            <SelectTrigger className={errors.genderIdentity ? 'border-destructive' : ''}>
+              <SelectValue placeholder="Select gender identity" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+              <SelectItem value="non-binary">Non-binary</SelectItem>
+              <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.genderIdentity && (
+            <p className="text-sm text-destructive">{errors.genderIdentity}</p>
+          )}
+        </div>
 
       </div>
     </div>
