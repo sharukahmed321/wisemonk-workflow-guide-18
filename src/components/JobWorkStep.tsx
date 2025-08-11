@@ -13,22 +13,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { createJobDescriptionValidator } from '@/lib/validationUtils';
 
 const jobWorkSchema = z.object({
   jobTitle: z.string().min(1, 'Job title is required'),
   seniority: z.enum(['junior', 'mid-level', 'senior']),
   startDate: z.date(),
   workLocation: z.enum(['remote', 'office', 'hybrid']),
-  jobDescription: z.string().min(1, 'Job description is required')
+  jobDescription: createJobDescriptionValidator()
 });
 
-export interface JobWorkData {
-  jobTitle: string;
-  seniority: 'junior' | 'mid-level' | 'senior';
-  startDate: Date;
-  workLocation: 'remote' | 'office' | 'hybrid';
-  jobDescription: string;
-}
+export type JobWorkData = z.infer<typeof jobWorkSchema>;
 
 interface JobWorkStepProps {
   onNext: (data: JobWorkData) => void;

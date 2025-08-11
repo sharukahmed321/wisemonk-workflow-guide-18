@@ -147,6 +147,21 @@ export const createPostalCodeValidator = (country?: string) => {
     .refine(val => validatePostalCode(val, country), 'Invalid postal code format');
 };
 
+// Job description character validation (allows comprehensive text formatting)
+export const jobDescriptionAllowed = (value: string): boolean => {
+  return /^[A-Za-z0-9\s\-'.,;:()\[\]{}"/&%@#*+=$!?\n\t\r]+$/.test(value);
+};
+
+export const createJobDescriptionValidator = (minLength: number = 10, maxLength: number = 2000) => {
+  return z.string()
+    .min(1, 'Job description is required')
+    .refine(notOnlyWhitespace, 'Job description cannot be only whitespace')
+    .transform(sanitizeInput)
+    .refine(jobDescriptionAllowed, 'Job description contains invalid characters')
+    .refine(val => val.length >= minLength, `Job description must be at least ${minLength} characters`)
+    .refine(val => val.length <= maxLength, `Job description must be no more than ${maxLength} characters`);
+};
+
 export const createDropdownValidator = (fieldName: string, allowedValues?: string[]) => {
   return z.string()
     .min(1, `Please select ${fieldName}`)

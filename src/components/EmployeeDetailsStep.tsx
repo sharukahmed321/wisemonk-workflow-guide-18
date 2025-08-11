@@ -12,7 +12,7 @@ import { CalendarIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { createNameValidator, createJobTitleValidator } from '@/lib/validationUtils';
+import { createNameValidator, createJobTitleValidator, createJobDescriptionValidator } from '@/lib/validationUtils';
 
 const employeeDetailsSchema = z.object({
   firstName: createNameValidator('First name', 2, 50),
@@ -33,7 +33,7 @@ const employeeDetailsSchema = z.object({
   startDate: z.date(),
   lastDate: z.date().optional(),
   workLocation: z.enum(['remote', 'office', 'hybrid']),
-  jobDescription: z.string('Job Description is required')
+  jobDescription: createJobDescriptionValidator()
 });
 
 export type EmployeeDetailsData = z.infer<typeof employeeDetailsSchema>;
