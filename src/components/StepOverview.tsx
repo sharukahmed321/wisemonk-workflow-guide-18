@@ -29,7 +29,7 @@ export function StepOverview({ onStart }: StepOverviewProps) {
       step: 3,
       title: "Compensation & Agreement",
       description: "Salary details and final confirmation",
-      icon: DollarSign,
+      icon: RupeeSign,
       fields: ["Salary & Currency", "Department & Employment Type", "Agreement Review"],
       time: "2-3 min"
     }
