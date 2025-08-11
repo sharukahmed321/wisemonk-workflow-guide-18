@@ -28,7 +28,7 @@ export function useEmployees() {
       }
 
       // Then, fetch invited employees from profiles table (pre-registered)
-      const { data: profilesData, error: profilesError } = await supabase
+     /* const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .eq('is_pre_registered', true)
@@ -38,7 +38,7 @@ export function useEmployees() {
         console.error('Error fetching profiles:', profilesError);
         setError(profilesError.message);
         return;
-      }
+      }*/
 
       // Combine and transform data
       const combinedEmployees: Employee[] = [
@@ -58,9 +58,9 @@ export function useEmployees() {
           status: emp.status as EmployeeStatus,
           avatar: emp.avatar_url,
           birthday: emp.birthday ? new Date(emp.birthday).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : undefined,
-        })),
+        }))
         // Map invited employees from profiles
-        ...(profilesData || []).map(profile => ({
+       /* ...(profilesData || []).map(profile => ({
           id: profile.id,
           employeeId: `INV-${profile.id.slice(0, 8).toUpperCase()}`,
           firstName: profile.first_name || '',
@@ -75,7 +75,7 @@ export function useEmployees() {
           status: 'Invited' as EmployeeStatus,
           joiningDate: profile.invited_at,
           preboardingStatus: 'Invitation Sent' as any,
-        }))
+        }))*/
       ];
 
       setEmployees(combinedEmployees);
