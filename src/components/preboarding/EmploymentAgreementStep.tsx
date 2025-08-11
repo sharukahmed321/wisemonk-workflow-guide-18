@@ -63,7 +63,7 @@ export function EmploymentAgreementStep({ data, onComplete, onPrevious, employee
           disabled={!isComplete}
           className="px-8"
         >
-          Complete Preboarding
+          Send for E-Signing
         </Button>
       </div>
     </div>
