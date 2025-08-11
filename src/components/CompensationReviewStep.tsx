@@ -86,25 +86,7 @@ export function CompensationReviewStep({
           <div>
             <h4 className="font-medium text-foreground mb-4">Compensation & Work Details</h4>
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="salary"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Annual Salary *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="50000"
-                        className="h-11"
-                        onChange={e => field.onChange(Number(e.target.value))}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+             
 
               <FormField
                 control={form.control}
@@ -123,7 +105,26 @@ export function CompensationReviewStep({
                   </FormItem>
                 )}
               />
-
+               <FormField
+                control={form.control}
+                name="salary"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Annual Salary *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={240000}
+                        placeholder="50000"
+                        className="h-11"
+                        onChange={e => field.onChange(Number(e.target.value))}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="department"
