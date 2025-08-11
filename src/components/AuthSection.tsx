@@ -65,7 +65,7 @@ const signUpSchema = z.object({
     .transform(val => val.trim().toLowerCase()), // T24: Auto-trim and normalize email
   password: z.string()
     .min(1, 'Password is required') // T4: Better required field validation
-    .min(12, 'Password must be at least 12 characters')
+    .min(8, 'Password must be at least 8 characters')
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
   confirmPassword: z.string().min(1, 'Please confirm your password'),
   terms: z.boolean().refine(val => val === true, 'You must accept the terms and conditions'),
