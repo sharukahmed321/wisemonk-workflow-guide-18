@@ -32,7 +32,7 @@ export function PreboardingFlow({
     personalDetails: {
       fullName: '',
       fatherName: '',
-      dateOfBirth: new Date(),
+      dateOfBirth: undefined,
       aadhaarNumber: '',
       addressLine1: '',
       addressLine2: '',
@@ -62,6 +62,10 @@ export function PreboardingFlow({
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
+        // Handle date parsing from localStorage
+        if (parsedData.personalDetails?.dateOfBirth) {
+          parsedData.personalDetails.dateOfBirth = new Date(parsedData.personalDetails.dateOfBirth);
+        }
         setPreboardingData(parsedData);
 
         // Determine completed steps based on saved data
@@ -290,7 +294,10 @@ export function PreboardingFlow({
         {/* Step Content */}
         <Card>
           <CardContent className="p-8">
-            {currentStep === 1 && <PersonalDetailsStep data={preboardingData.personalDetails} onComplete={data => handleStepComplete(1, data)} onPrevious={handlePrevious} />}
+            {currentStep === 1 && <PersonalDetailsStep data={{
+              ...preboardingData.personalDetails,
+              dateOfBirth: preboardingData.personalDetails.dateOfBirth || new Date()
+            }} onComplete={data => handleStepComplete(1, data)} onPrevious={handlePrevious} />}
             
             {currentStep === 2 && <BackgroundVerificationStep data={preboardingData.backgroundVerification} onComplete={data => handleStepComplete(2, data)} onPrevious={handlePrevious} employeeId={employeeId} />}
             

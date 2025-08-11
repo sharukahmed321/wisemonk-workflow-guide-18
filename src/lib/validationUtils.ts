@@ -176,7 +176,9 @@ const calculateAge = (birthDate: Date): number => {
 };
 
 export const createDateOfBirthValidator = () => {
-  return z.date()
+  return z.date({
+    message: 'Date of birth is required'
+  })
     .refine(date => !isNaN(date.getTime()), 'Invalid date format')
     .refine(date => date <= new Date(), 'Date of birth cannot be in the future')
     .refine(date => calculateAge(date) >= 18, 'You must be at least 18 years old');

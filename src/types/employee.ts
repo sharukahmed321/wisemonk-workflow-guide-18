@@ -34,7 +34,7 @@ export interface PreboardingData {
   personalDetails: {
     fullName: string;
     fatherName: string;
-    dateOfBirth: Date;
+    dateOfBirth?: Date;
     aadhaarNumber: string;
     addressLine1: string;
     addressLine2: string;
