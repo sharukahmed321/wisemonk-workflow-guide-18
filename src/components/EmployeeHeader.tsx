@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -5,6 +6,7 @@ import { LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from './Logo';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 export function EmployeeHeader() {
   const {
     user,
@@ -13,7 +15,7 @@ export function EmployeeHeader() {
   const userInitials = user?.email ? user.email.split('@')[0].slice(0, 2).toUpperCase() : 'U';
   return <header className="flex h-16 items-center justify-between border-b border-border bg-background px-6">
       {/* Logo */}
-      
+      <Logo />
 
       {/* User Menu */}
       <DropdownMenu>
