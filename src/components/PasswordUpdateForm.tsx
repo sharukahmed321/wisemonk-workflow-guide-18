@@ -16,7 +16,7 @@ interface PasswordUpdateFormProps {
 
 const passwordUpdateSchema = z.object({
   password: z.string()
-    .min(12, 'Password must be at least 12 characters')
+    .min(8, 'Password must be at least 8 characters')
     .regex(/^(?=.*[a-z])/, 'Password must contain lowercase letters')
     .regex(/^(?=.*[A-Z])/, 'Password must contain uppercase letters')
     .regex(/^(?=.*\d)/, 'Password must contain numbers')
@@ -38,7 +38,7 @@ export function PasswordUpdateForm({ onSuccess }: PasswordUpdateFormProps) {
 
   const checkPasswordStrength = (password: string) => {
     const checks = {
-      length: password.length >= 12,
+      length: password.length >= 8,
       lowercase: /[a-z]/.test(password),
       uppercase: /[A-Z]/.test(password),
       number: /\d/.test(password),
