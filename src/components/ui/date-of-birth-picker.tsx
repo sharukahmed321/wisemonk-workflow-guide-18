@@ -52,8 +52,8 @@ const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
   if (value && isValid(value)) {
     return new Date(value.getFullYear(), value.getMonth(), 1);
   }
-  // Default to around 25 years ago instead of 1990
-  const defaultYear = new Date().getFullYear() - 25;
+  // Default to around 30 years ago for better UX
+  const defaultYear = new Date().getFullYear() - 30;
   return new Date(defaultYear, 0, 1);
 });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -186,26 +186,13 @@ const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
     }
   };
 
-  const calculateAge = (birthDate: Date): number => {
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      return age - 1;
-    }
-    
-    return age;
-  };
-
   const isValidDateOfBirth = (date: Date): boolean => {
     const today = new Date();
     const minDate = new Date(minYear, 0, 1);
     
     return isValid(date) && 
            !isAfter(date, today) && 
-           !isBefore(date, minDate) &&
-           calculateAge(date) >= 18;
+           !isBefore(date, minDate);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
