@@ -33,7 +33,7 @@ const employeeDetailsSchema = z.object({
   startDate: z.date(),
   lastDate: z.date().optional(),
   workLocation: z.enum(['remote', 'office', 'hybrid']),
-  jobDescription: z.string().optional()
+  jobDescription: z.string('Job Description is required')
 });
 
 export type EmployeeDetailsData = z.infer<typeof employeeDetailsSchema>;

@@ -13,7 +13,7 @@ import { EmployeeDetailsData } from './EmployeeDetailsStep';
 import { format } from "date-fns";
 
 const compensationReviewSchema = z.object({
-  salary: z.number().min(1, 'Salary is required'),
+  salary: z.number().min(240000, 'Salary is required'),
   currency: z.string().min(1, 'Currency is required'),
   department: z.string().min(1, 'Department is required'),
   employmentType: z.string().min(1, 'Employment type is required'),
