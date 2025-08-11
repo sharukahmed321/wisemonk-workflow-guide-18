@@ -294,10 +294,7 @@ export function PreboardingFlow({
         {/* Step Content */}
         <Card>
           <CardContent className="p-8">
-            {currentStep === 1 && <PersonalDetailsStep data={{
-              ...preboardingData.personalDetails,
-              dateOfBirth: preboardingData.personalDetails.dateOfBirth || new Date()
-            }} onComplete={data => handleStepComplete(1, data)} onPrevious={handlePrevious} />}
+            {currentStep === 1 && <PersonalDetailsStep data={preboardingData.personalDetails} onComplete={data => handleStepComplete(1, data)} onPrevious={handlePrevious} />}
             
             {currentStep === 2 && <BackgroundVerificationStep data={preboardingData.backgroundVerification} onComplete={data => handleStepComplete(2, data)} onPrevious={handlePrevious} employeeId={employeeId} />}
             

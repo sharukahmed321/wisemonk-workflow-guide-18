@@ -25,7 +25,7 @@ const personalDetailsSchema = z.object({
 type PersonalDetailsData = z.infer<typeof personalDetailsSchema>;
 
 interface PersonalDetailsStepProps {
-  data: PersonalDetailsData;
+  data: Partial<PersonalDetailsData>;
   onComplete: (data: PersonalDetailsData) => void;
   onPrevious?: () => void;
 }
