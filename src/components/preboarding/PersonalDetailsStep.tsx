@@ -119,7 +119,7 @@ export function PersonalDetailsStep({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
-                    Aadhar No. *
+                    Aadhaar No. *
                   </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter your aadhar no." className="h-11" {...field} />
