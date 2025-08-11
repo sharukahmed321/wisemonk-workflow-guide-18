@@ -169,8 +169,10 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               maxLength={12}
               required
             />
-            <div className="text-sm text-muted-foreground">
-              {formData.aadhaarNumber.length}/12
+            <div className="flex justify-end">
+              <div className="text-sm text-muted-foreground">
+                {formData.aadhaarNumber.length}/12
+              </div>
             </div>
             {errors.aadhaarNumber && (
               <p className="text-sm text-destructive">{errors.aadhaarNumber}</p>
