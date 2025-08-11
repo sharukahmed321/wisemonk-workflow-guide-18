@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, User, Briefcase, DollarSign, CheckCircle } from "lucide-react";
+import { Clock, User, Briefcase, IndianRupee, CheckCircle } from "lucide-react";
 
 interface StepOverviewProps {
   onStart: () => void;
@@ -29,7 +29,7 @@ export function StepOverview({ onStart }: StepOverviewProps) {
       step: 3,
       title: "Compensation & Agreement",
       description: "Salary details and final confirmation",
-      icon: RupeeSign,
+      icon: IndianRupee,
       fields: ["Salary & Currency", "Department & Employment Type", "Agreement Review"],
       time: "2-3 min"
     }
