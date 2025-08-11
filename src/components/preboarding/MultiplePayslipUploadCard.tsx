@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, FileText, CheckCircle, AlertCircle, X, Receipt } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, X, Receipt, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,65 +22,128 @@ interface MultiplePayslipUploadCardProps {
 
 export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeId }: MultiplePayslipUploadCardProps) {
   const { toast } = useToast();
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileUpload = async (payslipNumber: 1 | 2 | 3, file: File) => {
-    // Validate file
+  const handleMultipleFilesUpload = async (files: FileList) => {
+    if (files.length !== 3) {
+      toast({
+        title: "Invalid file count",
+        description: "Please select exactly 3 payslip files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload a PDF, JPG, or PNG file.",
-        variant: "destructive",
-      });
-      return;
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    // Validate all files first
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: `File "${file.name}" is not a PDF, JPG, or PNG file.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      if (file.size > maxSize) {
+        toast({
+          title: "File too large",
+          description: `File "${file.name}" is larger than 5MB.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast({
-        title: "File too large",
-        description: "Please upload a file smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
+    setIsUploading(true);
 
-    // Update status to uploading
-    onPayslipUpdate(payslipNumber, { file, status: 'uploading' });
+    // Set all files to uploading status
+    const filesArray = Array.from(files);
+    filesArray.forEach((file, index) => {
+      onPayslipUpdate((index + 1) as 1 | 2 | 3, { file, status: 'uploading' });
+    });
+
+    // Upload all files concurrently
+    const uploadPromises = filesArray.map(async (file, index) => {
+      const payslipNumber = (index + 1) as 1 | 2 | 3;
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('employeeId', employeeId);
+        formData.append('documentType', `payslip_${payslipNumber}`);
+
+        const { data, error } = await supabase.functions.invoke('upload-employee-document', {
+          body: formData
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        onPayslipUpdate(payslipNumber, { file, status: 'success' });
+        return { success: true, payslipNumber };
+      } catch (error) {
+        console.error(`Upload error for payslip ${payslipNumber}:`, error);
+        onPayslipUpdate(payslipNumber, { file, status: 'error' });
+        return { success: false, payslipNumber, error };
+      }
+    });
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('employeeId', employeeId);
-      formData.append('documentType', `payslip_${payslipNumber}`);
+      const results = await Promise.all(uploadPromises);
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.filter(r => !r.success).length;
 
-      const { data, error } = await supabase.functions.invoke('upload-employee-document', {
-        body: formData
-      });
-
-      if (error) {
-        throw error;
+      if (successCount === 3) {
+        toast({
+          title: "All payslips uploaded successfully",
+          description: "All 3 payslips have been uploaded and are pending verification.",
+        });
+      } else if (successCount > 0) {
+        toast({
+          title: "Partial upload success",
+          description: `${successCount} of 3 payslips uploaded successfully. ${failedCount} failed.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload any payslips. Please try again.",
+          variant: "destructive",
+        });
       }
-
-      onPayslipUpdate(payslipNumber, { file, status: 'success' });
-      
-      toast({
-        title: "Payslip uploaded successfully",
-        description: `Payslip ${payslipNumber} has been uploaded and is pending verification.`,
-      });
-    } catch (error) {
-      console.error('Upload error:', error);
-      onPayslipUpdate(payslipNumber, { file, status: 'error' });
-      
-      toast({
-        title: "Upload failed",
-        description: `Failed to upload payslip ${payslipNumber}. Please try again.`,
-        variant: "destructive",
-      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleFileRemove = (payslipNumber: 1 | 2 | 3) => {
     onPayslipUpdate(payslipNumber, { status: 'pending' });
+  };
+
+  const handleChooseFiles = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = '.pdf,.jpg,.jpeg,.png';
+    input.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      const files = target.files;
+      if (files) {
+        handleMultipleFilesUpload(files);
+      }
+    };
+    input.click();
+  };
+
+  const handleResetFiles = () => {
+    onPayslipUpdate(1, { status: 'pending' });
+    onPayslipUpdate(2, { status: 'pending' });
+    onPayslipUpdate(3, { status: 'pending' });
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -89,15 +152,6 @@ export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeI
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getStatusColor = (status: PayslipData['status']) => {
-    switch (status) {
-      case 'success': return 'border-green-200 bg-green-50';
-      case 'error': return 'border-red-200 bg-red-50';
-      case 'uploading': return 'border-blue-200 bg-blue-50';
-      default: return 'border-border';
-    }
   };
 
   const getStatusIcon = (status: PayslipData['status']) => {
@@ -109,77 +163,8 @@ export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeI
     }
   };
 
-  const PayslipUploadSection = ({ 
-    payslipNumber, 
-    payslipData 
-  }: { 
-    payslipNumber: 1 | 2 | 3; 
-    payslipData: PayslipData 
-  }) => (
-    <div className={`border-2 border-dashed rounded-lg p-4 transition-colors ${getStatusColor(payslipData.status)}`}>
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="font-medium text-foreground">Payslip {payslipNumber}</h4>
-        {getStatusIcon(payslipData.status)}
-      </div>
-      
-      {payslipData.file && payslipData.status !== 'pending' ? (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 p-2 bg-background rounded border">
-            <FileText className="w-4 h-4 text-muted-foreground" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {payslipData.file.name}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {formatFileSize(payslipData.file.size)}
-              </p>
-            </div>
-            {payslipData.status === 'success' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleFileRemove(payslipNumber)}
-                className="h-8 w-8 p-0"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-          
-          {payslipData.status === 'uploading' && (
-            <div className="w-full bg-muted rounded-full h-2">
-              <div className="bg-primary h-2 rounded-full animate-pulse w-3/4"></div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div 
-          className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
-          onClick={() => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.pdf,.jpg,.jpeg,.png';
-            input.onchange = (e) => {
-              const target = e.target as HTMLInputElement;
-              const file = target.files?.[0];
-              if (file) {
-                handleFileUpload(payslipNumber, file);
-              }
-            };
-            input.click();
-          }}
-        >
-          <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground mb-1">
-            Click to upload or drag and drop
-          </p>
-          <p className="text-xs text-muted-foreground">
-            PDF, JPG, PNG (max 5MB)
-          </p>
-        </div>
-      )}
-    </div>
-  );
+  const hasAnyFiles = payslips.payslip1.file || payslips.payslip2.file || payslips.payslip3.file;
+  const allFilesSelected = payslips.payslip1.file && payslips.payslip2.file && payslips.payslip3.file;
 
   return (
     <Card>
@@ -197,9 +182,110 @@ export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeI
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <PayslipUploadSection payslipNumber={1} payslipData={payslips.payslip1} />
-        <PayslipUploadSection payslipNumber={2} payslipData={payslips.payslip2} />
-        <PayslipUploadSection payslipNumber={3} payslipData={payslips.payslip3} />
+        {!hasAnyFiles ? (
+          <div 
+            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+            onClick={handleChooseFiles}
+          >
+            <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Upload 3 Payslips</h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              Click to select all 3 payslip files at once
+            </p>
+            <p className="text-xs text-muted-foreground">
+              PDF, JPG, PNG (max 5MB each)
+            </p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              disabled={isUploading}
+            >
+              Choose 3 Files
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-foreground">Selected Payslips</h3>
+              {allFilesSelected && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetFiles}
+                  className="flex items-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Choose Different Files
+                </Button>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              {[1, 2, 3].map((num) => {
+                const payslipKey = `payslip${num}` as keyof typeof payslips;
+                const payslipData = payslips[payslipKey];
+                
+                return (
+                  <div 
+                    key={num}
+                    className="flex items-center gap-3 p-3 bg-muted/20 rounded-lg border"
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-full text-xs font-medium text-primary">
+                      {num}
+                    </div>
+                    
+                    {payslipData.file ? (
+                      <>
+                        <FileText className="w-5 h-5 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {payslipData.file.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(payslipData.file.size)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(payslipData.status)}
+                          {payslipData.status === 'success' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleFileRemove(num as 1 | 2 | 3)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground">
+                            No file selected
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {!allFilesSelected && (
+              <Button 
+                variant="outline" 
+                onClick={handleChooseFiles}
+                disabled={isUploading}
+                className="w-full"
+              >
+                {hasAnyFiles ? 'Replace Files' : 'Choose Files'}
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
