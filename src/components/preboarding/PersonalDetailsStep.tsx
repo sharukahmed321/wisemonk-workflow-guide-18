@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { DateOfBirthPicker } from '@/components/ui/date-of-birth-picker';
 import { User, MapPin } from 'lucide-react';
-import { createAddressValidator, createCityValidator, createStateValidator, createPostalCodeValidator } from "@/lib/validationUtils";
+import { createAddressValidator, createCityValidator, createStateValidator, createPostalCodeValidator, createDateOfBirthValidator } from "@/lib/validationUtils";
 
 const personalDetailsSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   fatherName: z.string().min(2, 'Father\'s name must be at least 2 characters'),
-  dateOfBirth: z.date(),
+  dateOfBirth: createDateOfBirthValidator(),
   aadhaarNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be 12 digits'),
   addressLine1: createAddressValidator('Address Line 1'),
   addressLine2: createAddressValidator('Address Line 2'),

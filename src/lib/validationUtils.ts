@@ -162,6 +162,26 @@ export const createJobDescriptionValidator = (minLength: number = 10, maxLength:
     .refine(val => val.length <= maxLength, `Job description must be no more than ${maxLength} characters`);
 };
 
+// Age calculation utility
+const calculateAge = (birthDate: Date): number => {
+  const today = new Date();
+  const age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    return age - 1;
+  }
+  
+  return age;
+};
+
+export const createDateOfBirthValidator = () => {
+  return z.date()
+    .refine(date => !isNaN(date.getTime()), 'Invalid date format')
+    .refine(date => date <= new Date(), 'Date of birth cannot be in the future')
+    .refine(date => calculateAge(date) >= 18, 'You must be at least 18 years old');
+};
+
 export const createSalaryValidator = (minSalary: number = 240000, maxSalary?: number) => {
   return z.number()
     .min(1, 'Salary is required')

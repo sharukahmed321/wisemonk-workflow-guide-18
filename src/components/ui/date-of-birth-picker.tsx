@@ -186,13 +186,26 @@ const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
     }
   };
 
+  const calculateAge = (birthDate: Date): number => {
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      return age - 1;
+    }
+    
+    return age;
+  };
+
   const isValidDateOfBirth = (date: Date): boolean => {
     const today = new Date();
     const minDate = new Date(minYear, 0, 1);
     
     return isValid(date) && 
            !isAfter(date, today) && 
-           !isBefore(date, minDate);
+           !isBefore(date, minDate) &&
+           calculateAge(date) >= 18;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
