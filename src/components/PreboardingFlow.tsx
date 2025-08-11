@@ -77,7 +77,12 @@ export function PreboardingFlow({
         if (parsedData.personalDetails.fullName && parsedData.personalDetails.aadhaarNumber) {
           completed.add(1);
         }
-        if (Object.keys(parsedData.backgroundVerification.documents).length > 0) {
+        // Check if background verification is complete (both documents and payslips)
+        const hasDocuments = Object.keys(parsedData.backgroundVerification.documents).length > 0;
+        const hasPayslips = parsedData.backgroundVerification.payslips?.payslip1?.status === 'success' &&
+                           parsedData.backgroundVerification.payslips?.payslip2?.status === 'success' &&
+                           parsedData.backgroundVerification.payslips?.payslip3?.status === 'success';
+        if (hasDocuments && hasPayslips) {
           completed.add(2);
         }
         if (parsedData.employmentAgreement.agreedToTerms) {
@@ -92,7 +97,34 @@ export function PreboardingFlow({
 
   // Save to localStorage whenever data changes
   useEffect(() => {
-    localStorage.setItem(`preboarding-${employeeId}`, JSON.stringify(preboardingData));
+    // Create a serializable version of the data (excluding File objects)
+    const serializableData = {
+      ...preboardingData,
+      backgroundVerification: {
+        ...preboardingData.backgroundVerification,
+        payslips: {
+          payslip1: {
+            fileName: preboardingData.backgroundVerification.payslips.payslip1?.fileName,
+            fileSize: preboardingData.backgroundVerification.payslips.payslip1?.fileSize,
+            uploadedUrl: preboardingData.backgroundVerification.payslips.payslip1?.uploadedUrl,
+            status: preboardingData.backgroundVerification.payslips.payslip1?.status || 'pending'
+          },
+          payslip2: {
+            fileName: preboardingData.backgroundVerification.payslips.payslip2?.fileName,
+            fileSize: preboardingData.backgroundVerification.payslips.payslip2?.fileSize,
+            uploadedUrl: preboardingData.backgroundVerification.payslips.payslip2?.uploadedUrl,
+            status: preboardingData.backgroundVerification.payslips.payslip2?.status || 'pending'
+          },
+          payslip3: {
+            fileName: preboardingData.backgroundVerification.payslips.payslip3?.fileName,
+            fileSize: preboardingData.backgroundVerification.payslips.payslip3?.fileSize,
+            uploadedUrl: preboardingData.backgroundVerification.payslips.payslip3?.uploadedUrl,
+            status: preboardingData.backgroundVerification.payslips.payslip3?.status || 'pending'
+          }
+        }
+      }
+    };
+    localStorage.setItem(`preboarding-${employeeId}`, JSON.stringify(serializableData));
   }, [preboardingData, employeeId]);
   const steps: PreboardingStep[] = [{
     number: 1,

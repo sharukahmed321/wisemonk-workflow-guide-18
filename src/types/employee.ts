@@ -48,9 +48,9 @@ export interface PreboardingData {
       previousOfferLetter?: File;
     };
     payslips: {
-      payslip1: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
-      payslip2: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
-      payslip3: { file?: File; status: 'pending' | 'uploading' | 'success' | 'error' };
+      payslip1: { file?: File; fileName?: string; fileSize?: number; uploadedUrl?: string; status: 'pending' | 'uploading' | 'success' | 'error' };
+      payslip2: { file?: File; fileName?: string; fileSize?: number; uploadedUrl?: string; status: 'pending' | 'uploading' | 'success' | 'error' };
+      payslip3: { file?: File; fileName?: string; fileSize?: number; uploadedUrl?: string; status: 'pending' | 'uploading' | 'success' | 'error' };
     };
     uploadStatus: Record<string, 'pending' | 'uploading' | 'success' | 'error'>;
   };

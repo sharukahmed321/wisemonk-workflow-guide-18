@@ -7,6 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 
 interface PayslipData {
   file?: File;
+  fileName?: string;
+  fileSize?: number;
+  uploadedUrl?: string;
   status: 'pending' | 'uploading' | 'success' | 'error';
 }
 
@@ -84,7 +87,13 @@ export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeI
           throw error;
         }
 
-        onPayslipUpdate(payslipNumber, { file, status: 'success' });
+        onPayslipUpdate(payslipNumber, { 
+          file, 
+          fileName: file.name,
+          fileSize: file.size,
+          uploadedUrl: data?.url || '',
+          status: 'success' 
+        });
         return { success: true, payslipNumber };
       } catch (error) {
         console.error(`Upload error for payslip ${payslipNumber}:`, error);
@@ -163,8 +172,8 @@ export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeI
     }
   };
 
-  const hasAnyFiles = payslips.payslip1.file || payslips.payslip2.file || payslips.payslip3.file;
-  const allFilesSelected = payslips.payslip1.file && payslips.payslip2.file && payslips.payslip3.file;
+  const hasAnyFiles = payslips.payslip1.fileName || payslips.payslip2.fileName || payslips.payslip3.fileName;
+  const allFilesSelected = payslips.payslip1.fileName && payslips.payslip2.fileName && payslips.payslip3.fileName;
 
   return (
     <Card>
@@ -234,15 +243,15 @@ export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeI
                       {num}
                     </div>
                     
-                    {payslipData.file ? (
+                    {payslipData.fileName ? (
                       <>
                         <FileText className="w-5 h-5 text-muted-foreground" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
-                            {payslipData.file.name}
+                            {payslipData.fileName}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatFileSize(payslipData.file.size)}
+                            {payslipData.fileSize ? formatFileSize(payslipData.fileSize) : 'Unknown size'}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
