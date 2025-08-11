@@ -12,9 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import { PersonalInfoData } from './PersonalInfoStep';
 import { JobWorkData } from './JobWorkStep';
 import { format } from "date-fns";
+import { createSalaryValidator } from "@/lib/validationUtils";
 
 const compensationSchema = z.object({
-  salary: z.number().min(1, 'Salary is required'),
+  salary: createSalaryValidator(),
   currency: z.string().min(1, 'Currency is required'),
   department: z.string().min(1, 'Department is required'),
   employmentType: z.enum(['full-time', 'part-time', 'contract', 'intern']),
@@ -114,7 +115,7 @@ export function CompensationStep({
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="50000"
+                        placeholder="240000"
                         className="h-11"
                         onChange={e => field.onChange(Number(e.target.value))}
                         value={field.value || ''}

@@ -162,6 +162,13 @@ export const createJobDescriptionValidator = (minLength: number = 10, maxLength:
     .refine(val => val.length <= maxLength, `Job description must be no more than ${maxLength} characters`);
 };
 
+export const createSalaryValidator = (minSalary: number = 240000, maxSalary?: number) => {
+  return z.number()
+    .min(1, 'Salary is required')
+    .refine(val => val >= minSalary, `Annual salary must be at least ${minSalary.toLocaleString()}`)
+    .refine(val => !maxSalary || val <= maxSalary, maxSalary ? `Annual salary must not exceed ${maxSalary.toLocaleString()}` : undefined);
+};
+
 export const createDropdownValidator = (fieldName: string, allowedValues?: string[]) => {
   return z.string()
     .min(1, `Please select ${fieldName}`)
