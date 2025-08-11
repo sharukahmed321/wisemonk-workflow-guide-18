@@ -238,47 +238,61 @@ export function EmployeeDetailsStep({
                 )} 
               />
 
-              <FormField 
-                control={form.control} 
-                name="startDate" 
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Start Date *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "h-11 justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar 
-                          mode="single" 
-                          selected={field.value} 
-                          onSelect={field.onChange} 
-                          disabled={date => date < new Date()} 
-                          initialFocus
-                          defaultMonth={new Date()}
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} 
-              />
+         <FormField 
+  control={form.control} 
+  name="startDate" 
+  render={({ field }) => (
+    <FormItem className="flex flex-col">
+      <FormLabel>Start Date *</FormLabel>
+      <Popover>
+        <PopoverTrigger asChild>
+          <FormControl>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "h-11 justify-start text-left font-normal",
+                !field.value && "text-muted-foreground"
+              )}
+            >
+              {field.value ? (
+                format(field.value, "PPP")
+              ) : (
+                <span>Pick a date</span>
+              )}
+              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+            </Button>
+          </FormControl>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar 
+            mode="single" 
+            selected={field.value} 
+            onSelect={field.onChange} 
+            // Disable all dates before the start of this month
+            disabled={(date) => {
+              const firstDayOfMonth = new Date(
+                new Date().getFullYear(),
+                new Date().getMonth(),
+                1
+              );
+              return date < firstDayOfMonth;
+            }}
+            initialFocus
+            // Always show the calendar starting from the first of the month
+            defaultMonth={new Date(
+              new Date().getFullYear(),
+              new Date().getMonth(),
+              1
+            )}
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
 
               <FormField 
                 control={form.control} 
