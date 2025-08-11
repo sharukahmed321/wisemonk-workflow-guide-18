@@ -887,7 +887,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete, isRecoveryMode
                       </FormControl>
                       <FormMessage />
                       <p className="text-xs text-muted-foreground">
-                        Must contain at least 12 characters with uppercase, lowercase, number, and special character
+                        Must contain at least 8 characters with uppercase, lowercase, number, and special character
                       </p>
                     </FormItem>
                   )}
