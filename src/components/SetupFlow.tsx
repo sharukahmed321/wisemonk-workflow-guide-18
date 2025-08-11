@@ -87,7 +87,7 @@ export function AddressStep({ onComplete }: AddressStepProps) {
       });
 
       // Generate MSA agreement after address is saved
-      console.log('🔄 Generating MSA agreement...');
+     /* console.log('🔄 Generating MSA agreement...');
       const { data: authData } = await supabase.auth.getSession();
       
       if (!authData.session) {
@@ -111,7 +111,7 @@ export function AddressStep({ onComplete }: AddressStepProps) {
         title: "Success",
         description: "MSA agreement generated and stored successfully! Proceeding to signature step.",
       });
-
+*/
       // Navigate to MSA step for signing
       navigate('/dashboard/setup/msa');
     } catch (error) {
