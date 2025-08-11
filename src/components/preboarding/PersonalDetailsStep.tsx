@@ -124,6 +124,9 @@ export function PersonalDetailsStep({
                   <FormControl>
                     <Input placeholder="Enter your aadhar no." className="h-11" {...field} />
                   </FormControl>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {field.value?.length || 0}/12
+                  </div>
                   <FormMessage />
                 </FormItem>
               )} 
