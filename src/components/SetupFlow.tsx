@@ -237,10 +237,6 @@ interface MSAStepProps {
 export function MSAStep({ onComplete }: MSAStepProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-  const [msaDocument, setMsaDocument] = useState<MSADocument | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
   const form = useForm<MSAFormData>({
@@ -248,184 +244,85 @@ export function MSAStep({ onComplete }: MSAStepProps) {
     defaultValues: {}
   });
 
-  React.useEffect(() => {
-    loadExistingDocument();
-  }, []);
-
-  const loadExistingDocument = async () => {
-    try {
-      const { data: authData } = await supabase.auth.getSession();
-      
-      if (!authData.session) {
-        throw new Error('No active session');
-      }
-
-      const response = await supabase.functions.invoke('generate-msa-agreement', {
-        headers: {
-          Authorization: `Bearer ${authData.session.access_token}`,
-        },
-      });
-
-      if (response.error) {
-        throw new Error(`Failed to load MSA: ${response.error.message}`);
-      }
-
-      if (response.data?.document) {
-        setMsaDocument(response.data.document);
-      }
-    } catch (error) {
-      console.error('Error loading MSA document:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load MSA document. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const downloadMSA = async () => {
-    if (!msaDocument?.download_url) return;
-
-    setIsDownloading(true);
-    try {
-      const response = await fetch(msaDocument.download_url);
-      if (!response.ok) throw new Error('Failed to download file');
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = msaDocument.file_name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "MSA agreement downloaded successfully.",
-      });
-    } catch (error) {
-      console.error('Error downloading MSA:', error);
-      toast({
-        title: "Error",
-        description: "Failed to download MSA. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const regenerateDocument = async () => {
-    setIsRegenerating(true);
-    try {
-      // Force regeneration by clearing cache (this would require backend changes)
-      await loadExistingDocument();
-      
-      toast({
-        title: "Success",
-        description: "MSA agreement regenerated successfully.",
-      });
-    } catch (error) {
-      console.error('Error regenerating MSA:', error);
-      toast({
-        title: "Error",
-        description: "Failed to regenerate MSA. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRegenerating(false);
-    }
-  };
-
   const sendForSigning = async () => {
-    if (!msaDocument) {
-      toast({
-        title: "Error", 
-        description: "No MSA document found to send for signing.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      console.log('🔄 Sending MSA for e-signature via Zoho Sign...');
+      // First redirect to dashboard immediately
+      navigate('/dashboard');
       
+      toast({
+        title: "Processing",
+        description: "MSA generation and e-signature process has started in the background.",
+      });
+
+      // Then run MSA generation and signing in background
       const { data: authData } = await supabase.auth.getSession();
       
       if (!authData.session) {
         throw new Error('No active session');
       }
 
-      const response = await supabase.functions.invoke('send-msa-for-signing', {
-        body: {
-          msa_document_id: msaDocument.id
-        },
+      console.log('🔄 Generating MSA agreement...');
+
+      // Generate MSA agreement first
+      const msaResponse = await supabase.functions.invoke('generate-msa-agreement', {
         headers: {
           Authorization: `Bearer ${authData.session.access_token}`,
         },
       });
 
-      if (response.error) {
-        console.error('Zoho Sign error:', response.error);
-        throw new Error(`Failed to send for signing: ${response.error.message}`);
+      if (msaResponse.error) {
+        console.error('MSA generation error:', msaResponse.error);
+        throw new Error(`Failed to generate MSA: ${msaResponse.error.message}`);
       }
 
-      console.log('✅ MSA sent for e-signature successfully');
-      
-      // Update profile to mark MSA as completed since it's been sent for signing
-      const { data: user } = await supabase.auth.getUser();
-      if (user.user) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ 
-            msa_completed: true,
-            msa_status: 'completed'
-          })
-          .eq('user_id', user.user.id);
-          
-        if (updateError) {
-          console.error('Error updating MSA completion status:', updateError);
+      console.log('✅ MSA agreement generated successfully');
+
+      // Now send for signing
+      if (msaResponse.data?.document) {
+        console.log('🔄 Sending MSA for e-signature via Zoho Sign...');
+        
+        const signResponse = await supabase.functions.invoke('send-msa-for-signing', {
+          body: {
+            msa_document_id: msaResponse.data.document.id
+          },
+          headers: {
+            Authorization: `Bearer ${authData.session.access_token}`,
+          },
+        });
+
+        if (signResponse.error) {
+          console.error('Zoho Sign error:', signResponse.error);
+          throw new Error(`Failed to send for signing: ${signResponse.error.message}`);
+        }
+
+        console.log('✅ MSA sent for e-signature successfully');
+        
+        // Update profile to mark MSA as completed since it's been sent for signing
+        const { data: user } = await supabase.auth.getUser();
+        if (user.user) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ 
+              msa_completed: true,
+              msa_status: 'completed'
+            })
+            .eq('user_id', user.user.id);
+            
+          if (updateError) {
+            console.error('Error updating MSA completion status:', updateError);
+          }
         }
       }
-      
-      toast({
-        title: "Success",
-        description: "MSA sent for e-signature! Redirecting to dashboard...",
-      });
-
-      // Wait a moment for the toast to show, then redirect to dashboard
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
 
     } catch (error) {
-      console.error('Error sending MSA for signing:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send MSA for signing. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error in MSA background process:', error);
+      // Don't show error toast to user since they're already on dashboard
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="h-6 w-6 animate-spin text-primary" />
-          <span className="text-muted-foreground">Loading MSA document...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -444,70 +341,10 @@ export function MSAStep({ onComplete }: MSAStepProps) {
               Master Service Agreement
             </CardTitle>
             <p className="text-muted-foreground">
-              Your personalized MSA agreement has been generated and stored securely.
+              Ready to generate and send your personalized MSA agreement for electronic signature.
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Document Information */}
-            <div className="border rounded-lg p-6 bg-muted/20">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-foreground">
-                    {msaDocument?.file_name || 'MSA Agreement'}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Created: {msaDocument?.created_at ? new Date(msaDocument.created_at).toLocaleDateString() : 'N/A'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Status: {msaDocument?.is_signed ? 'Signed' : 'Pending Signature'}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={downloadMSA}
-                    disabled={isDownloading || !msaDocument?.download_url}
-                    className="flex items-center gap-2"
-                  >
-                    {isDownloading ? 'Downloading...' : 'Download PDF'}
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={regenerateDocument}
-                    disabled={isRegenerating}
-                    className="flex items-center gap-2"
-                  >
-                    {isRegenerating ? 'Regenerating...' : 'Regenerate'}
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="space-y-4 text-sm text-muted-foreground">
-                <p>
-                  <strong>Summary:</strong> This Master Service Agreement has been personalized with your company and personal information.
-                </p>
-                
-                <div className="space-y-2">
-                  <p><strong>Key Terms:</strong></p>
-                  <ul className="list-disc list-inside space-y-1 ml-4">
-                    <li>Service availability and support commitments</li>
-                    <li>Data protection and privacy guarantees</li>
-                    <li>Billing terms and cancellation policy</li>
-                    <li>Limitation of liability and dispute resolution</li>
-                  </ul>
-                </div>
-                
-                <p>
-                  By accepting this agreement, you confirm that you have read, understood, 
-                  and agree to be bound by all terms and conditions.
-                </p>
-              </div>
-            </div>
-
             <div className="space-y-6">
               <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
                 <div className="space-y-3">
@@ -515,9 +352,9 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                     🔐 What happens next?
                   </h4>
                   <div className="text-sm text-muted-foreground space-y-2">
-                    <p>You can download and review the agreement above, then proceed to send it for e-signature.</p>
-                    <p>Both you and Mithun will receive email invitations to sign the document electronically.</p>
-                    <p>Once sent, you'll be redirected to the dashboard where you can add your first employee.</p>
+                    <p>When you click "Send for E-Signature", we'll automatically generate your personalized MSA agreement and send it for electronic signature.</p>
+                    <p>Both you and Wisemonk will receive email invitations to sign the document electronically.</p>
+                    <p>You'll be redirected to the dashboard immediately while the process completes in the background.</p>
                   </div>
                 </div>
               </div>
@@ -528,10 +365,10 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                 </Button>
                 <Button 
                   onClick={sendForSigning} 
-                  disabled={isSubmitting || msaDocument?.is_signed} 
+                  disabled={isSubmitting} 
                   className="flex-1"
                 >
-                  {isSubmitting ? 'Sending for Signature...' : msaDocument?.is_signed ? 'Already Signed' : 'Send for E-Signature'}
+                  {isSubmitting ? 'Processing...' : 'Send for E-Signature'}
                 </Button>
               </div>
             </div>
