@@ -87,8 +87,18 @@ const Index = () => {
       const role = userRole?.[0]?.role;
       const hasOrganization = profile?.organization_id || userRole?.[0]?.organization_id;
 
+      // PRIORITY 1: Check profile completion first (regardless of role)
+      // If profile is incomplete, always go to onboarding
+      if (!profile || !profile.first_name || !profile.last_name || !profile.job_title) {
+        console.log('Redirecting to onboarding - incomplete profile:', { profile, role });
+        setAppState('onboarding');
+        return;
+      }
+
+      // PRIORITY 2: Role-based routing only AFTER profile is complete
       // If user is an employee with organization, redirect to people dashboard
       if (role === 'employee' && hasOrganization) {
+        console.log('Redirecting to employee dashboard:', { profile, role });
         setAppState('dashboard');
         if (!location.pathname.startsWith('/dashboard/people')) {
           navigate('/dashboard/people', { replace: true });
@@ -96,18 +106,11 @@ const Index = () => {
         return;
       }
 
-      // For new users or incomplete profiles, always go to onboarding
-      // This includes users with 'client' role but missing basic info
-      if (!profile || !profile.first_name || !profile.last_name || !profile.job_title) {
-        console.log('Redirecting to onboarding - incomplete profile:', { profile, role });
-        setAppState('onboarding');
-      } else {
-        // Profile is complete, go to dashboard
-        console.log('Redirecting to dashboard - complete profile:', { profile, role });
-        setAppState('dashboard');
-        if (!location.pathname.startsWith('/dashboard')) {
-          navigate('/dashboard', { replace: true });
-        }
+      // PRIORITY 3: Default to main dashboard for complete profiles
+      console.log('Redirecting to main dashboard - complete profile:', { profile, role });
+      setAppState('dashboard');
+      if (!location.pathname.startsWith('/dashboard')) {
+        navigate('/dashboard', { replace: true });
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
