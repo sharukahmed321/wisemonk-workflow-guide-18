@@ -50,7 +50,7 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
       title: 'Previous Offer Letter',
       description: 'Upload your previous company offer letter',
       icon: Award,
-      required: true
+      required: false
     }
   ];
 
