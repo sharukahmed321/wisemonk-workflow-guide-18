@@ -345,7 +345,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
             </p>
           </CardHeader>
           
-          <div className="flex justify-center px-6 pb-4">
+          <div className="flex justify-end px-6 pb-4">
             <Button 
               variant="outline" 
               onClick={() => window.open('https://docs.google.com/document/d/19gpL98DSu_jvbU7Ol5NXU5AJPYG4SKEXKR_-_YElZ40/edit?tab=t.0', '_blank')}
