@@ -26,7 +26,6 @@ export interface BankDetailsData {
   bankName: string;
   accountNumber: string;
   ifscCode: string;
-  panNumber: string;
   cancelledCheque?: File;
   hasUAN: boolean;
   uanNumber?: string;
