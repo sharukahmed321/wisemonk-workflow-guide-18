@@ -344,6 +344,18 @@ export function MSAStep({ onComplete }: MSAStepProps) {
               Ready to generate and send your personalized MSA agreement for electronic signature.
             </p>
           </CardHeader>
+          
+          <div className="flex justify-center px-6 pb-4">
+            <Button 
+              variant="outline" 
+              onClick={() => window.open('https://docs.google.com/document/d/19gpL98DSu_jvbU7Ol5NXU5AJPYG4SKEXKR_-_YElZ40/edit?tab=t.0', '_blank')}
+              className="flex items-center gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View MSA Template
+            </Button>
+          </div>
+          
           <CardContent className="space-y-6">
             <div className="space-y-6">
               <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
