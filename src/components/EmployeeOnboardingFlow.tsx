@@ -6,7 +6,6 @@ import { OnboardingStepIndicator } from './OnboardingStepIndicator';
 import { PersonalInfoOnboardingStep } from './PersonalInfoOnboardingStep';
 import { DocumentCollectionStep } from './DocumentCollectionStep';
 import { BankDetailsStep } from './BankDetailsStep';
-import { ProgressRecoveryAlert } from './ProgressRecoveryAlert';
 import ProgressStateManager, { 
   OnboardingProgressData, 
   FileUploadStatus 
@@ -21,6 +20,7 @@ export interface PersonalInfoData {
   genderIdentity: string;
   dateOfBirth?: Date;
 }
+
 export interface DocumentData {
   graduationCert?: File;
   relievingLetter?: File;
@@ -28,6 +28,7 @@ export interface DocumentData {
   resume?: File;
   passport?: File;
 }
+
 export interface BankDetailsData {
   bankName: string;
   accountNumber: string;
@@ -36,6 +37,7 @@ export interface BankDetailsData {
   hasUAN: boolean;
   uanNumber?: string;
 }
+
 export interface OnboardingData {
   personalInfo: PersonalInfoData;
   documentCollection: DocumentData;
@@ -51,7 +53,9 @@ interface OnboardingContextType {
   errors: Record<string, string>;
   setErrors: (errors: Record<string, string>) => void;
 }
+
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
+
 export const useOnboardingContext = () => {
   const context = useContext(OnboardingContext);
   if (!context) {
@@ -92,9 +96,6 @@ export function EmployeeOnboardingFlow({
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showRecovery, setShowRecovery] = useState(false);
-  const [hasLostFiles, setHasLostFiles] = useState(false);
-  const [lostFileNames, setLostFileNames] = useState<string[]>([]);
   const { toast } = useToast();
 
   // File upload status tracking
@@ -120,13 +121,21 @@ export function EmployeeOnboardingFlow({
     const savedProgress = ProgressStateManager.loadOnboardingProgress(employeeId);
     
     if (savedProgress && ProgressStateManager.validateOnboardingData(savedProgress)) {
-      // Check for lost files
+      // Check for lost files and show toast notification
       const hasLost = ProgressStateManager.hasLostFiles(savedProgress.fileUploadStatus);
       const lostFiles = ProgressStateManager.getLostFiles(savedProgress.fileUploadStatus);
       
-      setHasLostFiles(hasLost);
-      setLostFileNames(lostFiles);
-      setShowRecovery(true);
+      if (hasLost) {
+        toast({
+          title: "Previous progress detected",
+          description: `Your progress has been restored. ${lostFiles.length} file(s) need to be re-selected to continue.`
+        });
+      } else {
+        toast({
+          title: "Previous progress detected",
+          description: "Your progress has been restored. You can continue where you left off."
+        });
+      }
       
       // Set the saved data
       setCurrentStep(savedProgress.currentStep);
@@ -140,7 +149,7 @@ export function EmployeeOnboardingFlow({
       });
       setFileUploadStatus(savedProgress.fileUploadStatus);
     }
-  }, [employeeId]);
+  }, [employeeId, toast]);
 
   useEffect(() => {
     const progressData: OnboardingProgressData = {
@@ -153,44 +162,6 @@ export function EmployeeOnboardingFlow({
     };
     ProgressStateManager.saveOnboardingProgress(employeeId, progressData);
   }, [data, completedSteps, currentStep, fileUploadStatus, employeeId]);
-
-  const handleResumeProgress = () => {
-    setShowRecovery(false);
-    if (hasLostFiles) {
-      toast({
-        title: "Files need re-upload",
-        description: `${lostFileNames.length} file(s) need to be re-selected to continue`
-      });
-    }
-  };
-
-  const handleStartFresh = () => {
-    ProgressStateManager.clearOnboardingProgress(employeeId);
-    setCurrentStep(1);
-    setCompletedSteps(new Set());
-    setData({
-      personalInfo: {
-        phoneNumber: '',
-        genderIdentity: ''
-      },
-      documentCollection: {},
-      bankDetails: {
-        bankName: '',
-        accountNumber: '',
-        ifscCode: '',
-        hasUAN: false,
-        uanNumber: ''
-      }
-    });
-    setFileUploadStatus({});
-    setShowRecovery(false);
-    setHasLostFiles(false);
-    setLostFileNames([]);
-    toast({
-      title: "Starting fresh",
-      description: "Onboarding process has been reset"
-    });
-  };
 
   // Context value
   const contextValue: OnboardingContextType = {
@@ -289,11 +260,13 @@ export function EmployeeOnboardingFlow({
       console.log('Validation failed, cannot proceed');
     }
   };
+
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleComplete = async () => {
@@ -356,9 +329,11 @@ export function EmployeeOnboardingFlow({
       setIsSubmitting(false);
     }
   };
+
   const getStepProgress = () => {
     return Math.round((currentStep - 1) / (STEPS.length - 1) * 100);
   };
+
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
@@ -371,20 +346,15 @@ export function EmployeeOnboardingFlow({
         return null;
     }
   };
+
   const currentStepData = STEPS[currentStep - 1];
   const isLastStep = currentStep === STEPS.length;
   const canProceed = Object.keys(errors).length === 0;
-  return <OnboardingContext.Provider value={contextValue}>
+
+  return (
+    <OnboardingContext.Provider value={contextValue}>
       <div className="min-h-screen bg-muted/30 px-4 py-6">
         <div className="mx-auto max-w-4xl space-y-8">
-          <ProgressRecoveryAlert
-            hasProgress={showRecovery}
-            hasLostFiles={hasLostFiles}
-            lostFileNames={lostFileNames}
-            onResumeProgress={handleResumeProgress}
-            onStartFresh={handleStartFresh}
-          />
-          
           <div className="text-center">
             <h1 className="text-3xl font-bold text-foreground">Welcome to WiseMonk, {employeeName}!</h1>
             <p className="mt-2 text-muted-foreground">
@@ -393,11 +363,11 @@ export function EmployeeOnboardingFlow({
           </div>
 
           <OnboardingStepIndicator steps={STEPS.map((step, index) => ({
-          number: step.number,
-          title: step.title,
-          isCompleted: completedSteps.has(step.number),
-          isCurrent: currentStep === step.number
-        }))} />
+            number: step.number,
+            title: step.title,
+            isCompleted: completedSteps.has(step.number),
+            isCurrent: currentStep === step.number
+          }))} />
 
           <Card className="mx-auto max-w-3xl">
             <CardHeader className="border-b">
@@ -444,5 +414,6 @@ export function EmployeeOnboardingFlow({
           </Card>
         </div>
       </div>
-    </OnboardingContext.Provider>;
+    </OnboardingContext.Provider>
+  );
 }

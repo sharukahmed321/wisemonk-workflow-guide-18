@@ -6,7 +6,6 @@ import { WizardStepIndicator } from './WizardStepIndicator';
 import { PersonalDetailsStep } from './preboarding/PersonalDetailsStep';
 import { BackgroundVerificationStep } from './preboarding/BackgroundVerificationStep';
 import { EmploymentAgreementStep } from './preboarding/EmploymentAgreementStep';
-import { ProgressRecoveryAlert } from './ProgressRecoveryAlert';
 import ProgressStateManager, { 
   PreboardingProgressData, 
   FileUploadStatus 
@@ -15,25 +14,22 @@ import { PreboardingData, PreboardingStep } from '@/types/employee';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, FileText, Shield, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+
 interface PreboardingFlowProps {
   employeeId: string;
   employeeName: string;
   onComplete?: () => void;
 }
+
 export function PreboardingFlow({
   employeeId,
   employeeName,
   onComplete
 }: PreboardingFlowProps) {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
-  const [showRecovery, setShowRecovery] = useState(false);
-  const [hasLostFiles, setHasLostFiles] = useState(false);
-  const [lostFileNames, setLostFileNames] = useState<string[]>([]);
 
   // File upload status tracking
   const [fileUploadStatus, setFileUploadStatus] = useState<Record<string, FileUploadStatus>>({});
@@ -76,13 +72,21 @@ export function PreboardingFlow({
     const savedProgress = ProgressStateManager.loadPreboardingProgress(employeeId);
     
     if (savedProgress && ProgressStateManager.validatePreboardingData(savedProgress)) {
-      // Check for lost files
+      // Check for lost files and show toast notification
       const hasLost = ProgressStateManager.hasLostFiles(savedProgress.fileUploadStatus);
       const lostFiles = ProgressStateManager.getLostFiles(savedProgress.fileUploadStatus);
       
-      setHasLostFiles(hasLost);
-      setLostFileNames(lostFiles);
-      setShowRecovery(true);
+      if (hasLost) {
+        toast({
+          title: "Previous progress detected",
+          description: `Your progress has been restored. ${lostFiles.length} file(s) need to be re-selected to continue.`
+        });
+      } else {
+        toast({
+          title: "Previous progress detected",
+          description: "Your progress has been restored. You can continue where you left off."
+        });
+      }
       
       // Set the saved data
       setCurrentStep(savedProgress.currentStep);
@@ -96,7 +100,7 @@ export function PreboardingFlow({
       });
       setFileUploadStatus(savedProgress.fileUploadStatus);
     }
-  }, [employeeId]);
+  }, [employeeId, toast]);
 
   // Save to localStorage whenever data changes
   useEffect(() => {
@@ -111,60 +115,6 @@ export function PreboardingFlow({
     ProgressStateManager.savePreboardingProgress(employeeId, progressData);
   }, [preboardingData, completedSteps, currentStep, fileUploadStatus, employeeId]);
 
-  const handleResumeProgress = () => {
-    setShowRecovery(false);
-    if (hasLostFiles) {
-      toast({
-        title: "Files need re-upload",
-        description: `${lostFileNames.length} file(s) need to be re-selected to continue`
-      });
-    }
-  };
-
-  const handleStartFresh = () => {
-    ProgressStateManager.clearPreboardingProgress(employeeId);
-    setCurrentStep(1);
-    setCompletedSteps(new Set());
-    setPreboardingData({
-      personalDetails: {
-        fullName: '',
-        fatherName: '',
-        dateOfBirth: undefined,
-        aadhaarNumber: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        pincode: ''
-      },
-      backgroundVerification: {
-        documents: {},
-        payslips: {
-          payslip1: { status: 'pending' },
-          payslip2: { status: 'pending' },
-          payslip3: { status: 'pending' }
-        },
-        uploadStatus: {
-          panCard: 'pending',
-          previousOfferLetter: 'pending'
-        }
-      },
-      employmentAgreement: {
-        agreedToTerms: false,
-        digitalSignature: undefined,
-        signatureDate: undefined,
-        completedAt: undefined
-      }
-    });
-    setFileUploadStatus({});
-    setShowRecovery(false);
-    setHasLostFiles(false);
-    setLostFileNames([]);
-    toast({
-      title: "Starting fresh",
-      description: "Preboarding process has been reset"
-    });
-  };
   const steps: PreboardingStep[] = [{
     number: 1,
     title: 'Personal Details',
@@ -184,6 +134,7 @@ export function PreboardingFlow({
     isCompleted: completedSteps.has(3),
     isCurrent: currentStep === 3
   }];
+
   const handleStepComplete = async (step: number, data: any) => {
     setCompletedSteps(prev => new Set([...prev, step]));
 
@@ -249,6 +200,7 @@ export function PreboardingFlow({
       handleComplete();
     }
   };
+
   const handleComplete = async () => {
     setIsLoading(true);
 
@@ -322,14 +274,18 @@ export function PreboardingFlow({
       setIsLoading(false);
     }
   };
+
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
+
   const progressPercentage = completedSteps.size / 3 * 100;
+
   if (completedSteps.size === 3 && isLoading) {
-    return <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
         <Card className="max-w-md mx-auto">
           <CardHeader className="text-center">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -344,18 +300,13 @@ export function PreboardingFlow({
             </p>
           </CardContent>
         </Card>
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-muted/30">
+
+  return (
+    <div className="min-h-screen bg-muted/30">
       <div className="max-w-4xl mx-auto p-6">
-        <ProgressRecoveryAlert
-          hasProgress={showRecovery}
-          hasLostFiles={hasLostFiles}
-          lostFileNames={lostFileNames}
-          onResumeProgress={handleResumeProgress}
-          onStartFresh={handleStartFresh}
-        />
-        
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -377,13 +328,34 @@ export function PreboardingFlow({
         {/* Step Content */}
         <Card>
           <CardContent className="p-8">
-            {currentStep === 1 && <PersonalDetailsStep data={preboardingData.personalDetails} onComplete={data => handleStepComplete(1, data)} onPrevious={handlePrevious} />}
+            {currentStep === 1 && (
+              <PersonalDetailsStep 
+                data={preboardingData.personalDetails} 
+                onComplete={data => handleStepComplete(1, data)} 
+                onPrevious={handlePrevious} 
+              />
+            )}
             
-            {currentStep === 2 && <BackgroundVerificationStep data={preboardingData.backgroundVerification} onComplete={data => handleStepComplete(2, data)} onPrevious={handlePrevious} employeeId={employeeId} />}
+            {currentStep === 2 && (
+              <BackgroundVerificationStep 
+                data={preboardingData.backgroundVerification} 
+                onComplete={data => handleStepComplete(2, data)} 
+                onPrevious={handlePrevious} 
+                employeeId={employeeId} 
+              />
+            )}
             
-            {currentStep === 3 && <EmploymentAgreementStep data={preboardingData.employmentAgreement} onComplete={data => handleStepComplete(3, data)} onPrevious={handlePrevious} employeeId={employeeId} />}
+            {currentStep === 3 && (
+              <EmploymentAgreementStep 
+                data={preboardingData.employmentAgreement} 
+                onComplete={data => handleStepComplete(3, data)} 
+                onPrevious={handlePrevious} 
+                employeeId={employeeId} 
+              />
+            )}
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 }
