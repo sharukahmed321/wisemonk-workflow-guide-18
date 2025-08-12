@@ -4,6 +4,14 @@ export interface FileUploadStatus {
   uploadStatus: 'pending' | 'uploading' | 'success' | 'error';
   uploadedAt?: string;
   errorMessage?: string;
+  uploadedUrl?: string;
+  fileType?: string;
+  originalFile?: {
+    name: string;
+    size: number;
+    type: string;
+    lastModified: number;
+  };
 }
 
 export interface OnboardingProgressData {

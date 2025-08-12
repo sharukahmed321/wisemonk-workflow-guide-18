@@ -333,6 +333,13 @@ export function PreboardingFlow({
                 data={preboardingData.personalDetails} 
                 onComplete={data => handleStepComplete(1, data)} 
                 onPrevious={handlePrevious} 
+                onDataChange={(data) => {
+                  setPreboardingData(prev => ({
+                    ...prev,
+                    personalDetails: data
+                  }));
+                }}
+                employeeId={employeeId}
               />
             )}
             
@@ -342,6 +349,12 @@ export function PreboardingFlow({
                 onComplete={data => handleStepComplete(2, data)} 
                 onPrevious={handlePrevious} 
                 employeeId={employeeId} 
+                onDataChange={(data) => {
+                  setPreboardingData(prev => ({
+                    ...prev,
+                    backgroundVerification: data
+                  }));
+                }}
               />
             )}
             

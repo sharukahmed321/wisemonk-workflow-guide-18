@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DateOfBirthPicker } from '@/components/ui/date-of-birth-picker';
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast";
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { SaveIndicator } from '@/components/SaveIndicator';
 
 interface PersonalDetails {
   firstName: string;
@@ -39,9 +41,11 @@ interface PersonalDetailsStepProps {
   };
   onComplete: (data: any) => void;
   onPrevious: () => void;
+  onDataChange?: (data: any) => void;
+  employeeId?: string;
 }
 
-export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDetailsStepProps) {
+export function PersonalDetailsStep({ data, onComplete, onPrevious, onDataChange, employeeId }: PersonalDetailsStepProps) {
   const [formData, setFormData] = useState({
     fullName: data?.fullName || '',
     fatherName: data?.fatherName || '',
@@ -55,7 +59,36 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const { toast } = useToast()
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const { toast } = useToast();
+
+  // Auto-save functionality
+  const { forceSave } = useAutoSave({
+    key: `preboarding_personal_details_${employeeId || 'temp'}`,
+    data: formData,
+    enabled: !!employeeId,
+    onSave: () => {
+      setSaveStatus('saved');
+      if (onDataChange) {
+        onDataChange(formData);
+      }
+    }
+  });
+
+  // Update parent component when form data changes
+  useEffect(() => {
+    if (onDataChange) {
+      onDataChange(formData);
+    }
+  }, [formData, onDataChange]);
+
+  // Update save status
+  useEffect(() => {
+    if (saveStatus === 'saved') {
+      const timer = setTimeout(() => setSaveStatus('idle'), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveStatus]);
 
   const isFormValid = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -96,6 +129,7 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
     event.preventDefault();
 
     if (isFormValid()) {
+      forceSave(); // Force save before completing
       onComplete(formData);
     } else {
       toast({
@@ -109,10 +143,15 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold text-foreground">Personal Details</CardTitle>
-        <CardDescription className="text-muted-foreground">
-          Please provide your personal information for our records
-        </CardDescription>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex-1">
+            <CardTitle className="text-2xl font-bold text-foreground">Personal Details</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Please provide your personal information for our records
+            </CardDescription>
+          </div>
+          <SaveIndicator status={saveStatus} />
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -125,7 +164,10 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               id="fullName"
               type="text"
               value={formData.fullName}
-              onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+              onChange={(e) => {
+                setSaveStatus('saving');
+                setFormData(prev => ({ ...prev, fullName: e.target.value }));
+              }}
               className="w-full"
               required
             />
@@ -143,7 +185,10 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               id="fatherName"
               type="text"
               value={formData.fatherName}
-              onChange={(e) => setFormData(prev => ({ ...prev, fatherName: e.target.value }))}
+              onChange={(e) => {
+                setSaveStatus('saving');
+                setFormData(prev => ({ ...prev, fatherName: e.target.value }));
+              }}
               className="w-full"
               required
             />
@@ -159,7 +204,10 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
             </Label>
             <DateOfBirthPicker
               value={formData.dateOfBirth}
-              onChange={(date) => setFormData(prev => ({ ...prev, dateOfBirth: date }))}
+              onChange={(date) => {
+                setSaveStatus('saving');
+                setFormData(prev => ({ ...prev, dateOfBirth: date }));
+              }}
               placeholder="Select your date of birth"
             />
             {errors.dateOfBirth && (
@@ -177,6 +225,7 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               type="text"
               value={formData.aadhaarNumber}
               onChange={(e) => {
+                setSaveStatus('saving');
                 const value = e.target.value.replace(/\D/g, '').slice(0, 12);
                 setFormData(prev => ({ ...prev, aadhaarNumber: value }));
               }}
@@ -204,7 +253,10 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               id="addressLine1"
               type="text"
               value={formData.addressLine1}
-              onChange={(e) => setFormData(prev => ({ ...prev, addressLine1: e.target.value }))}
+              onChange={(e) => {
+                setSaveStatus('saving');
+                setFormData(prev => ({ ...prev, addressLine1: e.target.value }));
+              }}
               placeholder="Street address, apartment, suite, etc."
               className="w-full"
               required
@@ -223,7 +275,10 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               id="addressLine2"
               type="text"
               value={formData.addressLine2}
-              onChange={(e) => setFormData(prev => ({ ...prev, addressLine2: e.target.value }))}
+              onChange={(e) => {
+                setSaveStatus('saving');
+                setFormData(prev => ({ ...prev, addressLine2: e.target.value }));
+              }}
               placeholder="Landmark, area, district"
               className="w-full"
               required
@@ -243,7 +298,10 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
                 id="city"
                 type="text"
                 value={formData.city}
-                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                onChange={(e) => {
+                  setSaveStatus('saving');
+                  setFormData(prev => ({ ...prev, city: e.target.value }));
+                }}
                 className="w-full"
                 required
               />
@@ -259,7 +317,10 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
                 id="state"
                 type="text"
                 value={formData.state}
-                onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                onChange={(e) => {
+                  setSaveStatus('saving');
+                  setFormData(prev => ({ ...prev, state: e.target.value }));
+                }}
                 className="w-full"
                 required
               />
@@ -279,6 +340,7 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               type="text"
               value={formData.pincode}
               onChange={(e) => {
+                setSaveStatus('saving');
                 const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                 setFormData(prev => ({ ...prev, pincode: value }));
               }}

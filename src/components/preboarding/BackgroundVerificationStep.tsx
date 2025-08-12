@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { DocumentUploadCard } from './DocumentUploadCard';
 import { MultiplePayslipUploadCard } from './MultiplePayslipUploadCard';
 import { Shield, FileText, CreditCard, Award } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { SaveIndicator } from '@/components/SaveIndicator';
 
 interface BackgroundVerificationData {
   documents: {
@@ -25,9 +27,10 @@ interface BackgroundVerificationStepProps {
   onComplete: (data: BackgroundVerificationData) => void;
   onPrevious: () => void;
   employeeId: string;
+  onDataChange?: (data: BackgroundVerificationData) => void;
 }
 
-export function BackgroundVerificationStep({ data, onComplete, onPrevious, employeeId }: BackgroundVerificationStepProps) {
+export function BackgroundVerificationStep({ data, onComplete, onPrevious, employeeId, onDataChange }: BackgroundVerificationStepProps) {
   const [documents, setDocuments] = useState(data.documents);
   const [payslips, setPayslips] = useState(data.payslips || {
     payslip1: { status: 'pending' as const },
@@ -35,7 +38,31 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
     payslip3: { status: 'pending' as const }
   });
   const [uploadStatus, setUploadStatus] = useState(data.uploadStatus);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const { toast } = useToast();
+
+  // Construct current data for auto-save
+  const currentData = { documents, payslips, uploadStatus };
+
+  // Auto-save functionality
+  const { forceSave } = useAutoSave({
+    key: `preboarding_background_verification_${employeeId}`,
+    data: currentData,
+    enabled: !!employeeId,
+    onSave: () => {
+      setSaveStatus('saved');
+      if (onDataChange) {
+        onDataChange(currentData);
+      }
+    }
+  });
+
+  // Update parent component when data changes
+  useEffect(() => {
+    if (onDataChange) {
+      onDataChange(currentData);
+    }
+  }, [documents, payslips, uploadStatus, onDataChange]);
 
   const documentTypes = [
     {
@@ -76,6 +103,7 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
         throw error;
       }
 
+      setSaveStatus('saving');
       setDocuments(prev => ({
         ...prev,
         [documentType]: file
@@ -119,6 +147,7 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
   };
 
   const handlePayslipUpdate = (payslipNumber: 1 | 2 | 3, data: { file?: File; fileName?: string; fileSize?: number; uploadedUrl?: string; status: 'pending' | 'uploading' | 'success' | 'error' }) => {
+    setSaveStatus('saving');
     setPayslips(prev => ({
       ...prev,
       [`payslip${payslipNumber}`]: data
@@ -137,6 +166,7 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
                           payslips.payslip3.status === 'success';
 
     if (hasAllRequiredDocs && hasAllPayslips) {
+      forceSave(); // Force save before completing
       onComplete({
         documents,
         payslips,
@@ -158,7 +188,10 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <Shield className="w-8 h-8 text-primary" />
         </div>
-        <h3 className="text-2xl font-semibold text-foreground mb-2">Background Verification</h3>
+        <div className="flex justify-center items-center gap-4 mb-2">
+          <h3 className="text-2xl font-semibold text-foreground">Background Verification</h3>
+          <SaveIndicator status={saveStatus} />
+        </div>
         <p className="text-muted-foreground">
           Please upload the required documents for background verification
         </p>
