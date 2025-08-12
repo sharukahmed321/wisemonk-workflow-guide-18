@@ -16,7 +16,6 @@ const bankDetailsSchema = z.object({
   bankName: z.string().min(1, 'Bank name is required'),
   accountNumber: z.string().min(1, 'Account number is required').regex(/^\d{9,18}$/, 'Please enter a valid account number'),
   ifscCode: z.string().min(1, 'IFSC code is required').regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Please enter a valid IFSC code'),
-  panNumber: z.string().min(1, 'PAN number is required').regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Please enter a valid PAN number'),
   cancelledCheque: z.instanceof(File, { message: 'Bank proof document is required' }),
   hasUAN: z.boolean(),
   uanNumber: z.string().optional()
@@ -137,29 +136,7 @@ export function BankDetailsStep() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="panNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>PAN Number *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., ABCDE1234F"
-                        className="h-11"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value.toUpperCase();
-                          field.onChange(value);
-                          handleFormChange('panNumber', value);
-                        }}
-                        maxLength={10}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+           
             </div>
 
             {/* Bank Proof Document */}
