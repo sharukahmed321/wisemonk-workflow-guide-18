@@ -37,7 +37,7 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
     payslip2: { status: 'pending' as const },
     payslip3: { status: 'pending' as const }
   });
-  const [uploadStatus, setUploadStatus] = useState(data.uploadStatus);
+  const [uploadStatus, setUploadStatus] = useState(data.uploadStatus || {});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const { toast } = useToast();
 
@@ -177,7 +177,7 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
 
   const isComplete = documentTypes
     .filter(doc => doc.required)
-    .every(doc => documents[doc.key as keyof typeof documents] && uploadStatus[doc.key] === 'success') &&
+    .every(doc => uploadStatus[doc.key] === 'success') &&
     payslips.payslip1.status === 'success' && 
     payslips.payslip2.status === 'success' && 
     payslips.payslip3.status === 'success';
