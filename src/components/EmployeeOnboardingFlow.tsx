@@ -7,6 +7,7 @@ import { PersonalInfoOnboardingStep } from './PersonalInfoOnboardingStep';
 import { DocumentCollectionStep } from './DocumentCollectionStep';
 import { BankDetailsStep } from './BankDetailsStep';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Onboarding data interfaces
 export interface PersonalInfoData {
@@ -99,7 +100,6 @@ export function EmployeeOnboardingFlow({
       bankName: '',
       accountNumber: '',
       ifscCode: '',
-      panNumber: '',
       hasUAN: false,
       uanNumber: ''
     }
@@ -195,11 +195,6 @@ export function EmployeeOnboardingFlow({
         } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(data.bankDetails.ifscCode)) {
           newErrors.ifscCode = 'Please enter a valid IFSC code';
         }
-        if (!data.bankDetails.panNumber) {
-          newErrors.panNumber = 'PAN number is required';
-        } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(data.bankDetails.panNumber)) {
-          newErrors.panNumber = 'Please enter a valid PAN number';
-        }
         if (!data.bankDetails.cancelledCheque) {
           newErrors.cancelledCheque = 'Bank proof document is required';
         }
@@ -234,13 +229,67 @@ export function EmployeeOnboardingFlow({
       setCurrentStep(currentStep - 1);
     }
   };
-  const handleComplete = () => {
-    localStorage.removeItem(`onboarding-${employeeId}`);
-    toast({
-      title: "Onboarding Complete!",
-      description: "Welcome to the team! Your account is now fully set up."
-    });
-    onComplete();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleComplete = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // Create FormData for file uploads
+      const formData = new FormData();
+      formData.append('employeeId', employeeId);
+      formData.append('onboardingData', JSON.stringify(data));
+      
+      // Append files with their original File objects
+      if (data.personalInfo.profilePicture) {
+        formData.append('profilePicture', data.personalInfo.profilePicture);
+      }
+      if (data.bankDetails.cancelledCheque) {
+        formData.append('cancelledCheque', data.bankDetails.cancelledCheque);
+      }
+      if (data.documentCollection.graduationCert) {
+        formData.append('graduationCert', data.documentCollection.graduationCert);
+      }
+      if (data.documentCollection.relievingLetter) {
+        formData.append('relievingLetter', data.documentCollection.relievingLetter);
+      }
+      if (data.documentCollection.resume) {
+        formData.append('resume', data.documentCollection.resume);
+      }
+      if (data.documentCollection.passport) {
+        formData.append('passport', data.documentCollection.passport);
+      }
+
+      // Call the edge function
+      const { data: result, error } = await supabase.functions.invoke('complete-employee-onboarding', {
+        body: formData
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to complete onboarding');
+      }
+
+      // Clear localStorage on success
+      localStorage.removeItem(`onboarding-${employeeId}`);
+      
+      toast({
+        title: "Onboarding Complete!",
+        description: "Welcome to the team! Your account is now fully set up."
+      });
+      
+      // Call onComplete callback
+      onComplete();
+      
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      setErrors({ submit: error.message || 'Failed to complete onboarding. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   const getStepProgress = () => {
     return Math.round((currentStep - 1) / (STEPS.length - 1) * 100);
@@ -309,15 +358,13 @@ export function EmployeeOnboardingFlow({
                   <div></div>
                 )}
 
-                <Button onClick={handleNext} disabled={!canProceed} className="flex items-center gap-2">
-                  {isLastStep ? (
-                    <>Submit</>
-                  ) : (
-                    <>
-                      Next
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
+                <Button 
+                  onClick={handleNext} 
+                  disabled={!canProceed || isSubmitting} 
+                  className="flex items-center gap-2"
+                >
+                  {isSubmitting ? 'Submitting...' : isLastStep ? 'Submit' : 'Next'}
+                  {!isSubmitting && !isLastStep && <ArrowRight className="h-4 w-4" />}
                 </Button>
               </div>
             </div>

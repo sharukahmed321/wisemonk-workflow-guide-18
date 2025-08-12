@@ -50,6 +50,7 @@ export type Database = {
       employees: {
         Row: {
           aadhaar_number: string | null
+          account_number: string | null
           added_by_email: string | null
           added_by_user_id: string | null
           address_line_1: string | null
@@ -62,6 +63,8 @@ export type Database = {
           annual_lta: number | null
           annual_special_allowance: number | null
           avatar_url: string | null
+          bank_name: string | null
+          bank_proof_document_url: string | null
           birthday: string | null
           city: string | null
           created_at: string | null
@@ -79,7 +82,10 @@ export type Database = {
           first_name: string
           full_name: string | null
           gender: string | null
+          graduation_certificate_url: string | null
+          has_uan: boolean | null
           id: string
+          ifsc_code: string | null
           job_description: string | null
           job_title: string
           last_date: string | null
@@ -92,6 +98,7 @@ export type Database = {
           monthly_special_allowance: number | null
           organization_id: string
           pan_card_url: string | null
+          passport_url: string | null
           payslip_1_url: string | null
           payslip_2_url: string | null
           payslip_3_url: string | null
@@ -99,12 +106,16 @@ export type Database = {
           pincode: string | null
           previous_offer_letter_url: string | null
           previous_payslips_url: string | null
+          profile_picture_url: string | null
+          relieving_letter_url: string | null
+          resume_url: string | null
           salary: number | null
           seniority: string | null
           signing_sent_at: string | null
           start_date: string
           state: string | null
           status: string | null
+          uan_number: string | null
           updated_at: string | null
           user_id: string | null
           work_location: string | null
@@ -116,6 +127,7 @@ export type Database = {
         }
         Insert: {
           aadhaar_number?: string | null
+          account_number?: string | null
           added_by_email?: string | null
           added_by_user_id?: string | null
           address_line_1?: string | null
@@ -128,6 +140,8 @@ export type Database = {
           annual_lta?: number | null
           annual_special_allowance?: number | null
           avatar_url?: string | null
+          bank_name?: string | null
+          bank_proof_document_url?: string | null
           birthday?: string | null
           city?: string | null
           created_at?: string | null
@@ -145,7 +159,10 @@ export type Database = {
           first_name: string
           full_name?: string | null
           gender?: string | null
+          graduation_certificate_url?: string | null
+          has_uan?: boolean | null
           id?: string
+          ifsc_code?: string | null
           job_description?: string | null
           job_title: string
           last_date?: string | null
@@ -158,6 +175,7 @@ export type Database = {
           monthly_special_allowance?: number | null
           organization_id: string
           pan_card_url?: string | null
+          passport_url?: string | null
           payslip_1_url?: string | null
           payslip_2_url?: string | null
           payslip_3_url?: string | null
@@ -165,12 +183,16 @@ export type Database = {
           pincode?: string | null
           previous_offer_letter_url?: string | null
           previous_payslips_url?: string | null
+          profile_picture_url?: string | null
+          relieving_letter_url?: string | null
+          resume_url?: string | null
           salary?: number | null
           seniority?: string | null
           signing_sent_at?: string | null
           start_date: string
           state?: string | null
           status?: string | null
+          uan_number?: string | null
           updated_at?: string | null
           user_id?: string | null
           work_location?: string | null
@@ -182,6 +204,7 @@ export type Database = {
         }
         Update: {
           aadhaar_number?: string | null
+          account_number?: string | null
           added_by_email?: string | null
           added_by_user_id?: string | null
           address_line_1?: string | null
@@ -194,6 +217,8 @@ export type Database = {
           annual_lta?: number | null
           annual_special_allowance?: number | null
           avatar_url?: string | null
+          bank_name?: string | null
+          bank_proof_document_url?: string | null
           birthday?: string | null
           city?: string | null
           created_at?: string | null
@@ -211,7 +236,10 @@ export type Database = {
           first_name?: string
           full_name?: string | null
           gender?: string | null
+          graduation_certificate_url?: string | null
+          has_uan?: boolean | null
           id?: string
+          ifsc_code?: string | null
           job_description?: string | null
           job_title?: string
           last_date?: string | null
@@ -224,6 +252,7 @@ export type Database = {
           monthly_special_allowance?: number | null
           organization_id?: string
           pan_card_url?: string | null
+          passport_url?: string | null
           payslip_1_url?: string | null
           payslip_2_url?: string | null
           payslip_3_url?: string | null
@@ -231,12 +260,16 @@ export type Database = {
           pincode?: string | null
           previous_offer_letter_url?: string | null
           previous_payslips_url?: string | null
+          profile_picture_url?: string | null
+          relieving_letter_url?: string | null
+          resume_url?: string | null
           salary?: number | null
           seniority?: string | null
           signing_sent_at?: string | null
           start_date?: string
           state?: string | null
           status?: string | null
+          uan_number?: string | null
           updated_at?: string | null
           user_id?: string | null
           work_location?: string | null
