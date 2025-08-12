@@ -7,12 +7,14 @@ import NotFound from './pages/NotFound';
 import InvitationPage from './pages/InvitationPage';
 import StandalonePreboardingPage from './pages/StandalonePreboarding';
 import PreboardingCompletePage from './pages/PreboardingComplete';
+import OnboardingPage from './pages/OnboardingPage';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/invite/:token" element={<InvitationPage />} />
         <Route path="/preboarding/:employeeId" element={<StandalonePreboardingPage />} />
         <Route path="/preboarding-complete" element={<PreboardingCompletePage />} />
