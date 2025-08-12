@@ -96,11 +96,14 @@ const Index = () => {
         return;
       }
 
-      // If profile doesn't exist or is incomplete, go to onboarding
+      // For new users or incomplete profiles, always go to onboarding
+      // This includes users with 'client' role but missing basic info
       if (!profile || !profile.first_name || !profile.last_name || !profile.job_title) {
+        console.log('Redirecting to onboarding - incomplete profile:', { profile, role });
         setAppState('onboarding');
       } else {
         // Profile is complete, go to dashboard
+        console.log('Redirecting to dashboard - complete profile:', { profile, role });
         setAppState('dashboard');
         if (!location.pathname.startsWith('/dashboard')) {
           navigate('/dashboard', { replace: true });

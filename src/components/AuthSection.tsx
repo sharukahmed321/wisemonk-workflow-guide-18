@@ -530,10 +530,8 @@ export function AuthSection({ onSignInComplete, onSignUpComplete, isRecoveryMode
       
       setAuthState('verified');
       
-      // Call the completion callback
-      setTimeout(() => {
-        onSignUpComplete();
-      }, 2000);
+      // Call the completion callback immediately
+      onSignUpComplete();
     } catch (error: any) {
       console.error('Account creation error:', error);
       setError('An error occurred while creating your account. Please try again.');
