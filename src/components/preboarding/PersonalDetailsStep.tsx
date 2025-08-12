@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -70,6 +71,21 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
     }
     if (!formData.aadhaarNumber || formData.aadhaarNumber.length !== 12) {
       newErrors.aadhaarNumber = "Valid 12-digit Aadhaar number is required";
+    }
+    if (!formData.addressLine1.trim()) {
+      newErrors.addressLine1 = "Address Line 1 is required";
+    }
+    if (!formData.addressLine2.trim()) {
+      newErrors.addressLine2 = "Address Line 2 is required";
+    }
+    if (!formData.city.trim()) {
+      newErrors.city = "City is required";
+    }
+    if (!formData.state.trim()) {
+      newErrors.state = "State is required";
+    }
+    if (!formData.pincode || formData.pincode.length !== 6) {
+      newErrors.pincode = "Valid 6-digit pincode is required";
     }
 
     setErrors(newErrors);
@@ -193,21 +209,28 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               className="w-full"
               required
             />
+            {errors.addressLine1 && (
+              <p className="text-sm text-destructive">{errors.addressLine1}</p>
+            )}
           </div>
 
           {/* Address Line 2 */}
           <div className="space-y-2">
             <Label htmlFor="addressLine2" className="text-sm font-medium text-foreground">
-              Address Line 2
+              Address Line 2 *
             </Label>
             <Input
               id="addressLine2"
               type="text"
               value={formData.addressLine2}
               onChange={(e) => setFormData(prev => ({ ...prev, addressLine2: e.target.value }))}
-              placeholder="Additional address information (optional)"
+              placeholder="Landmark, area, district"
               className="w-full"
+              required
             />
+            {errors.addressLine2 && (
+              <p className="text-sm text-destructive">{errors.addressLine2}</p>
+            )}
           </div>
 
           {/* City and State */}
@@ -224,6 +247,9 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
                 className="w-full"
                 required
               />
+              {errors.city && (
+                <p className="text-sm text-destructive">{errors.city}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="state" className="text-sm font-medium text-foreground">
@@ -237,6 +263,9 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
                 className="w-full"
                 required
               />
+              {errors.state && (
+                <p className="text-sm text-destructive">{errors.state}</p>
+              )}
             </div>
           </div>
 
@@ -258,6 +287,9 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious }: PersonalDe
               maxLength={6}
               required
             />
+            {errors.pincode && (
+              <p className="text-sm text-destructive">{errors.pincode}</p>
+            )}
           </div>
 
           {/* Navigation Buttons */}
