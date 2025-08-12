@@ -65,9 +65,9 @@ const Index = () => {
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error checking profile:', profileError);
         // Default to dashboard on error
-        setAppState('dashboard');
-        if (!location.pathname.startsWith('/dashboard')) {
-          navigate('/dashboard', { replace: true });
+        setAppState('onboarding');
+        if (!location.pathname.startsWith('/onboarding')) {
+          navigate('/onboarding', { replace: true });
         }
         return;
       }
