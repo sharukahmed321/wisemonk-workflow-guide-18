@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,6 +47,7 @@ export function EmployeeDetailsStep({
   onNext,
   defaultValues
 }: EmployeeDetailsStepProps) {
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
   const form = useForm<EmployeeDetailsData>({
     resolver: zodResolver(employeeDetailsSchema),
     defaultValues: {
@@ -244,7 +245,7 @@ export function EmployeeDetailsStep({
   render={({ field }) => (
     <FormItem className="flex flex-col">
       <FormLabel>Start Date *</FormLabel>
-      <Popover>
+      <Popover open={isStartDateOpen} onOpenChange={setIsStartDateOpen}>
         <PopoverTrigger asChild>
           <FormControl>
             <Button
@@ -267,7 +268,10 @@ export function EmployeeDetailsStep({
           <Calendar 
             mode="single" 
             selected={field.value} 
-            onSelect={field.onChange} 
+            onSelect={(date) => {
+              field.onChange(date);
+              setIsStartDateOpen(false);
+            }} 
             // Disable all dates before the start of this month
             disabled={(date) => {
               const firstDayOfMonth = new Date(
