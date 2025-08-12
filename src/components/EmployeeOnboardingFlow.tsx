@@ -6,6 +6,11 @@ import { OnboardingStepIndicator } from './OnboardingStepIndicator';
 import { PersonalInfoOnboardingStep } from './PersonalInfoOnboardingStep';
 import { DocumentCollectionStep } from './DocumentCollectionStep';
 import { BankDetailsStep } from './BankDetailsStep';
+import { ProgressRecoveryAlert } from './ProgressRecoveryAlert';
+import ProgressStateManager, { 
+  OnboardingProgressData, 
+  FileUploadStatus 
+} from '@/lib/progressStateManager';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -87,7 +92,13 @@ export function EmployeeOnboardingFlow({
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [hasLostFiles, setHasLostFiles] = useState(false);
+  const [lostFileNames, setLostFileNames] = useState<string[]>([]);
   const { toast } = useToast();
+
+  // File upload status tracking
+  const [fileUploadStatus, setFileUploadStatus] = useState<Record<string, FileUploadStatus>>({});
 
   // Initialize with empty data
   const [data, setData] = useState<OnboardingData>({
@@ -106,26 +117,80 @@ export function EmployeeOnboardingFlow({
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem(`onboarding-${employeeId}`);
-    if (saved) {
-      try {
-        const parsedData = JSON.parse(saved);
-        setData(parsedData.data || data);
-        setCompletedSteps(new Set(parsedData.completedSteps || []));
-        setCurrentStep(parsedData.currentStep || 1);
-      } catch (error) {
-        console.error('Error loading saved onboarding data:', error);
-      }
+    const savedProgress = ProgressStateManager.loadOnboardingProgress(employeeId);
+    
+    if (savedProgress && ProgressStateManager.validateOnboardingData(savedProgress)) {
+      // Check for lost files
+      const hasLost = ProgressStateManager.hasLostFiles(savedProgress.fileUploadStatus);
+      const lostFiles = ProgressStateManager.getLostFiles(savedProgress.fileUploadStatus);
+      
+      setHasLostFiles(hasLost);
+      setLostFileNames(lostFiles);
+      setShowRecovery(true);
+      
+      // Set the saved data
+      setCurrentStep(savedProgress.currentStep);
+      setCompletedSteps(new Set(savedProgress.completedSteps));
+      
+      // Map the data structure
+      setData({
+        personalInfo: savedProgress.personalInfoData,
+        documentCollection: savedProgress.documentData,
+        bankDetails: savedProgress.bankDetailsData
+      });
+      setFileUploadStatus(savedProgress.fileUploadStatus);
     }
   }, [employeeId]);
+
   useEffect(() => {
-    const dataToSave = {
-      data,
+    const progressData: OnboardingProgressData = {
+      currentStep,
       completedSteps: Array.from(completedSteps),
-      currentStep
+      personalInfoData: data.personalInfo,
+      documentData: data.documentCollection,
+      bankDetailsData: data.bankDetails,
+      fileUploadStatus
     };
-    localStorage.setItem(`onboarding-${employeeId}`, JSON.stringify(dataToSave));
-  }, [data, completedSteps, currentStep, employeeId]);
+    ProgressStateManager.saveOnboardingProgress(employeeId, progressData);
+  }, [data, completedSteps, currentStep, fileUploadStatus, employeeId]);
+
+  const handleResumeProgress = () => {
+    setShowRecovery(false);
+    if (hasLostFiles) {
+      toast({
+        title: "Files need re-upload",
+        description: `${lostFileNames.length} file(s) need to be re-selected to continue`
+      });
+    }
+  };
+
+  const handleStartFresh = () => {
+    ProgressStateManager.clearOnboardingProgress(employeeId);
+    setCurrentStep(1);
+    setCompletedSteps(new Set());
+    setData({
+      personalInfo: {
+        phoneNumber: '',
+        genderIdentity: ''
+      },
+      documentCollection: {},
+      bankDetails: {
+        bankName: '',
+        accountNumber: '',
+        ifscCode: '',
+        hasUAN: false,
+        uanNumber: ''
+      }
+    });
+    setFileUploadStatus({});
+    setShowRecovery(false);
+    setHasLostFiles(false);
+    setLostFileNames([]);
+    toast({
+      title: "Starting fresh",
+      description: "Onboarding process has been reset"
+    });
+  };
 
   // Context value
   const contextValue: OnboardingContextType = {
@@ -273,8 +338,8 @@ export function EmployeeOnboardingFlow({
         throw new Error(result.error || 'Failed to complete onboarding');
       }
 
-      // Clear localStorage on success
-      localStorage.removeItem(`onboarding-${employeeId}`);
+      // Clear localStorage and progress tracking on success
+      ProgressStateManager.clearOnboardingProgress(employeeId);
       
       toast({
         title: "Onboarding Complete!",
@@ -312,6 +377,14 @@ export function EmployeeOnboardingFlow({
   return <OnboardingContext.Provider value={contextValue}>
       <div className="min-h-screen bg-muted/30 px-4 py-6">
         <div className="mx-auto max-w-4xl space-y-8">
+          <ProgressRecoveryAlert
+            hasProgress={showRecovery}
+            hasLostFiles={hasLostFiles}
+            lostFileNames={lostFileNames}
+            onResumeProgress={handleResumeProgress}
+            onStartFresh={handleStartFresh}
+          />
+          
           <div className="text-center">
             <h1 className="text-3xl font-bold text-foreground">Welcome to WiseMonk, {employeeName}!</h1>
             <p className="mt-2 text-muted-foreground">

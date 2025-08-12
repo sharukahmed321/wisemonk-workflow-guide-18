@@ -6,6 +6,11 @@ import { WizardStepIndicator } from './WizardStepIndicator';
 import { PersonalDetailsStep } from './preboarding/PersonalDetailsStep';
 import { BackgroundVerificationStep } from './preboarding/BackgroundVerificationStep';
 import { EmploymentAgreementStep } from './preboarding/EmploymentAgreementStep';
+import { ProgressRecoveryAlert } from './ProgressRecoveryAlert';
+import ProgressStateManager, { 
+  PreboardingProgressData, 
+  FileUploadStatus 
+} from '@/lib/progressStateManager';
 import { PreboardingData, PreboardingStep } from '@/types/employee';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, FileText, Shield, User } from 'lucide-react';
@@ -26,6 +31,12 @@ export function PreboardingFlow({
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [hasLostFiles, setHasLostFiles] = useState(false);
+  const [lostFileNames, setLostFileNames] = useState<string[]>([]);
+
+  // File upload status tracking
+  const [fileUploadStatus, setFileUploadStatus] = useState<Record<string, FileUploadStatus>>({});
 
   // Initialize preboarding data
   const [preboardingData, setPreboardingData] = useState<PreboardingData>({
@@ -62,70 +73,98 @@ export function PreboardingFlow({
 
   // Load saved data from localStorage
   useEffect(() => {
-    const savedData = localStorage.getItem(`preboarding-${employeeId}`);
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-        // Handle date parsing from localStorage
-        if (parsedData.personalDetails?.dateOfBirth) {
-          parsedData.personalDetails.dateOfBirth = new Date(parsedData.personalDetails.dateOfBirth);
-        }
-        setPreboardingData(parsedData);
-
-        // Determine completed steps based on saved data
-        const completed = new Set<number>();
-        if (parsedData.personalDetails.fullName && parsedData.personalDetails.aadhaarNumber) {
-          completed.add(1);
-        }
-        // Check if background verification is complete (both documents and payslips)
-        const hasDocuments = Object.keys(parsedData.backgroundVerification.documents).length > 0;
-        const hasPayslips = parsedData.backgroundVerification.payslips?.payslip1?.status === 'success' &&
-                           parsedData.backgroundVerification.payslips?.payslip2?.status === 'success' &&
-                           parsedData.backgroundVerification.payslips?.payslip3?.status === 'success';
-        if (hasDocuments && hasPayslips) {
-          completed.add(2);
-        }
-        if (parsedData.employmentAgreement.agreedToTerms) {
-          completed.add(3);
-        }
-        setCompletedSteps(completed);
-      } catch (error) {
-        console.error('Error loading saved preboarding data:', error);
-      }
+    const savedProgress = ProgressStateManager.loadPreboardingProgress(employeeId);
+    
+    if (savedProgress && ProgressStateManager.validatePreboardingData(savedProgress)) {
+      // Check for lost files
+      const hasLost = ProgressStateManager.hasLostFiles(savedProgress.fileUploadStatus);
+      const lostFiles = ProgressStateManager.getLostFiles(savedProgress.fileUploadStatus);
+      
+      setHasLostFiles(hasLost);
+      setLostFileNames(lostFiles);
+      setShowRecovery(true);
+      
+      // Set the saved data
+      setCurrentStep(savedProgress.currentStep);
+      setCompletedSteps(new Set(savedProgress.completedSteps));
+      
+      // Map the data structure
+      setPreboardingData({
+        personalDetails: savedProgress.personalDetailsData,
+        backgroundVerification: savedProgress.backgroundVerificationData,
+        employmentAgreement: savedProgress.employmentAgreementData
+      });
+      setFileUploadStatus(savedProgress.fileUploadStatus);
     }
   }, [employeeId]);
 
   // Save to localStorage whenever data changes
   useEffect(() => {
-    // Create a serializable version of the data (excluding File objects)
-    const serializableData = {
-      ...preboardingData,
-      backgroundVerification: {
-        ...preboardingData.backgroundVerification,
-        payslips: {
-          payslip1: {
-            fileName: preboardingData.backgroundVerification.payslips?.payslip1?.fileName,
-            fileSize: preboardingData.backgroundVerification.payslips?.payslip1?.fileSize,
-            uploadedUrl: preboardingData.backgroundVerification.payslips?.payslip1?.uploadedUrl,
-            status: preboardingData.backgroundVerification.payslips?.payslip1?.status || 'pending'
-          },
-          payslip2: {
-            fileName: preboardingData.backgroundVerification.payslips?.payslip2?.fileName,
-            fileSize: preboardingData.backgroundVerification.payslips?.payslip2?.fileSize,
-            uploadedUrl: preboardingData.backgroundVerification.payslips?.payslip2?.uploadedUrl,
-            status: preboardingData.backgroundVerification.payslips?.payslip2?.status || 'pending'
-          },
-          payslip3: {
-            fileName: preboardingData.backgroundVerification.payslips?.payslip3?.fileName,
-            fileSize: preboardingData.backgroundVerification.payslips?.payslip3?.fileSize,
-            uploadedUrl: preboardingData.backgroundVerification.payslips?.payslip3?.uploadedUrl,
-            status: preboardingData.backgroundVerification.payslips?.payslip3?.status || 'pending'
-          }
-        }
-      }
+    const progressData: PreboardingProgressData = {
+      currentStep,
+      completedSteps: Array.from(completedSteps),
+      personalDetailsData: preboardingData.personalDetails,
+      backgroundVerificationData: preboardingData.backgroundVerification,
+      employmentAgreementData: preboardingData.employmentAgreement,
+      fileUploadStatus
     };
-    localStorage.setItem(`preboarding-${employeeId}`, JSON.stringify(serializableData));
-  }, [preboardingData, employeeId]);
+    ProgressStateManager.savePreboardingProgress(employeeId, progressData);
+  }, [preboardingData, completedSteps, currentStep, fileUploadStatus, employeeId]);
+
+  const handleResumeProgress = () => {
+    setShowRecovery(false);
+    if (hasLostFiles) {
+      toast({
+        title: "Files need re-upload",
+        description: `${lostFileNames.length} file(s) need to be re-selected to continue`
+      });
+    }
+  };
+
+  const handleStartFresh = () => {
+    ProgressStateManager.clearPreboardingProgress(employeeId);
+    setCurrentStep(1);
+    setCompletedSteps(new Set());
+    setPreboardingData({
+      personalDetails: {
+        fullName: '',
+        fatherName: '',
+        dateOfBirth: undefined,
+        aadhaarNumber: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        pincode: ''
+      },
+      backgroundVerification: {
+        documents: {},
+        payslips: {
+          payslip1: { status: 'pending' },
+          payslip2: { status: 'pending' },
+          payslip3: { status: 'pending' }
+        },
+        uploadStatus: {
+          panCard: 'pending',
+          previousOfferLetter: 'pending'
+        }
+      },
+      employmentAgreement: {
+        agreedToTerms: false,
+        digitalSignature: undefined,
+        signatureDate: undefined,
+        completedAt: undefined
+      }
+    });
+    setFileUploadStatus({});
+    setShowRecovery(false);
+    setHasLostFiles(false);
+    setLostFileNames([]);
+    toast({
+      title: "Starting fresh",
+      description: "Preboarding process has been reset"
+    });
+  };
   const steps: PreboardingStep[] = [{
     number: 1,
     title: 'Personal Details',
@@ -231,8 +270,8 @@ export function PreboardingFlow({
 
       console.log('✅ Preboarding data finalized:', response);
 
-      // Clear localStorage
-      localStorage.removeItem(`preboarding-${employeeId}`);
+      // Clear localStorage and progress tracking
+      ProgressStateManager.clearPreboardingProgress(employeeId);
       
       console.log('✅ Preboarding completed successfully');
       
@@ -309,6 +348,14 @@ export function PreboardingFlow({
   }
   return <div className="min-h-screen bg-muted/30">
       <div className="max-w-4xl mx-auto p-6">
+        <ProgressRecoveryAlert
+          hasProgress={showRecovery}
+          hasLostFiles={hasLostFiles}
+          lostFileNames={lostFileNames}
+          onResumeProgress={handleResumeProgress}
+          onStartFresh={handleStartFresh}
+        />
+        
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
