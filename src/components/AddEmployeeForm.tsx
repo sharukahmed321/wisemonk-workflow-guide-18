@@ -62,6 +62,9 @@ export function AddEmployeeForm({
   const [showSuccess, setShowSuccess] = useState(false);
   const [userOrganizationId, setUserOrganizationId] = useState<string | null>(null);
   const [isLoadingOrganization, setIsLoadingOrganization] = useState(true);
+  const [isBirthdayOpen, setIsBirthdayOpen] = useState(false);
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+  const [isEndDateOpen, setIsEndDateOpen] = useState(false);
 
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
@@ -437,7 +440,7 @@ export function AddEmployeeForm({
                   field
                 }) => <FormItem>
                         <FormLabel>Birthday</FormLabel>
-                        <Popover>
+                        <Popover open={isBirthdayOpen} onOpenChange={setIsBirthdayOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -460,7 +463,10 @@ export function AddEmployeeForm({
                             <Calendar
                               mode="single"
                               selected={field.value}
-                              onSelect={field.onChange}
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setIsBirthdayOpen(false);
+                              }}
                               disabled={(date) =>
                                 date > new Date() || date < new Date("1900-01-01")
                               }
@@ -546,7 +552,7 @@ export function AddEmployeeForm({
                   field
                 }) => <FormItem className="flex flex-col">
                         <FormLabel>Start Date *</FormLabel>
-                        <Popover>
+                        <Popover open={isStartDateOpen} onOpenChange={setIsStartDateOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button variant="outline" className={cn("h-11 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -556,40 +562,52 @@ export function AddEmployeeForm({
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus className={cn("p-3 pointer-events-auto")} />
+                            <Calendar 
+                              mode="single" 
+                              selected={field.value} 
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setIsStartDateOpen(false);
+                              }} 
+                              initialFocus 
+                              className={cn("p-3 pointer-events-auto")} 
+                            />
                           </PopoverContent>
                         </Popover>
                         <FormMessage />
                       </FormItem>} />
 
-                   {form.watch('employmentType') === 'Contract' && (
-                     <FormField control={form.control} name="lastDate" render={({
-                       field
-                     }) => <FormItem className="flex flex-col">
-                           <FormLabel>End Date *</FormLabel>
-                           <Popover>
-                             <PopoverTrigger asChild>
-                               <FormControl>
-                                 <Button variant="outline" className={cn("h-11 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                   {field.value ? format(field.value, "PPP") : <span>Pick end date</span>}
-                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                 </Button>
-                               </FormControl>
-                             </PopoverTrigger>
-                             <PopoverContent className="w-auto p-0" align="start">
-                               <Calendar 
-                                 mode="single" 
-                                 selected={field.value} 
-                                 onSelect={field.onChange} 
-                                 disabled={(date) => form.getValues('startDate') ? date <= form.getValues('startDate') : false}
-                                 initialFocus 
-                                 className={cn("p-3 pointer-events-auto")} 
-                               />
-                             </PopoverContent>
-                           </Popover>
-                           <FormMessage />
-                         </FormItem>} />
-                   )}
+                     {form.watch('employmentType') === 'Contract' && (
+                      <FormField control={form.control} name="lastDate" render={({
+                        field
+                      }) => <FormItem className="flex flex-col">
+                            <FormLabel>End Date *</FormLabel>
+                            <Popover open={isEndDateOpen} onOpenChange={setIsEndDateOpen}>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button variant="outline" className={cn("h-11 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? format(field.value, "PPP") : <span>Pick end date</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar 
+                                  mode="single" 
+                                  selected={field.value} 
+                                  onSelect={(date) => {
+                                    field.onChange(date);
+                                    setIsEndDateOpen(false);
+                                  }} 
+                                  disabled={(date) => form.getValues('startDate') ? date <= form.getValues('startDate') : false}
+                                  initialFocus 
+                                  className={cn("p-3 pointer-events-auto")} 
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>} />
+                    )}
                 </div>
               </div>
 
