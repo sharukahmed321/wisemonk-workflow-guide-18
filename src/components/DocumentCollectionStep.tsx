@@ -14,12 +14,8 @@ const DOCUMENTS = [{
   title: 'Relieving Letter from Last Employer',
   description: 'Official relieving letter from your previous company',
   icon: FileText
-}, {
-  key: 'salarySlip' as const,
-  title: 'Last Salary Slip',
-  description: 'Most recent salary slip from your previous employer',
-  icon: Receipt
-}, {
+}, 
+                   {
   key: 'resume' as const,
   title: 'Latest Resume',
   description: 'Your most up-to-date CV or resume',
