@@ -19,6 +19,8 @@ import { PasswordUpdateForm } from "./PasswordUpdateForm";
 import { Eye, EyeOff, Shield, AlertCircle, Clock, Wifi } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSecureSignup } from "@/hooks/useSecureSignup";
+import { validateEmailDomain, validatePasswordStrength } from "@/lib/dataValidation";
 
 interface AuthSectionProps {
   onSignInComplete: () => void;
@@ -66,7 +68,10 @@ const signUpSchema = z.object({
   password: z.string()
     .min(1, 'Password is required') // T4: Better required field validation
     .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+    .refine((password) => {
+      const validation = validatePasswordStrength(password);
+      return validation.isValid;
+    }, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
   confirmPassword: z.string().min(1, 'Please confirm your password'),
   terms: z.boolean().refine(val => val === true, 'You must accept the terms and conditions'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -92,6 +97,7 @@ export function AuthSection({ onSignInComplete, onSignUpComplete, isRecoveryMode
   const [isTimeout, setIsTimeout] = useState(false); // T27: Track timeout state
   const [isOffline, setIsOffline] = useState(!navigator.onLine); // T27: Track offline state
   const { toast } = useToast();
+  const { storeSignupData, retrieveSignupData, clearSignupData, completeUserCreation } = useSecureSignup();
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -360,6 +366,13 @@ export function AuthSection({ onSignInComplete, onSignUpComplete, isRecoveryMode
       // T22, T23: Sanitize inputs to prevent XSS and injection
       const sanitizedEmail = sanitizeInput(data.email.trim().toLowerCase());
       
+      // Enhanced email domain validation
+      const emailDomainValidation = validateEmailDomain(sanitizedEmail);
+      if (!emailDomainValidation.isValid) {
+        setError(emailDomainValidation.error!);
+        return;
+      }
+      
       // Enhanced user existence check before sending OTP
       const userStatus = await checkUserExists(sanitizedEmail);
       if (userStatus) {
@@ -424,11 +437,11 @@ export function AuthSection({ onSignInComplete, onSignUpComplete, isRecoveryMode
           // Store signup data temporarily for use after verification
           setUserEmail(sanitizedEmail);
           
-          // Store password temporarily (we'll create the user after OTP verification)
-          localStorage.setItem('pending_signup_data', JSON.stringify({
+          // SECURITY: Store password securely in memory instead of localStorage
+          storeSignupData({
             email: sanitizedEmail,
             password: data.password
-          }));
+          });
           
           toast({
             title: "Verification code sent!",
@@ -488,81 +501,66 @@ export function AuthSection({ onSignInComplete, onSignUpComplete, isRecoveryMode
     }
   };
 
+  const handleOTPVerified = async () => {
+    console.log('OTP verified, creating user account');
+    
+    try {
+      // SECURITY: Get signup data from secure in-memory storage
+      const signupData = retrieveSignupData();
+      if (!signupData) {
+        setError('Signup data not found. Please restart the signup process.');
+        setAuthState('auth');
+        return;
+      }
+
+      // Create the user account now that email is verified
+      const result = await completeUserCreation();
+      
+      if (!result.success) {
+        console.error('User creation error:', result.error);
+        setError(result.error || 'Failed to create account. Please try again.');
+        setAuthState('auth');
+        return;
+      }
+
+      toast({
+        title: "Account created successfully!",
+        description: "Welcome! Your account has been created.",
+      });
+      
+      setAuthState('verified');
+      
+      // Call the completion callback
+      setTimeout(() => {
+        onSignUpComplete();
+      }, 2000);
+    } catch (error: any) {
+      console.error('Account creation error:', error);
+      setError('An error occurred while creating your account. Please try again.');
+      setAuthState('auth');
+    }
+  };
+
+  const handleBackToAuth = () => {
+    setAuthState('auth');
+    setUserEmail('');
+    setError(null);
+    signUpForm.reset();
+    
+    // SECURITY: Clear secure signup data
+    clearSignupData();
+  };
+
   if (authState === 'email-check') {
     return (
       <OTPVerificationForm
         email={userEmail}
         onBack={() => {
-          // Clear temporary data when going back
-          localStorage.removeItem('pending_signup_data');
+          // SECURITY: Clear secure signup data when going back
+          clearSignupData();
           setAuthState('auth');
         }}
-        onVerify={async (otp: string) => {
-          console.log('OTP verification successful for:', userEmail);
-          
-          // Get pending signup data
-          const pendingData = localStorage.getItem('pending_signup_data');
-          if (pendingData) {
-            const { email, password } = JSON.parse(pendingData);
-            
-            try {
-              // After OTP verification, create the user account
-              const { data: authData, error: authError } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                  emailRedirectTo: `${window.location.origin}/dashboard`,
-                  data: {
-                    first_name: '',
-                    last_name: '',
-                  }
-                }
-              });
-
-              if (authError) {
-                console.error('User creation error after OTP:', authError);
-                
-                // Handle specific error cases
-                if (authError.message.includes('User already registered')) {
-                  // This shouldn't happen with our new validation, but just in case
-                  toast({
-                    title: "Account already exists",
-                    description: "This email is already registered. Please sign in instead.",
-                    variant: "destructive",
-                  });
-                } else {
-                  toast({
-                    title: "Account creation failed",
-                    description: authError.message,
-                    variant: "destructive",
-                  });
-                }
-                setAuthState('auth');
-                return;
-              }
-
-              if (authData.user) {
-                // Clear the temporary data
-                localStorage.removeItem('pending_signup_data');
-                
-                await logAuthEvent('sign_up_success', true, { email });
-                console.log('User account created successfully after OTP verification');
-                setAuthState('verified');
-              }
-            } catch (error: any) {
-              console.error('Error creating user after OTP:', error);
-              toast({
-                title: "Account creation failed",
-                description: "An error occurred while creating your account.",
-                variant: "destructive",
-              });
-              setAuthState('auth');
-            }
-          } else {
-            console.error('No pending signup data found');
-            setAuthState('auth');
-          }
-        }}
+        onVerify={handleOTPVerified}
         onResend={async () => {
           try {
             const { data, error } = await supabase.functions.invoke('send-otp', {
