@@ -41,8 +41,8 @@ const Index = () => {
       }
       
       // User is authenticated and email is verified
-      if (location.pathname.startsWith('/dashboard')) {
-        setAppState('dashboard');
+      if (location.pathname.startsWith('/onboarding')) {
+        setAppState('onboarding');
       } else {
         // Check if user needs onboarding by checking their profile
         checkUserOnboardingStatus();
