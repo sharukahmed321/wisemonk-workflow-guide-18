@@ -38,42 +38,7 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
   };
   return (
     <Card>
-      <CardHeader>
-       
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Status:</span>
-          {isGenerated ? (
-            <Badge variant="default">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Generated
-            </Badge>
-          ) : (
-            <Badge variant="secondary">
-              <Clock className="w-3 h-3 mr-1" />
-              Pending Generation
-            </Badge>
-          )}
-        </div>
-
-        <p className="text-sm text-muted-foreground">
-          {isGenerated 
-            ? "Your employment agreement has been generated successfully. Click download to access the document."
-            : "
-          }
-        </p>
-
-        {error && (
-          <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-lg">
-            <AlertCircle className="w-4 h-4 text-destructive mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-destructive">Generation Failed</p>
-              <p className="text-xs text-destructive/80 mt-1">{error}</p>
-            </div>
-          </div>
-        )}
-
+     
         {isGenerated ? (
           <Button 
             onClick={handleDownload}
