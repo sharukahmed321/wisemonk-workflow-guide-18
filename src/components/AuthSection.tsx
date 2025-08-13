@@ -940,13 +940,21 @@ export function AuthSection({ onSignInComplete, onSignUpComplete, isRecoveryMode
                       <div className="space-y-1 leading-none">
                         <FormLabel className="text-sm font-normal">
                           I accept the{' '}
-                          <button type="button" className="text-primary hover:text-primary/80">
-                            Terms of Service
-                          </button>{' '}
-                          and{' '}
-                          <button type="button" className="text-primary hover:text-primary/80">
-                            Privacy Policy
-                          </button>
+                           <button 
+                             type="button" 
+                             className="text-primary hover:text-primary/80"
+                             onClick={() => window.open('https://www.wisemonk.io/terms-of-service', '_blank')}
+                           >
+                             Terms of Service
+                           </button>{' '}
+                           and{' '}
+                           <button 
+                             type="button" 
+                             className="text-primary hover:text-primary/80"
+                             onClick={() => window.open('https://www.wisemonk.io/privacy', '_blank')}
+                           >
+                             Privacy Policy
+                           </button>
                         </FormLabel>
                         <FormMessage />
                       </div>
