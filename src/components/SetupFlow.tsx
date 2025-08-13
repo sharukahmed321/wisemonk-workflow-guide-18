@@ -10,12 +10,23 @@ import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download, RefreshCw } f
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  createAddressValidator, 
+  createCityValidator, 
+  createStateValidator, 
+  createPostalCodeValidator 
+} from '@/lib/validationUtils';
 
 const addressSchema = z.object({
-  address: z.string().min(1, 'Address is required'),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
-  postalCode: z.string().min(1, 'Postal code is required')
+  address: createAddressValidator('Street address'),
+  city: createCityValidator(),
+  state: createStateValidator(),
+  postalCode: z.string()
+    .min(1, 'Postal code is required')
+    .refine(val => val.trim().length > 0, 'Postal code cannot be only whitespace')
+    .transform(val => val.trim())
+    .refine(val => /^\d+$/.test(val), 'Postal code must contain only numbers')
+    .refine(val => val.length >= 3 && val.length <= 10, 'Postal code must be between 3-10 digits')
 });
 
 const msaSchema = z.object({});
