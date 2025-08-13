@@ -38,12 +38,7 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
   };
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="w-5 h-5" />
-          Employment Agreement
-        </CardTitle>
-      </CardHeader>
+      
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Status:</span>
