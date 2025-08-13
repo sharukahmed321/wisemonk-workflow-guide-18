@@ -12,7 +12,7 @@ import { CalendarIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { createNameValidator, createJobTitleValidator, createJobDescriptionValidator } from '@/lib/validationUtils';
+import { createNameValidator, createJobTitleValidator, createJobDescriptionValidator, createPhoneValidator } from '@/lib/validationUtils';
 
 const employeeDetailsSchema = z.object({
   firstName: createNameValidator('First name', 2, 50),
@@ -21,10 +21,7 @@ const employeeDetailsSchema = z.object({
     .min(1, 'Email address is required')
     .email('Please enter a valid email address')
     .transform(val => val.trim().toLowerCase()),
-  phone: z.string()
-    .min(1, 'Phone number is required')
-    .refine(val => val.trim().length > 0, 'Phone number cannot be only whitespace')
-    .transform(val => val.trim()),
+  phone: createPhoneValidator(),
   gender: z.enum(['Male', 'Female'], {
     message: 'Please select a gender',
   }),
@@ -187,7 +184,7 @@ export function EmployeeDetailsStep({
                   <FormItem>
                     <FormLabel>Phone Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter 10-digit phone number" pattern="^(\+91[\-\s]?)?[6-9]\d{9}$" className="h-11" {...field} />
+                      <Input placeholder="Enter 10-digit phone number" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

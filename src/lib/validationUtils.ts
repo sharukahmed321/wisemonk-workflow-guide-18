@@ -191,6 +191,14 @@ export const createSalaryValidator = (minSalary: number = 240000, maxSalary?: nu
     .refine(val => !maxSalary || val <= maxSalary, maxSalary ? `Annual salary must not exceed ${maxSalary.toLocaleString()}` : undefined);
 };
 
+export const createPhoneValidator = () => {
+  return z.string()
+    .min(1, 'Phone number is required')
+    .refine(notOnlyWhitespace, 'Phone number cannot be only whitespace')
+    .transform(val => val.trim())
+    .refine(val => /^\d{10}$/.test(val), 'Phone number should be 10 digits');
+};
+
 export const createDropdownValidator = (fieldName: string, allowedValues?: string[]) => {
   return z.string()
     .min(1, `Please select ${fieldName}`)
