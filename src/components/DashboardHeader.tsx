@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Settings, ChevronDown, LogOut, User, Shield } from 'lucide-react';
+import { Search, Settings, ChevronDown, LogOut, User, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -112,14 +112,6 @@ export function DashboardHeader() {
         {/* Settings */}
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/dashboard/settings')}>
           <Settings className="h-3.5 w-3.5" />
-        </Button>
-
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative h-8 w-8">
-          <Bell className="h-3.5 w-3.5" />
-          <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs">
-            3
-          </Badge>
         </Button>
 
         {/* User Menu */}
