@@ -565,6 +565,9 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
         {/* Main Content Card */}
         <Card>
           <CardHeader className="pb-6">
+            <CardTitle className="text-2xl font-semibold text-foreground">
+              {stepTitles[currentStep]}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {currentStep === 1 && (
