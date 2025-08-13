@@ -22,6 +22,10 @@ export function EmailVerificationGuard({ children }: EmailVerificationGuardProps
   useEffect(() => {
     if (user) {
       checkVerificationStatus();
+    } else {
+      // If no user, immediately set as not verified to allow children to render
+      // This prevents the loading state during sign out
+      setIsVerified(false);
     }
   }, [user]);
 
@@ -98,7 +102,8 @@ export function EmailVerificationGuard({ children }: EmailVerificationGuardProps
   };
 
   // Show loading state while checking verification
-  if (isVerified === null) {
+  // If no user, render children immediately (will redirect via Index page)
+  if (isVerified === null && user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
         <div className="flex items-center space-x-2">

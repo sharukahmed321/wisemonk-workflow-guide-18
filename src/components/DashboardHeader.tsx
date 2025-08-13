@@ -51,7 +51,7 @@ export function DashboardHeader() {
         title: "Signed out successfully",
         description: "You have been securely signed out.",
       });
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (error) {
       toast({
         title: "Error signing out",
