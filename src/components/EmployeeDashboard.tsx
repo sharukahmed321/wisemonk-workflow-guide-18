@@ -47,10 +47,9 @@ function EmployeeHome() {
     window.location.reload();
   };
 
-  const handleOnboardingComplete = () => {
-    // Mock completion - in real app would update employee status to "Active"
+  const handleOnboardingComplete = async () => {
     console.log('Employee onboarding completed!');
-    // Refresh data after onboarding completion
+    // Refresh the preboarding status to get updated employee data
     window.location.reload();
   };
 

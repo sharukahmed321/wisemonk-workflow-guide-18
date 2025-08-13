@@ -159,8 +159,8 @@ Deno.serve(async (req) => {
       // Document URLs
       ...documentUrls,
       
-      // Update status
-      status: 'Onboarding',
+      // Update status to Active after onboarding completion
+      status: 'Active',
       updated_at: new Date().toISOString()
     }
 
