@@ -43,11 +43,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
           }
           setEmployeeData(employee);
         }
-      if (draft.compensationData) {
-        // Exclude salary from cached data - user should enter it fresh each time
-        const { salary, ...compensationWithoutSalary } = draft.compensationData;
-        setCompensationData(compensationWithoutSalary);
-      }
+        if (draft.compensationData) setCompensationData(draft.compensationData);
         if (draft.currentStep) setCurrentStep(draft.currentStep);
       } catch (error) {
         console.error('Error loading draft:', error);
