@@ -60,10 +60,10 @@ export default function EmployeeProfileCard() {
         throw profileError;
       }
 
-      // Try to get employee data for additional fields
+      // Try to get employee data for additional fields including profile picture
       const { data: employee, error: employeeError } = await supabase
         .from('employees')
-        .select('date_of_birth, job_title, department, phone')
+        .select('date_of_birth, job_title, department, phone, profile_picture_url, avatar_url')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -73,7 +73,7 @@ export default function EmployeeProfileCard() {
         last_name: profile?.last_name || '',
         email: profile?.email || user.email || '',
         phone: employee?.phone || profile?.phone || '',
-        avatar_url: profile?.avatar_url || '',
+        avatar_url: employee?.profile_picture_url || employee?.avatar_url || profile?.avatar_url || '',
         job_title: employee?.job_title || profile?.job_title || '',
         department: employee?.department || profile?.department || '',
         date_of_birth: employee?.date_of_birth || ''
