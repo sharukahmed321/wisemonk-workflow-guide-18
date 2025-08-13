@@ -247,7 +247,7 @@ export function EmployeeDashboard() {
               <Routes>
                 <Route index element={<EmployeeHome />} />
                 <Route path="profile" element={<EmployeeProfileCard />} />
-                <Route path="onboarding" element={<EmployeeOnboarding />} />
+                
                 <Route path="preboarding/:employeeId" element={<EmployeePreboarding />} />
                 {/* Redirect any other paths back to employee home */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />

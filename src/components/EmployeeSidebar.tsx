@@ -2,7 +2,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  Home, User, FileCheck, Settings
+  Home, User, Settings
 } from 'lucide-react';
 import {
   Sidebar,
@@ -38,8 +38,7 @@ export function Logo() {
 
 const navigationItems = [
   { id: 'home', label: 'My Dashboard', icon: Home, url: '/dashboard' },
-  { id: 'profile', label: 'My Profile', icon: User, url: '/dashboard/profile' },
-  { id: 'onboarding', label: 'Onboarding Steps', icon: FileCheck, url: '/dashboard/onboarding' }
+  { id: 'profile', label: 'My Profile', icon: User, url: '/dashboard/profile' }
 ];
 
 export function EmployeeSidebar() {
