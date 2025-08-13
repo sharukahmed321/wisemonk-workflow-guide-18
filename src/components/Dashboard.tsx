@@ -192,7 +192,7 @@ export function Dashboard() {
                 } />
                 <Route path="people" element={<People />} />
                 <Route path="people/:employeeId" element={<EmployeeProfilePage />} />
-                <Route path="people/add" element={<AddEmployeeTwoStepForm onSuccess={() => navigate('/dashboard/people')} />} />
+                <Route path="people/add" element={<AddEmployeeTwoStepForm onSuccess={() => navigate('/dashboard/people?tab=Invited')} />} />
                 <Route path="preboarding/:employeeId" element={<PreboardingPage />} />
                 <Route path="teams" element={<PlaceholderPage title="Teams" />} />
                 <Route path="time" element={<PlaceholderPage title="Time & Attendance" />} />

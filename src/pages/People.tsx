@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { EmployeeStatus } from '@/types/employee';
 import { EmployeeTable } from '@/components/EmployeeTable';
 import { StatusTabs } from '@/components/StatusTabs';
@@ -10,8 +10,17 @@ import { useEmployees } from '@/hooks/useEmployees';
 
 export default function People() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedStatus, setSelectedStatus] = useState<EmployeeStatus>('Active');
   const { employees, loading, error, statusCounts } = useEmployees();
+
+  // Set initial tab based on URL parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['Active', 'Invited', 'Inactive', 'Terminated'].includes(tabParam)) {
+      setSelectedStatus(tabParam as EmployeeStatus);
+    }
+  }, [searchParams]);
 
   const filteredEmployees = employees.filter(emp => emp.status === selectedStatus);
 

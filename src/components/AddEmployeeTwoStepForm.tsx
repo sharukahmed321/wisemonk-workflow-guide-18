@@ -404,8 +404,11 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
         // Auto-redirect after success
         setTimeout(() => {
-          onSuccess?.();
-          navigate('/dashboard');
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            navigate('/dashboard');
+          }
         }, 2500);
 
       } catch (operationError) {
