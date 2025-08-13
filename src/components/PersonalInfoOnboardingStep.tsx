@@ -94,8 +94,13 @@ export function PersonalInfoOnboardingStep() {
             type="tel"
             placeholder="Enter 10-digit phone number"
             value={data.personalInfo.phoneNumber || ''}
-            onChange={(e) => updatePersonalInfo({ phoneNumber: e.target.value })}
+            onChange={(e) => {
+              // Only allow digits and limit to 10 characters
+              const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+              updatePersonalInfo({ phoneNumber: value });
+            }}
             className={errors.phoneNumber ? 'border-destructive' : ''}
+            maxLength={10}
           />
           {errors.phoneNumber && (
             <p className="text-sm text-destructive">{errors.phoneNumber}</p>
