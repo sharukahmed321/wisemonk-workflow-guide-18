@@ -38,7 +38,9 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
   };
   return (
     <Card>
-      
+      <CardHeader>
+       
+      </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Status:</span>
@@ -58,7 +60,7 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
         <p className="text-sm text-muted-foreground">
           {isGenerated 
             ? "Your employment agreement has been generated successfully. Click download to access the document."
-            : "Generate your employment agreement document to complete the preboarding process."
+            : "
           }
         </p>
 
