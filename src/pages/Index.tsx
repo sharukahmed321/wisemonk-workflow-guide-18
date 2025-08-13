@@ -14,11 +14,24 @@ const Index = () => {
   const { user, loading, isEmailVerified, session } = useAuth();
   const [appState, setAppState] = useState<'auth' | 'onboarding' | 'dashboard'>('auth');
   
-  // Recovery session detection
+  // Recovery session detection - Supabase sends different parameters for password reset
   const searchParams = new URLSearchParams(location.search);
-  const mode = searchParams.get('mode');
-  const hasRecoveryToken = searchParams.has('token') || searchParams.has('access_token');
-  const isRecoverySession = session?.user?.aud === 'authenticated' && mode === 'update-password' && hasRecoveryToken;
+  const type = searchParams.get('type');
+  const accessToken = searchParams.get('access_token');
+  const refreshToken = searchParams.get('refresh_token');
+  
+  // Debug logging to understand what parameters Supabase actually sends
+  if (accessToken || refreshToken || type) {
+    console.log('Password reset URL parameters detected:', {
+      type,
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      allParams: Object.fromEntries(searchParams.entries())
+    });
+  }
+  
+  // Supabase password reset links include type=recovery and auth tokens
+  const isRecoverySession = Boolean((type === 'recovery' || searchParams.has('access_token')) && user);
   
   useEffect(() => {
     if (loading) return; // Wait for auth to load
