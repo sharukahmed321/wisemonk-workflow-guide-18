@@ -112,6 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setSession(null);
       setUserRole(null);
+      setIsEmailVerified(false);
       setLoading(false);
 
       // Log sign out event (before actual signout to avoid RLS issues)
