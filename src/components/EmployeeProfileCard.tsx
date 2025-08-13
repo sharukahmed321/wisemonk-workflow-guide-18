@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Mail, Phone, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Loader2, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -23,9 +23,12 @@ interface ProfileData {
 export default function EmployeeProfileCard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<ProfileData>({
     first_name: '',
     last_name: '',
@@ -100,22 +103,88 @@ export default function EmployeeProfileCard() {
     }));
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select an image file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size must be less than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+    
+    // Create preview URL
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+  };
+
+  const uploadProfilePicture = async (file: File, employeeId: string) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `profile-picture/profile_${Date.now()}.${fileExt}`;
+    const filePath = `${employeeId}/onboarding/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('employee-documents')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('employee-documents')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
     try {
       setSaving(true);
+      let updatedAvatarUrl = formData.avatar_url;
+
+      // Upload new profile picture if selected
+      if (selectedFile) {
+        const { data: employeeData } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (employeeData) {
+          updatedAvatarUrl = await uploadProfilePicture(selectedFile, employeeData.id);
+        }
+      }
 
       // Update profile data
+      const profileUpdateData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+        job_title: formData.job_title,
+        department: formData.department,
+        ...(updatedAvatarUrl && { avatar_url: updatedAvatarUrl })
+      };
+
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          phone: formData.phone,
-          job_title: formData.job_title,
-          department: formData.department
-        })
+        .update(profileUpdateData)
         .eq('user_id', user.id);
 
       if (profileError) throw profileError;
@@ -128,22 +197,36 @@ export default function EmployeeProfileCard() {
         .maybeSingle();
 
       if (employeeExists) {
+        const employeeUpdateData = {
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          phone: formData.phone,
+          job_title: formData.job_title,
+          department: formData.department,
+          date_of_birth: formData.date_of_birth || null,
+          ...(updatedAvatarUrl && { profile_picture_url: updatedAvatarUrl })
+        };
+
         const { error: employeeError } = await supabase
           .from('employees')
-          .update({
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            phone: formData.phone,
-            job_title: formData.job_title,
-            department: formData.department,
-            date_of_birth: formData.date_of_birth || null
-          })
+          .update(employeeUpdateData)
           .eq('user_id', user.id);
 
         if (employeeError) throw employeeError;
       }
 
-      setProfileData(formData);
+      // Update local state
+      const updatedFormData = { ...formData, avatar_url: updatedAvatarUrl };
+      setFormData(updatedFormData);
+      setProfileData(updatedFormData);
+      
+      // Clear file selection
+      setSelectedFile(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+
       toast({
         title: "Success",
         description: "Profile updated successfully"
@@ -198,10 +281,30 @@ export default function EmployeeProfileCard() {
           </CardHeader>
           <CardContent className="text-center">
             <Avatar className="h-24 w-24 mx-auto mb-4">
-              <AvatarImage src={formData.avatar_url || undefined} />
+              <AvatarImage src={previewUrl || formData.avatar_url || undefined} />
               <AvatarFallback>{getInitials()}</AvatarFallback>
             </Avatar>
-            <Button variant="outline" size="sm">Change Photo</Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept="image/*"
+              className="hidden"
+            />
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Change Photo
+            </Button>
+            {selectedFile && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Selected: {selectedFile.name}
+              </p>
+            )}
           </CardContent>
         </Card>
 
