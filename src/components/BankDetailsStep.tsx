@@ -116,13 +116,13 @@ export function BankDetailsStep() {
               <FormField
                 control={form.control}
                 name="ifscCode"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>IFSC Code *</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., SBIN0001234"
-                        className="h-11"
+                        className={`h-11 ${fieldState.error ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         {...field}
                         onChange={(e) => {
                           const value = e.target.value.toUpperCase();
@@ -133,6 +133,9 @@ export function BankDetailsStep() {
                       />
                     </FormControl>
                     <FormMessage />
+                    <p className="text-xs text-muted-foreground">
+                      Format: 4 letters + 0 + 6 alphanumeric characters (e.g., SBIN0001234)
+                    </p>
                   </FormItem>
                 )}
               />

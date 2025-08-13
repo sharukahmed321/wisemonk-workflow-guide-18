@@ -350,6 +350,7 @@ export function EmployeeOnboardingFlow({
   const currentStepData = STEPS[currentStep - 1];
   const isLastStep = currentStep === STEPS.length;
   const canProceed = Object.keys(errors).length === 0;
+  const hasValidationErrors = Object.keys(errors).length > 0;
 
   return (
     <OnboardingContext.Provider value={contextValue}>
@@ -386,6 +387,18 @@ export function EmployeeOnboardingFlow({
             </CardContent>
 
             <div className="border-t bg-muted/20 px-6 py-4">
+              {hasValidationErrors && (
+                <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                  <div className="flex items-center gap-2 text-sm text-destructive font-medium mb-2">
+                    <span>Please fix the following errors:</span>
+                  </div>
+                  <ul className="text-sm text-destructive space-y-1">
+                    {Object.entries(errors).map(([field, error]) => (
+                      <li key={field}>• {error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 {currentStep > 1 ? (
                   <Button
@@ -401,14 +414,21 @@ export function EmployeeOnboardingFlow({
                   <div></div>
                 )}
 
-                <Button 
-                  onClick={handleNext} 
-                  disabled={!canProceed || isSubmitting} 
-                  className="flex items-center gap-2"
-                >
-                  {isSubmitting ? 'Submitting...' : isLastStep ? 'Submit' : 'Next'}
-                  {!isSubmitting && !isLastStep && <ArrowRight className="h-4 w-4" />}
-                </Button>
+                <div className="flex items-center gap-3">
+                  {!canProceed && !isSubmitting && (
+                    <span className="text-sm text-muted-foreground">
+                      Complete all required fields to continue
+                    </span>
+                  )}
+                  <Button 
+                    onClick={handleNext} 
+                    disabled={!canProceed || isSubmitting} 
+                    className="flex items-center gap-2"
+                  >
+                    {isSubmitting ? 'Submitting...' : isLastStep ? 'Submit' : 'Next'}
+                    {!isSubmitting && !isLastStep && <ArrowRight className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
