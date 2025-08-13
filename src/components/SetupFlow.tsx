@@ -214,9 +214,7 @@ export function AddressStep({ onComplete }: AddressStepProps) {
                 </div>
 
                 <div className="flex gap-4 pt-4">
-                  <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
-                    Save for Later
-                  </Button>
+                 
                   <Button type="submit" disabled={isSubmitting} className="flex-1">
                     {isSubmitting ? 'Generating Agreement...' : 'Continue & Generate MSA'}
                   </Button>
