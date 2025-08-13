@@ -16,8 +16,6 @@ import { supabase } from '@/integrations/supabase/client';
 // Onboarding data interfaces
 export interface PersonalInfoData {
   profilePicture?: File;
-  phoneNumber: string;
-  genderIdentity: string;
   dateOfBirth?: Date;
 }
 
@@ -105,18 +103,14 @@ export function EmployeeOnboardingFlow({
 
   // Initialize with empty data
   const [data, setData] = useState<OnboardingData>({
-    personalInfo: {
-      phoneNumber: '',
-      genderIdentity: ''
-    },
+    personalInfo: {},
     documentCollection: {},
     bankDetails: {
       bankName: '',
       accountNumber: '',
       ifscCode: '',
       hasUAN: false,
-      uanNumber: ''
-    }
+    },
   });
 
   useEffect(() => {
@@ -213,16 +207,10 @@ export function EmployeeOnboardingFlow({
     const newErrors: Record<string, string> = {};
     
     switch (step) {
-      case 1:
-        if (!data.personalInfo.phoneNumber) {
-          newErrors.phoneNumber = 'Phone number is required';
-        } else if (!/^\d{10}$/.test(data.personalInfo.phoneNumber)) {
-          newErrors.phoneNumber = 'Please enter a valid 10-digit phone number';
-        }
-        if (!data.personalInfo.genderIdentity) {
-          newErrors.genderIdentity = 'Gender identity is required';
-        }
-        break;
+      case 1: // Personal Info
+        // No validation needed - all fields are optional
+        setErrors({});
+        return true;
       case 2:
         // Documents are optional, so no validation needed
         break;
