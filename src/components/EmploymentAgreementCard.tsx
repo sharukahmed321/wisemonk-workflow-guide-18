@@ -40,6 +40,7 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
     <Card>
      
       <CardContent className="flex items-center justify-center">
+
         {isGenerated ? (
           <Button 
             onClick={handleDownload}
