@@ -6,7 +6,7 @@ import * as z from 'zod';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Switch } from './ui/switch';
+import { Checkbox } from './ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { CreditCard, Building2, Shield, FileCheck } from 'lucide-react';
 import { useOnboardingContext, BankDetailsData } from './EmployeeOnboardingFlow';
@@ -192,7 +192,7 @@ export function BankDetailsStep() {
                 <FormItem>
                   <div className="flex items-center gap-3">
                     <FormControl>
-                      <Switch
+                      <Checkbox
                         checked={field.value}
                         onCheckedChange={(checked) => {
                           field.onChange(checked);
