@@ -112,8 +112,8 @@ export function AddressStep({ onComplete }: AddressStepProps) {
         description: "MSA agreement generated and stored successfully! Proceeding to signature step.",
       });
 */
-      // Navigate to MSA step for signing
-      navigate('/dashboard/setup/msa');
+      // Navigate to dashboard
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error saving address or generating MSA:', error);
       toast({
