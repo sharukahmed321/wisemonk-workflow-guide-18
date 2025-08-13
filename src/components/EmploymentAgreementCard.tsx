@@ -39,11 +39,12 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
   return (
     <Card>
      
-      <CardContent className="flex items-center justify-center">
+      <CardContent className="space-y-4">
 
         {isGenerated ? (
           <Button 
             onClick={handleDownload}
+            className="w-full"
           >
             <Download className="w-4 h-4 mr-2" />
             Download Employment Agreement
@@ -52,6 +53,7 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
           <Button 
             onClick={handleGenerate}
             disabled={isGenerating}
+            className="w-full"
           >
             {isGenerating ? (
               <>
