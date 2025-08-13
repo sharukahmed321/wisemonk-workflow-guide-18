@@ -187,7 +187,7 @@ export function EmployeeDetailsStep({
                   <FormItem>
                     <FormLabel>Phone Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. +91 9876543210 or 9876543210" pattern="^(\+91[\-\s]?)?[6-9]\d{9}$" className="h-11" {...field} />
+                      <Input placeholder="Enter 10-digit phone number" pattern="^(\+91[\-\s]?)?[6-9]\d{9}$" className="h-11" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
