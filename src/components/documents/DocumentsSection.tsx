@@ -70,8 +70,7 @@ export function DocumentsSection({ documents, employeeId }: DocumentsSectionProp
 
   const categories = [
     { key: 'KYC', label: 'KYC Documents', description: 'Identity verification documents' },
-    { key: 'Employment', label: 'Employment Documents', description: 'Job-related documentation' },
-    { key: 'Personal', label: 'Personal Documents', description: 'Personal information and records' }
+    { key: 'Employment', label: 'Employment Documents', description: 'Job-related documentation' }
   ];
 
   return (
