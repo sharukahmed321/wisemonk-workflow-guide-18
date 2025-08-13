@@ -61,7 +61,7 @@ export function PersonalInfoOnboardingStep() {
         <div className="space-y-2">
           <Label htmlFor="profilePicture" className="flex items-center gap-2">
             <Upload className="w-4 h-4" />
-            Profile Picture (Optional)
+            Profile Picture
           </Label>
           <div className="flex items-center gap-4">
             {data.personalInfo.profilePicture instanceof File && (
