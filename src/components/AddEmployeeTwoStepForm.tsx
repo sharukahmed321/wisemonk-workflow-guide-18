@@ -451,10 +451,14 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
   };
 
   const handleSaveAndExit = () => {
-    // Save current form data if we're on the compensation step
-    if (currentStep === 2 && currentFormData) {
-      saveDraft(2, currentFormData);
-    }
+    // Save all available form data based on current step
+    const draftData = {
+      currentStep,
+      employeeData: employeeData,
+      compensationData: currentStep === 2 && currentFormData ? currentFormData : compensationData
+    };
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
+    
     toast({
       title: "Draft Saved",
       description: "Your progress has been saved. You can continue later from where you left off.",
