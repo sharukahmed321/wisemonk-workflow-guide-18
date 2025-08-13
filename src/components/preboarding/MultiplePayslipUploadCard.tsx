@@ -197,7 +197,7 @@ export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeI
             onClick={handleChooseFiles}
           >
             <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">Upload 3 Payslips</h3>
+            <h3 className="text-lg font-medium text-foreground mb-2">Upload Payslips</h3>
             <p className="text-sm text-muted-foreground mb-2">
               Click to select all 3 payslip files at once
             </p>
