@@ -10,10 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { EmployeeDetailsData } from './EmployeeDetailsStep';
+import { createSalaryValidator } from '@/lib/validationUtils';
 import { format } from "date-fns";
 
 const compensationReviewSchema = z.object({
-  salary: z.number().min(240000, 'Salary is required'),
+  salary: createSalaryValidator(240000),
   currency: z.string().min(1, 'Currency is required'),
   department: z.string().min(1, 'Department is required'),
   employmentType: z.string().min(1, 'Employment type is required'),
