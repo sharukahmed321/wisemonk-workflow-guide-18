@@ -154,8 +154,8 @@ export default function EmployeeProfile() {
     Exit: 'bg-destructive/10 text-destructive border-destructive/20',
   };
 
-  // Get the profile picture URL from the correct source
-  const profilePictureUrl = employee.profilePictureUrl || employee.avatar || null;
+  // Get the profile picture URL from the employee data
+  const profilePictureUrl = employee.avatar;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
