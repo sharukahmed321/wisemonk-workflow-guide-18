@@ -246,7 +246,23 @@ export function MSAStep({ onComplete }: MSAStepProps) {
     setIsSubmitting(true);
 
     try {
-      // First redirect to dashboard immediately
+      // First mark MSA as completed to trigger 75% progress
+      const { data: user } = await supabase.auth.getUser();
+      if (user.user) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ 
+            msa_completed: true,
+            msa_status: 'completed'
+          })
+          .eq('user_id', user.user.id);
+          
+        if (updateError) {
+          console.error('Error updating MSA completion status:', updateError);
+        }
+      }
+
+      // Then redirect to dashboard immediately
       navigate('/dashboard');
       
       toast({
@@ -296,22 +312,6 @@ export function MSAStep({ onComplete }: MSAStepProps) {
         }
 
         console.log('✅ MSA sent for e-signature successfully');
-        
-        // Update profile to mark MSA as completed since it's been sent for signing
-        const { data: user } = await supabase.auth.getUser();
-        if (user.user) {
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ 
-              msa_completed: true,
-              msa_status: 'completed'
-            })
-            .eq('user_id', user.user.id);
-            
-          if (updateError) {
-            console.error('Error updating MSA completion status:', updateError);
-          }
-        }
       }
 
     } catch (error) {
