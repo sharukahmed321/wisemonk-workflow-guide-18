@@ -12,7 +12,7 @@ interface EmploymentAgreementCardProps {
 }
 
 export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentAgreementCardProps) {
-  const { generateAgreement, isGenerating, error, document, isGenerated, downloadDocument } = useEmploymentAgreement(employeeId);
+  const { generateAgreement, isGenerating, isLoading, error, document, isGenerated, downloadDocument } = useEmploymentAgreement(employeeId);
 
   const hasNotifiedRef = useRef(false);
 
@@ -40,8 +40,12 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
     <Card>
      
       <CardContent className="space-y-4">
-
-        {isGenerated ? (
+        {isLoading ? (
+          <Button disabled className="w-full">
+            <Clock className="w-4 h-4 mr-2 animate-spin" />
+            Checking for existing agreements...
+          </Button>
+        ) : isGenerated ? (
           <Button 
             onClick={handleDownload}
             className="w-full"

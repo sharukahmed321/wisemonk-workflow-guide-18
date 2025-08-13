@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,6 +16,7 @@ interface EmploymentAgreementDocument {
 interface UseEmploymentAgreementReturn {
   generateAgreement: () => Promise<EmploymentAgreementDocument | null>;
   isGenerating: boolean;
+  isLoading: boolean;
   error: string | null;
   document: EmploymentAgreementDocument | null;
   isGenerated: boolean;
@@ -24,9 +25,65 @@ interface UseEmploymentAgreementReturn {
 
 export function useEmploymentAgreement(employeeId?: string): UseEmploymentAgreementReturn {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [document, setDocument] = useState<EmploymentAgreementDocument | null>(null);
   const { toast } = useToast();
+
+  // Check for existing documents on mount
+  useEffect(() => {
+    const checkExistingDocument = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Query for existing employment agreement
+        const { data: agreements, error } = await supabase
+          .from('employment_agreements')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error('Error checking existing documents:', error);
+          setIsLoading(false);
+          return;
+        }
+
+        if (agreements && agreements.length > 0) {
+          const agreement = agreements[0];
+          
+          // Generate a fresh signed URL for download
+          const { data: signedUrlData } = await supabase.storage
+            .from('employment-agreements')
+            .createSignedUrl(agreement.file_path, 3600); // 1 hour expiry
+
+          const documentData: EmploymentAgreementDocument = {
+            id: agreement.id,
+            file_name: agreement.file_name,
+            file_path: agreement.file_path,
+            download_url: signedUrlData?.signedUrl || undefined,
+            created_at: agreement.created_at,
+            is_signed: agreement.is_signed,
+            generation_method: agreement.generation_method || 'database'
+          };
+
+          setDocument(documentData);
+        }
+      } catch (err) {
+        console.error('Error checking existing documents:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkExistingDocument();
+  }, [employeeId]);
 
   const generateAgreement = async (): Promise<EmploymentAgreementDocument | null> => {
     setIsGenerating(true);
@@ -103,6 +160,7 @@ export function useEmploymentAgreement(employeeId?: string): UseEmploymentAgreem
   return {
     generateAgreement,
     isGenerating,
+    isLoading,
     error,
     document,
     isGenerated,
