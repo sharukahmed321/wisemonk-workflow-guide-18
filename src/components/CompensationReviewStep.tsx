@@ -224,7 +224,7 @@ export function CompensationReviewStep({
                     </div>
                     <div>
                       <span className="font-medium text-muted-foreground">Seniority:</span>
-                      <p className="capitalize">{employeeData.seniority.replace('-', ' ')}</p>
+                      <p className="capitalize">{employeeData.seniority?.replace('-', ' ') || 'Not specified'}</p>
                     </div>
                     <div>
                       <span className="font-medium text-muted-foreground">Start Date:</span>
