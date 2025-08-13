@@ -73,12 +73,7 @@ export function CompensationReviewStep({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium text-foreground mb-2">Compensation & Final Review</h3>
-        <p className="text-sm text-muted-foreground">
-          Set salary details and review the complete employee information before finalizing.
-        </p>
-      </div>
+      
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -304,7 +299,7 @@ export function CompensationReviewStep({
 
           <div className="flex gap-4 pt-4">
             <Button type="button" variant="outline" onClick={onBack} className="flex-1">
-              Back: Employee Details
+              Previous
             </Button>
             <Button type="submit" disabled={isSubmitting} className="flex-1">
               {isSubmitting ? 'Adding Employee...' : 'Complete & Add Employee'}
