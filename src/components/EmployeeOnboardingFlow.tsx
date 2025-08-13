@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect } from 'react';
+import React, { useState, createContext, useContext, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
@@ -52,6 +52,7 @@ interface OnboardingContextType {
   updateBankDetails: (details: Partial<BankDetailsData>) => void;
   errors: Record<string, string>;
   setErrors: (errors: Record<string, string>) => void;
+  setFormValidation?: (step: string, isValid: boolean) => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
@@ -96,6 +97,7 @@ export function EmployeeOnboardingFlow({
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formValidationStates, setFormValidationStates] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   // File upload status tracking
@@ -151,6 +153,13 @@ export function EmployeeOnboardingFlow({
     }
   }, [employeeId, toast]);
 
+  const setFormValidation = useCallback((step: string, isValid: boolean) => {
+    setFormValidationStates(prev => ({
+      ...prev,
+      [step]: isValid
+    }));
+  }, []);
+
   useEffect(() => {
     const progressData: OnboardingProgressData = {
       currentStep,
@@ -194,7 +203,8 @@ export function EmployeeOnboardingFlow({
       }));
     },
     errors,
-    setErrors
+    setErrors,
+    setFormValidation
   };
 
   // Validation functions
@@ -349,8 +359,16 @@ export function EmployeeOnboardingFlow({
 
   const currentStepData = STEPS[currentStep - 1];
   const isLastStep = currentStep === STEPS.length;
-  const canProceed = Object.keys(errors).length === 0;
-  const hasValidationErrors = Object.keys(errors).length > 0;
+  
+  // Check both custom validation errors and React Hook Form validation
+  const hasCustomErrors = Object.keys(errors).length > 0;
+  const currentStepKey = currentStep === 3 ? 'bankDetails' : `step${currentStep}`;
+  const isFormValid = formValidationStates[currentStepKey] === true;
+  
+  // For step 3 (bank details), prioritize React Hook Form validation
+  // For other steps, use custom validation
+  const canProceed = currentStep === 3 ? isFormValid && !hasCustomErrors : !hasCustomErrors;
+  const hasValidationErrors = hasCustomErrors;
 
   return (
     <OnboardingContext.Provider value={contextValue}>

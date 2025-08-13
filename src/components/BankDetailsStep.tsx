@@ -35,13 +35,18 @@ const bankDetailsSchema = z.object({
 type BankDetailsForm = z.infer<typeof bankDetailsSchema>;
 
 export function BankDetailsStep() {
-  const { data, updateBankDetails, errors } = useOnboardingContext();
+  const { data, updateBankDetails, errors, setFormValidation } = useOnboardingContext();
   
   const form = useForm<BankDetailsForm>({
     resolver: zodResolver(bankDetailsSchema),
     defaultValues: data.bankDetails,
     mode: "onChange"
   });
+
+  // Sync React Hook Form validation state with context
+  React.useEffect(() => {
+    setFormValidation?.('bankDetails', form.formState.isValid);
+  }, [form.formState.isValid, setFormValidation]);
 
   const handleFormChange = (field: keyof BankDetailsData, value: any) => {
     console.log(`Updating ${field}:`, value);
