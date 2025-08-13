@@ -108,7 +108,7 @@ export function FileUploadZone({
   };
 
   const isImage = currentFile?.type.startsWith('image/');
-  const hasError = error || (required && !currentFile);
+  const hasError = !!error;
 
   return (
     <div className={cn("space-y-2", className)}>
