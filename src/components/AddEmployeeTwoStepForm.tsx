@@ -24,6 +24,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
   const [currentStep, setCurrentStep] = useState(0); // 0 = overview, 1-2 = form steps
   const [employeeData, setEmployeeData] = useState<EmployeeDetailsData | null>(null);
   const [compensationData, setCompensationData] = useState<CompensationReviewData | null>(null);
+  const [currentFormData, setCurrentFormData] = useState<CompensationReviewData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -447,11 +448,19 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
   };
 
   const handleSaveAndExit = () => {
+    // Save current form data if we're on the compensation step
+    if (currentStep === 2 && currentFormData) {
+      saveDraft(2, currentFormData);
+    }
     toast({
       title: "Draft Saved",
       description: "Your progress has been saved. You can continue later from where you left off.",
     });
     navigate('/dashboard');
+  };
+
+  const handleFormDataChange = (data: CompensationReviewData) => {
+    setCurrentFormData(data);
   };
 
   const stepTitles = [
@@ -584,6 +593,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
                   employeeData={employeeData}
                   isSubmitting={isSubmitting}
                   defaultValues={compensationData || undefined}
+                  onFormChange={handleFormDataChange}
                 />
                 
                 </>

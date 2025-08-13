@@ -37,6 +37,7 @@ interface CompensationReviewStepProps {
   employeeData: EmployeeDetailsData;
   isSubmitting: boolean;
   defaultValues?: Partial<CompensationReviewData>;
+  onFormChange?: (data: CompensationReviewData) => void;
 }
 
 export function CompensationReviewStep({ 
@@ -44,7 +45,8 @@ export function CompensationReviewStep({
   onBack, 
   employeeData, 
   isSubmitting, 
-  defaultValues 
+  defaultValues,
+  onFormChange 
 }: CompensationReviewStepProps) {
   const form = useForm<CompensationReviewData>({
     resolver: zodResolver(compensationReviewSchema),
@@ -56,6 +58,16 @@ export function CompensationReviewStep({
       agreementAccepted: defaultValues?.agreementAccepted || false
     }
   });
+
+  // Track form changes
+  React.useEffect(() => {
+    const subscription = form.watch((value) => {
+      if (onFormChange && value) {
+        onFormChange(value as CompensationReviewData);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, onFormChange]);
 
   const currencies = [
     { value: 'INR', label: 'INR (₹)' }
