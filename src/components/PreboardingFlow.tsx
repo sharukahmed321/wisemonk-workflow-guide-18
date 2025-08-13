@@ -205,14 +205,15 @@ export function PreboardingFlow({
     setIsLoading(true);
 
     try {
-      // Final save of all preboarding data and mark employee as active
-      console.log('🏁 Completing preboarding process...');
+      // Immediately update employee status to "Onboarding" and route to onboarding
+      console.log('🏁 Completing preboarding process - Setting status to Onboarding...');
       const { data: response, error } = await supabase.functions.invoke('update-preboarding-data', {
         body: { 
           employeeId, 
           personalDetails: preboardingData.personalDetails, 
           stepNumber: 'complete',
-          finalizeStatus: true
+          finalizeStatus: true,
+          setStatusToOnboarding: true // New flag to set status to Onboarding instead of Active
         }
       });
 
@@ -220,49 +221,42 @@ export function PreboardingFlow({
         throw error;
       }
 
-      console.log('✅ Preboarding data finalized:', response);
+      console.log('✅ Preboarding data finalized and status set to Onboarding:', response);
 
       // Clear localStorage and progress tracking
       ProgressStateManager.clearPreboardingProgress(employeeId);
       
-      console.log('✅ Preboarding completed successfully');
+      console.log('✅ Preboarding completed successfully - Routing to Onboarding');
       
-      // Trigger Zoho Sign for employment agreement
-      console.log('🔄 Sending employment agreement for signing...');
-      try {
-        const { data: zohoResponse, error: zohoError } = await supabase.functions.invoke(
-          'send-employment-for-signing',
-          {
-            body: { employeeId }
-          }
-        );
-
-        if (zohoError) {
-          console.error('❌ Error sending for signing:', zohoError);
-          // Don't throw error - preboarding is still complete
-          toast({
-            title: "Preboarding completed!",
-            description: "Welcome to the team! Note: There was an issue sending the agreement for signing.",
-            variant: "default"
-          });
-        } else {
-          console.log('✅ Employment agreement sent for signing:', zohoResponse);
-          toast({
-            title: "Preboarding completed!",
-            description: "Welcome to the team! Your employment agreement has been sent for signing."
-          });
-        }
-      } catch (signError) {
-        console.error('❌ Failed to send for signing:', signError);
-        // Don't throw error - preboarding is still complete
-        toast({
-          title: "Preboarding completed!",
-          description: "Welcome to the team! Your preboarding is now complete."
-        });
-      }
+      toast({
+        title: "Preboarding completed!",
+        description: "Welcome to the team! Proceeding to employee onboarding."
+      });
       
-      // Call the completion callback
+      // Call the completion callback immediately to route to onboarding
       onComplete?.();
+
+      // Run e-signing process in the background (non-blocking)
+      console.log('🔄 Starting background e-signing process...');
+      setTimeout(async () => {
+        try {
+          const { data: zohoResponse, error: zohoError } = await supabase.functions.invoke(
+            'send-employment-for-signing',
+            {
+              body: { employeeId }
+            }
+          );
+
+          if (zohoError) {
+            console.error('❌ Background e-signing error:', zohoError);
+          } else {
+            console.log('✅ Background e-signing completed:', zohoResponse);
+          }
+        } catch (signError) {
+          console.error('❌ Background e-signing failed:', signError);
+        }
+      }, 1000); // Run after 1 second delay to allow routing to complete
+
     } catch (error) {
       console.error('Error completing preboarding:', error);
       toast({

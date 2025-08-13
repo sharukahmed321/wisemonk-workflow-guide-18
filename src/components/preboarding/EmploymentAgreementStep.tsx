@@ -25,15 +25,15 @@ export function EmploymentAgreementStep({ data, onComplete, onPrevious, employee
   };
 
   const handleComplete = () => {
-    if (documentGenerated) {
-      onComplete({
-        completedAt: new Date(),
-        documentGenerated,
-      });
-    }
+    // Remove dependency on documentGenerated - allow proceeding without generating agreement
+    onComplete({
+      completedAt: new Date(),
+      documentGenerated,
+    });
   };
 
-  const isComplete = documentGenerated;
+  // Always allow completion - agreement generation is now optional
+  const isComplete = true;
 
   return (
     <div className="space-y-6">

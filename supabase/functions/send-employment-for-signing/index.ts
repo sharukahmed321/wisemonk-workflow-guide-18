@@ -360,11 +360,25 @@ serve(async (req) => {
     });
 
     // Check if employee has an employment agreement PDF
+    // COMMENTED OUT: Allow e-signing to proceed without pre-generated agreement
+    // if (!employee.employment_agreement_url) {
+    //   return new Response(JSON.stringify({
+    //     error: 'No employment agreement PDF available. Please generate the agreement first.'
+    //   }), {
+    //     status: 400,
+    //     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    //   });
+    // }
+
+    // If no agreement URL, log it but don't fail
     if (!employee.employment_agreement_url) {
+      console.log('⚠️ No employment agreement URL found - skipping e-signing process');
       return new Response(JSON.stringify({
-        error: 'No employment agreement PDF available. Please generate the agreement first.'
+        success: true,
+        message: 'Employee status updated to Onboarding. E-signing skipped - no agreement URL available.',
+        employee_id: employeeId,
+        skipped_reason: 'No employment agreement URL'
       }), {
-        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
