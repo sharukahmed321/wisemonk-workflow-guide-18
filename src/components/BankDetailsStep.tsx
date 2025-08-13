@@ -39,7 +39,8 @@ export function BankDetailsStep() {
   
   const form = useForm<BankDetailsForm>({
     resolver: zodResolver(bankDetailsSchema),
-    defaultValues: data.bankDetails
+    defaultValues: data.bankDetails,
+    mode: "onChange"
   });
 
   const handleFormChange = (field: keyof BankDetailsData, value: any) => {
