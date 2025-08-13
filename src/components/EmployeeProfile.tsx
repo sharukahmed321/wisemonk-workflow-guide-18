@@ -154,6 +154,9 @@ export default function EmployeeProfile() {
     Exit: 'bg-destructive/10 text-destructive border-destructive/20',
   };
 
+  // Get the profile picture URL from the correct source
+  const profilePictureUrl = employee.profilePictureUrl || employee.avatar || null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 lg:space-y-8">
@@ -172,7 +175,7 @@ export default function EmployeeProfile() {
             <CardContent className="p-4 sm:p-6 md:p-8">
               <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                 <Avatar className="h-16 w-16 sm:h-20 w-20 md:h-24 w-24">
-                  <AvatarImage src={employee.avatar} alt={`${employee.firstName} ${employee.lastName}`} />
+                  <AvatarImage src={profilePictureUrl} alt={`${employee.firstName} ${employee.lastName}`} />
                   <AvatarFallback className="text-lg md:text-xl">
                     {employee.firstName[0]}{employee.lastName[0]}
                   </AvatarFallback>

@@ -1,4 +1,3 @@
-
 export type EmployeeStatus = 'Active' | 'Onboarding' | 'Preboarding' | 'Invited';
 export type EmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Intern';
 export type Department = 'Engineering' | 'Marketing' | 'Sales' | 'HR' | 'Finance' | 'Operations' | 'Design';
@@ -18,6 +17,7 @@ export interface Employee {
   startDate: string;
   status: EmployeeStatus;
   avatar?: string;
+  profilePictureUrl?: string;
   birthday?: string; // MM-DD format
   age?: number; // Calculated from date_of_birth
   gender?: string; // "Son" or "Daughter"
