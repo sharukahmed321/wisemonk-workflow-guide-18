@@ -209,7 +209,7 @@ export function MultiplePayslipUploadCard({ payslips, onPayslipUpdate, employeeI
               className="mt-4"
               disabled={isUploading}
             >
-              Choose 3 Files
+              Choose Files
             </Button>
           </div>
         ) : (
