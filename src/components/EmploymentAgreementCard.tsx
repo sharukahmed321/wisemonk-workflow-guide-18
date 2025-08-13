@@ -39,6 +39,8 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
   return (
     <Card>
      
+      <CardContent className="space-y-4">
+
         {isGenerated ? (
           <Button 
             onClick={handleDownload}
