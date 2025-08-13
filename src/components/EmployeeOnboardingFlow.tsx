@@ -365,15 +365,28 @@ export function EmployeeOnboardingFlow({
   const currentStepKey = currentStep === 3 ? 'bankDetails' : `step${currentStep}`;
   const isFormValid = formValidationStates[currentStepKey] === true;
   
+  // Debug logging for validation state
+  console.log('Validation Debug Info:', {
+    currentStep,
+    currentStepKey,
+    hasCustomErrors,
+    isFormValid,
+    errors,
+    formValidationStates,
+    bankDetailsData: data.bankDetails
+  });
+  
   // For step 3 (bank details), prioritize React Hook Form validation
   // For other steps, use custom validation
   let canProceed = false;
   if (currentStep === 3) {
     // For bank details step, require React Hook Form validation to be true
     canProceed = isFormValid && !hasCustomErrors;
+    console.log('Bank details validation:', { isFormValid, hasCustomErrors, canProceed });
   } else {
     // For other steps, just check custom validation
     canProceed = !hasCustomErrors;
+    console.log('Other step validation:', { hasCustomErrors, canProceed });
   }
   
   const hasValidationErrors = hasCustomErrors;
