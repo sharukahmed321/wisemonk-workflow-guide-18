@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +16,7 @@ import { sanitizeNumericInput, formatNumberWithCommas, convertNumberToWords } fr
 import { format } from "date-fns";
 
 const compensationReviewSchema = z.object({
-  salary: createSalaryValidator(240000),
+  salary: createSalaryValidator(10000000), // Set max salary to 1 crore
   currency: z.string().min(1, 'This field is required'),
   department: z.string().min(1, 'This field is required'),
   employmentType: z.string().min(1, 'This field is required'),
@@ -139,10 +138,7 @@ export function CompensationReviewStep({
                     </FormControl>
                     <FormDescription className="space-y-1">
                       {currentSalary && currentSalary > 0 ? (
-                        <>
-                          <div className="font-medium">₹{formatNumberWithCommas(currentSalary)}</div>
-                          <div className="text-muted-foreground text-xs">— {convertNumberToWords(currentSalary)}</div>
-                        </>
+                        <div className="text-muted-foreground text-sm">{convertNumberToWords(currentSalary)}</div>
                       ) : (
                         <div className="text-muted-foreground text-sm">Type the yearly gross salary to see it in words.</div>
                       )}
