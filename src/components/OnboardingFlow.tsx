@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,10 +7,12 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
-import { ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, RotateCcw } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CountrySelect } from './ui/country-select';
+import { useAuth } from '@/contexts/AuthContext';
+import { useOnboardingRecovery } from '@/hooks/useOnboardingRecovery';
 import { 
   createNameValidator, 
   createJobTitleValidator, 
@@ -39,6 +41,7 @@ type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
 type CompanyDetailsFormData = z.infer<typeof companyDetailsSchema>;
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [userData, setUserData] = useState<UserDetailsFormData>({
     firstName: '',
@@ -52,6 +55,20 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     employeeCount: ''
   });
   const { toast } = useToast();
+  const recovery = useOnboardingRecovery(user?.id);
+
+  // Handle onboarding recovery
+  useEffect(() => {
+    if (!recovery.loading && recovery.needsRecovery) {
+      setCurrentStep(recovery.currentStep);
+      
+      toast({
+        title: "Resuming Setup",
+        description: `Continuing from step ${recovery.currentStep} where you left off.`,
+        variant: "default",
+      });
+    }
+  }, [recovery.loading, recovery.needsRecovery, recovery.currentStep, toast]);
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -118,6 +135,7 @@ function UserDetailsStep({ onNext, userData, setUserData }: UserDetailsStepProps
           first_name: data.firstName,
           last_name: data.lastName,
           job_title: data.designation,
+          onboarding_step: 1
         })
         .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
 
@@ -244,6 +262,16 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
 
       if (orgError) {
         throw orgError;
+      }
+
+      // Update onboarding step progress
+      const { error: stepError } = await supabase
+        .from('profiles')
+        .update({ onboarding_step: 2 })
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (stepError) {
+        console.warn('Error updating onboarding step:', stepError);
       }
 
       setCompanyData(data);
@@ -377,6 +405,45 @@ interface SetupCompleteStepProps {
 }
 
 function SetupCompleteStep({ onComplete }: SetupCompleteStepProps) {
+  const [isCompleting, setIsCompleting] = useState(false);
+  const { toast } = useToast();
+
+  const handleComplete = async () => {
+    setIsCompleting(true);
+    
+    try {
+      // Mark onboarding as completed in the database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          onboarding_completed: true,
+          onboarding_completed_at: new Date().toISOString(),
+          onboarding_step: 3
+        })
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Setup Complete!",
+        description: "Welcome to your dashboard.",
+      });
+      
+      onComplete();
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete setup. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-4">
@@ -386,8 +453,12 @@ function SetupCompleteStep({ onComplete }: SetupCompleteStepProps) {
         <h2 className="text-2xl font-bold text-foreground">Great! You're almost ready</h2>
       </div>
 
-      <Button onClick={onComplete} className="w-full h-11">
-        Go to Dashboard
+      <Button 
+        onClick={handleComplete} 
+        disabled={isCompleting}
+        className="w-full h-11"
+      >
+        {isCompleting ? 'Completing setup...' : 'Go to Dashboard'}
       </Button>
     </div>
   );

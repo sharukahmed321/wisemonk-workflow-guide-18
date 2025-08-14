@@ -68,16 +68,16 @@ const Index = () => {
 
   const checkUserOnboardingStatus = async () => {
     try {
-      // Check user profile and role
+      // Check user profile and role with onboarding completion tracking
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('first_name, last_name, job_title, organization_id')
+        .select('first_name, last_name, job_title, organization_id, onboarding_completed, onboarding_step')
         .eq('user_id', user?.id)
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error checking profile:', profileError);
-        // Default to dashboard on error
+        // Default to onboarding on error for safety
         setAppState('onboarding');
         if (!location.pathname.startsWith('/onboarding')) {
           navigate('/onboarding', { replace: true });
@@ -100,15 +100,49 @@ const Index = () => {
       const role = userRole?.[0]?.role;
       const hasOrganization = profile?.organization_id || userRole?.[0]?.organization_id;
 
-      // PRIORITY 1: Check profile completion first (regardless of role)
-      // If profile is incomplete, always go to onboarding
-      if (!profile || !profile.first_name || !profile.last_name || !profile.job_title) {
-        console.log('Redirecting to onboarding - incomplete profile:', { profile, role });
+      // CRITICAL: Check onboarding completion flag first
+      if (!profile?.onboarding_completed) {
+        console.log('Redirecting to onboarding - onboarding not completed:', { 
+          profile: profile ? {
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            job_title: profile.job_title,
+            organization_id: profile.organization_id,
+            onboarding_completed: profile.onboarding_completed,
+            onboarding_step: profile.onboarding_step
+          } : null,
+          role 
+        });
         setAppState('onboarding');
+        if (!location.pathname.startsWith('/onboarding')) {
+          navigate('/onboarding', { replace: true });
+        }
         return;
       }
 
-      // PRIORITY 2: Role-based routing only AFTER profile is complete
+      // ADDITIONAL VALIDATION: Double-check required fields even if marked complete
+      if (!profile || !profile.first_name || !profile.last_name || !profile.job_title || !hasOrganization) {
+        console.log('Redirecting to onboarding - missing required fields despite completion flag:', { 
+          profile, role, hasOrganization 
+        });
+        
+        // Reset onboarding completion flag since data is incomplete
+        await supabase
+          .from('profiles')
+          .update({ 
+            onboarding_completed: false,
+            onboarding_step: 1 
+          })
+          .eq('user_id', user?.id);
+          
+        setAppState('onboarding');
+        if (!location.pathname.startsWith('/onboarding')) {
+          navigate('/onboarding', { replace: true });
+        }
+        return;
+      }
+
+      // PRIORITY 2: Role-based routing only AFTER onboarding is complete
       // If user is an employee with organization, redirect to people dashboard
       if (role === 'employee' && hasOrganization) {
         console.log('Redirecting to employee dashboard:', { profile, role });
@@ -127,10 +161,10 @@ const Index = () => {
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
-      // Default to dashboard on error
-      setAppState('dashboard');
-      if (!location.pathname.startsWith('/dashboard')) {
-        navigate('/dashboard', { replace: true });
+      // Default to onboarding on error for safety
+      setAppState('onboarding');
+      if (!location.pathname.startsWith('/onboarding')) {
+        navigate('/onboarding', { replace: true });
       }
     }
   };

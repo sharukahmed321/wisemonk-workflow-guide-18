@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -46,6 +46,124 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      employee_onboarding_progress: {
+        Row: {
+          bank_details_data: Json | null
+          completed_at: string | null
+          completed_steps: number[] | null
+          created_at: string
+          current_step: number
+          document_data: Json | null
+          employee_id: string
+          file_upload_status: Json | null
+          id: string
+          is_completed: boolean | null
+          organization_id: string | null
+          personal_info_data: Json | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          bank_details_data?: Json | null
+          completed_at?: string | null
+          completed_steps?: number[] | null
+          created_at?: string
+          current_step?: number
+          document_data?: Json | null
+          employee_id: string
+          file_upload_status?: Json | null
+          id?: string
+          is_completed?: boolean | null
+          organization_id?: string | null
+          personal_info_data?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          bank_details_data?: Json | null
+          completed_at?: string | null
+          completed_steps?: number[] | null
+          created_at?: string
+          current_step?: number
+          document_data?: Json | null
+          employee_id?: string
+          file_upload_status?: Json | null
+          id?: string
+          is_completed?: boolean | null
+          organization_id?: string | null
+          personal_info_data?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_onboarding_progress_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_preboarding_progress: {
+        Row: {
+          background_verification_data: Json | null
+          completed_at: string | null
+          completed_steps: number[] | null
+          created_at: string
+          current_step: number
+          employee_id: string
+          employment_agreement_data: Json | null
+          file_upload_status: Json | null
+          id: string
+          is_completed: boolean | null
+          organization_id: string | null
+          personal_details_data: Json | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          background_verification_data?: Json | null
+          completed_at?: string | null
+          completed_steps?: number[] | null
+          created_at?: string
+          current_step?: number
+          employee_id: string
+          employment_agreement_data?: Json | null
+          file_upload_status?: Json | null
+          id?: string
+          is_completed?: boolean | null
+          organization_id?: string | null
+          personal_details_data?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          background_verification_data?: Json | null
+          completed_at?: string | null
+          completed_steps?: number[] | null
+          created_at?: string
+          current_step?: number
+          employee_id?: string
+          employment_agreement_data?: Json | null
+          file_upload_status?: Json | null
+          id?: string
+          is_completed?: boolean | null
+          organization_id?: string | null
+          personal_details_data?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_preboarding_progress_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employees: {
         Row: {
@@ -469,6 +587,11 @@ export type Database = {
           industry: string | null
           is_active: boolean
           legal_name: string
+          msa_document_name: string | null
+          msa_document_url: string | null
+          msa_request_id: string | null
+          msa_signed_date: string | null
+          msa_status: string | null
           name: string
           phone: string | null
           updated_at: string
@@ -488,6 +611,11 @@ export type Database = {
           industry?: string | null
           is_active?: boolean
           legal_name: string
+          msa_document_name?: string | null
+          msa_document_url?: string | null
+          msa_request_id?: string | null
+          msa_signed_date?: string | null
+          msa_status?: string | null
           name: string
           phone?: string | null
           updated_at?: string
@@ -507,6 +635,11 @@ export type Database = {
           industry?: string | null
           is_active?: boolean
           legal_name?: string
+          msa_document_name?: string | null
+          msa_document_url?: string | null
+          msa_request_id?: string | null
+          msa_signed_date?: string | null
+          msa_status?: string | null
           name?: string
           phone?: string | null
           updated_at?: string
@@ -589,6 +722,9 @@ export type Database = {
           msa_signed_at: string | null
           msa_signed_by: string | null
           msa_status: Database["public"]["Enums"]["setup_step_status"] | null
+          onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
+          onboarding_step: number | null
           organization_id: string | null
           password_changed_at: string | null
           phone: string | null
@@ -638,6 +774,9 @@ export type Database = {
           msa_signed_at?: string | null
           msa_signed_by?: string | null
           msa_status?: Database["public"]["Enums"]["setup_step_status"] | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number | null
           organization_id?: string | null
           password_changed_at?: string | null
           phone?: string | null
@@ -687,6 +826,9 @@ export type Database = {
           msa_signed_at?: string | null
           msa_signed_by?: string | null
           msa_status?: Database["public"]["Enums"]["setup_step_status"] | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number | null
           organization_id?: string | null
           password_changed_at?: string | null
           phone?: string | null
@@ -777,9 +919,9 @@ export type Database = {
     Functions: {
       assign_organization_role: {
         Args: {
-          p_user_id: string
           p_organization_id: string
           p_role?: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
         }
         Returns: undefined
       }
@@ -813,15 +955,15 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
       increment_failed_login_attempts: {
         Args:
+          | { ip_address?: string; user_email: string }
           | { user_email: string }
-          | { user_email: string; ip_address?: string }
         Returns: undefined
       }
       is_email_verified: {
@@ -833,7 +975,7 @@ export type Database = {
         Returns: boolean
       }
       reset_failed_login_attempts: {
-        Args: { user_email: string; ip_address?: string }
+        Args: { ip_address?: string; user_email: string }
         Returns: undefined
       }
       should_lock_account: {
@@ -842,19 +984,19 @@ export type Database = {
       }
       upsert_organization: {
         Args: {
-          p_organization_id?: string
-          p_name?: string
-          p_legal_name?: string
-          p_country?: string
-          p_employee_count?: Database["public"]["Enums"]["employee_count_range"]
           p_business_address?: string
           p_business_city?: string
-          p_business_state?: string
           p_business_postal_code?: string
-          p_website?: string
-          p_phone?: string
-          p_industry?: string
+          p_business_state?: string
+          p_country?: string
           p_description?: string
+          p_employee_count?: Database["public"]["Enums"]["employee_count_range"]
+          p_industry?: string
+          p_legal_name?: string
+          p_name?: string
+          p_organization_id?: string
+          p_phone?: string
+          p_website?: string
         }
         Returns: string
       }
