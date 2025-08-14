@@ -386,12 +386,6 @@ function SetupCompleteStep({ onComplete }: SetupCompleteStepProps) {
         <h2 className="text-2xl font-bold text-foreground">Great! You're almost ready</h2>
       </div>
 
-      <div className="space-y-3">
-        <div className="w-full bg-muted rounded-full h-2">
-          <div className="bg-primary h-2 rounded-full w-full"></div>
-        </div>
-      </div>
-
       <Button onClick={onComplete} className="w-full h-11">
         Go to Dashboard
       </Button>
