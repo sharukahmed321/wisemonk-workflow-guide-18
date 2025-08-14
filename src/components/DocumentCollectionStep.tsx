@@ -70,14 +70,11 @@ export function DocumentCollectionStep() {
                       {document.title}
                     </Label>
                     {document.required && (
-                      <span className="text-destructive text-sm font-medium">*</span>
+                      <span className="text-foreground text-sm font-medium">*</span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {document.description}
-                    {document.required && (
-                      <span className="text-destructive"> (Required)</span>
-                    )}
                   </p>
                   {hasError && (
                     <p className="text-xs text-destructive mt-1">
