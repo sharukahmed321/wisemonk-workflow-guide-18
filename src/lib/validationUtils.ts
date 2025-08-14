@@ -106,7 +106,7 @@ export const createDropdownValidator = (fieldName: string, options: string[]) =>
 
 export const createSalaryValidator = (maxSalary: number = 500000) => {
   return z.number()
-    .min(1, 'This field is required')
+    .min(240000, 'Minimum salary is ₹2,40,000')
     .max(maxSalary, `Salary cannot exceed ${maxSalary.toLocaleString()}`)
     .positive('Salary must be a positive number');
 };

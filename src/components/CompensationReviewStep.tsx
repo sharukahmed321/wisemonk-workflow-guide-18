@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -5,12 +6,14 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmployeeDetailsData } from './EmployeeDetailsStep';
 import { createSalaryValidator } from '@/lib/validationUtils';
+import { sanitizeNumericInput, formatNumberWithCommas, convertNumberToWords } from '@/lib/salaryUtils';
 import { format } from "date-fns";
 
 const compensationReviewSchema = z.object({
@@ -48,10 +51,12 @@ export function CompensationReviewStep({
   defaultValues,
   onFormChange 
 }: CompensationReviewStepProps) {
+  const [salaryDisplay, setSalaryDisplay] = React.useState('');
+  
   const form = useForm<CompensationReviewData>({
     resolver: zodResolver(compensationReviewSchema),
     defaultValues: {
-      salary: defaultValues?.salary || 0,
+      salary: defaultValues?.salary || undefined,
       currency: defaultValues?.currency || 'INR',
       department: defaultValues?.department || 'Engineering',
       employmentType: defaultValues?.employmentType || 'Full-time',
@@ -68,6 +73,30 @@ export function CompensationReviewStep({
     });
     return () => subscription.unsubscribe();
   }, [form, onFormChange]);
+
+  // Handle salary input
+  const handleSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = sanitizeNumericInput(e.target.value);
+    const numericValue = rawValue ? parseInt(rawValue, 10) : undefined;
+    
+    setSalaryDisplay(rawValue);
+    form.setValue('salary', numericValue || 0);
+    form.trigger('salary');
+  };
+
+  const handleSalaryBlur = () => {
+    const numericValue = form.getValues('salary');
+    if (numericValue && numericValue > 0) {
+      setSalaryDisplay(formatNumberWithCommas(numericValue));
+    }
+  };
+
+  const handleSalaryWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+  };
+
+  // Watch salary for live preview
+  const currentSalary = form.watch('salary');
 
   const currencies = [
     { value: 'INR', label: 'INR (₹)' }
@@ -86,8 +115,6 @@ export function CompensationReviewStep({
 
   return (
     <div className="space-y-6">
-      
-
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Compensation Details */}
@@ -102,13 +129,24 @@ export function CompensationReviewStep({
                     <FormLabel>Annual Salary *</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        placeholder="50000"
+                        type="text"
                         className="h-11"
-                        onChange={e => field.onChange(Number(e.target.value))}
-                        value={field.value || ''}
+                        value={salaryDisplay}
+                        onChange={handleSalaryChange}
+                        onBlur={handleSalaryBlur}
+                        onWheel={handleSalaryWheel}
                       />
                     </FormControl>
+                    <FormDescription className="space-y-1">
+                      {currentSalary && currentSalary > 0 ? (
+                        <>
+                          <div className="font-medium">₹{formatNumberWithCommas(currentSalary)}</div>
+                          <div className="text-muted-foreground text-xs">— {convertNumberToWords(currentSalary)}</div>
+                        </>
+                      ) : (
+                        <div className="text-muted-foreground text-sm">Type the yearly gross salary to see it in words.</div>
+                      )}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -165,19 +203,13 @@ export function CompensationReviewStep({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Employment Type *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select employment type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Full-time">Full-time</SelectItem>
-                        <SelectItem value="Part-time">Part-time</SelectItem>
-                        <SelectItem value="Contract">Contract</SelectItem>
-                        <SelectItem value="Intern">Intern</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input
+                        value="Full-time"
+                        disabled
+                        className="h-11 bg-muted"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -189,97 +221,100 @@ export function CompensationReviewStep({
           <div>
             <h4 className="font-medium text-foreground mb-4">Employee Information Review</h4>
             <Card>
-              <CardHeader>
+              <CardHeader className="sticky top-0 bg-background z-10 border-b">
                 <CardTitle className="text-base">Complete Employee Record</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Personal Information */}
-                <div>
-                  <h5 className="font-medium text-sm text-muted-foreground mb-2">Personal Information</h5>
-                  <div className="grid gap-3 md:grid-cols-2 text-sm">
-                    <div>
-                      <span className="font-medium text-muted-foreground">Full Name:</span>
-                      <p className="font-medium">{employeeData.firstName} {employeeData.lastName}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-muted-foreground">Email:</span>
-                      <p>{employeeData.email}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-muted-foreground">Phone:</span>
-                      <p>{employeeData.phone}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <Separator />
-                
-                {/* Job Information */}
-                <div>
-                  <h5 className="font-medium text-sm text-muted-foreground mb-2">Position Details</h5>
-                  <div className="grid gap-3 md:grid-cols-2 text-sm">
-                    <div>
-                      <span className="font-medium text-muted-foreground">Job Title:</span>
-                      <p>{employeeData.jobTitle}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-muted-foreground">Seniority:</span>
-                      <p className="capitalize">{employeeData.seniority?.replace('-', ' ') || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-muted-foreground">Start Date:</span>
-                      <p>{employeeData.startDate ? format(employeeData.startDate, "PPP") : 'Not specified'}</p>
-                    </div>
-                    {employeeData.lastDate && (
+              <ScrollArea className="max-h-96">
+                <CardContent className="space-y-4 pt-4">
+                  {/* Personal Information */}
+                  <div>
+                    <h5 className="font-medium text-sm text-muted-foreground mb-2">Personal Information</h5>
+                    <div className="grid gap-3 md:grid-cols-2 text-sm">
                       <div>
-                        <span className="font-medium text-muted-foreground">End Date:</span>
-                        <p>{format(employeeData.lastDate, "PPP")}</p>
+                        <span className="font-medium text-muted-foreground">Full Name:</span>
+                        <p className="font-medium">{employeeData.firstName} {employeeData.lastName}</p>
                       </div>
-                    )}
-                    <div>
-                      <span className="font-medium text-muted-foreground">Work Location:</span>
-                      <p className="capitalize">{employeeData.workLocation}</p>
+                      <div>
+                        <span className="font-medium text-muted-foreground">Email:</span>
+                        <p>{employeeData.email}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-muted-foreground">Phone:</span>
+                        <p>{employeeData.phone}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <Separator />
-                
-                 {/* Compensation & Work Information */}
-                <div>
-                  <h5 className="font-medium text-sm text-muted-foreground mb-2">Compensation & Work Details</h5>
-                  <div className="grid gap-3 md:grid-cols-2 text-sm">
-                    <div>
-                      <span className="font-medium text-muted-foreground">Annual Salary:</span>
-                       <p className="font-medium text-lg">
-                         ₹ {form.watch('salary')?.toLocaleString() || '0'}
-                       </p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-muted-foreground">Department:</span>
-                      <p className="capitalize">{form.watch('department') || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-muted-foreground">Employment Type:</span>
-                      <p className="capitalize">{form.watch('employmentType') || 'Not specified'}</p>
+                  
+                  <Separator />
+                  
+                  {/* Job Information */}
+                  <div>
+                    <h5 className="font-medium text-sm text-muted-foreground mb-2">Position Details</h5>
+                    <div className="grid gap-3 md:grid-cols-2 text-sm">
+                      <div>
+                        <span className="font-medium text-muted-foreground">Job Title:</span>
+                        <p>{employeeData.jobTitle}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-muted-foreground">Seniority:</span>
+                        <p className="capitalize">{employeeData.seniority?.replace('-', ' ') || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-muted-foreground">Start Date:</span>
+                        <p>{employeeData.startDate ? format(employeeData.startDate, "PPP") : 'Not specified'}</p>
+                      </div>
+                      {employeeData.lastDate && (
+                        <div>
+                          <span className="font-medium text-muted-foreground">End Date:</span>
+                          <p>{format(employeeData.lastDate, "PPP")}</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-medium text-muted-foreground">Work Location:</span>
+                        <p className="capitalize">{employeeData.workLocation}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                  
+                  <Separator />
+                  
+                   {/* Compensation & Work Information */}
+                  <div>
+                    <h5 className="font-medium text-sm text-muted-foreground mb-2">Compensation & Work Details</h5>
+                    <div className="grid gap-3 md:grid-cols-2 text-sm">
+                      <div>
+                        <span className="font-medium text-muted-foreground">Annual Salary:</span>
+                         <p className="font-medium text-lg">
+                           ₹ {form.watch('salary') ? formatNumberWithCommas(form.watch('salary')) : '0'}
+                         </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-muted-foreground">Department:</span>
+                        <p className="capitalize">{form.watch('department') || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-muted-foreground">Employment Type:</span>
+                        <p>Full-time</p>
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Job Description Preview */}
-                {employeeData.jobDescription && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h5 className="font-medium text-sm text-muted-foreground mb-2">Job Description</h5>
-                      <div className="p-3 bg-muted/30 rounded-md text-sm whitespace-pre-line max-h-32 overflow-y-auto">
-                        {employeeData.jobDescription}
+                  {/* Job Description Preview */}
+                  {employeeData.jobDescription && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h5 className="font-medium text-sm text-muted-foreground mb-2">Job Description</h5>
+                        <div className="p-3 bg-muted/30 rounded-md text-sm whitespace-pre-line">
+                          {employeeData.jobDescription}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
+                    </>
+                  )}
+                </CardContent>
+              </ScrollArea>
             </Card>
+            <p className="text-xs text-muted-foreground mt-2">Scroll to review full details.</p>
           </div>
 
           {/* Agreement Acceptance */}
