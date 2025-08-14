@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
@@ -21,7 +21,9 @@ const employeeDetailsSchema = z.object({
     .min(1, 'Email address is required')
     .email('Please enter a valid email address')
     .transform(val => val.trim().toLowerCase()),
-  phone: createPhoneValidator(),
+  phone: z.string()
+    .min(1, 'Phone number is required')
+    .regex(/^\+91\d{10}$/, 'Phone number must be in format +91XXXXXXXXXX'),
   gender: z.enum(['Male', 'Female'], {
     message: 'Please select a gender',
   }),
@@ -51,7 +53,7 @@ export function EmployeeDetailsStep({
       firstName: defaultValues?.firstName || '',
       lastName: defaultValues?.lastName || '',
       email: defaultValues?.email || '',
-      phone: defaultValues?.phone || '',
+      phone: defaultValues?.phone || '+91',
       gender: defaultValues?.gender,
       jobTitle: defaultValues?.jobTitle || '',
       seniority: defaultValues?.seniority || 'junior',
@@ -184,7 +186,20 @@ export function EmployeeDetailsStep({
                   <FormItem>
                     <FormLabel>Phone Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter 10-digit phone number" className="h-11" {...field} />
+                      <div className="flex">
+                        <div className="flex items-center justify-center px-3 bg-muted border border-r-0 border-input rounded-l-md h-11">
+                          <span className="text-sm text-muted-foreground">+91</span>
+                        </div>
+                        <Input 
+                          placeholder="Enter 10-digit phone number" 
+                          className="h-11 rounded-l-none" 
+                          value={field.value?.replace('+91', '') || ''}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            field.onChange(`+91${digits}`);
+                          }}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -236,64 +251,66 @@ export function EmployeeDetailsStep({
                 )} 
               />
 
-         <FormField 
-  control={form.control} 
-  name="startDate" 
-  render={({ field }) => (
-    <FormItem className="flex flex-col">
-      <FormLabel>Start Date *</FormLabel>
-      <Popover open={isStartDateOpen} onOpenChange={setIsStartDateOpen}>
-        <PopoverTrigger asChild>
-          <FormControl>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "h-11 justify-start text-left font-normal",
-                !field.value && "text-muted-foreground"
-              )}
-            >
-              {field.value ? (
-                format(field.value, "PPP")
-              ) : (
-                <span>Pick a date</span>
-              )}
-              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-            </Button>
-          </FormControl>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar 
-            mode="single" 
-            selected={field.value} 
-            onSelect={(date) => {
-              field.onChange(date);
-              setIsStartDateOpen(false);
-            }} 
-            // Disable all dates before the start of this month
-            disabled={(date) => {
-              const firstDayOfMonth = new Date(
-                new Date().getFullYear(),
-                new Date().getMonth(),
-                1
-              );
-              return date < firstDayOfMonth;
-            }}
-            initialFocus
-            // Always show the calendar starting from the first of the month
-            defaultMonth={new Date(
-              new Date().getFullYear(),
-              new Date().getMonth(),
-              1
-            )}
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
+              <FormField 
+                control={form.control} 
+                name="startDate" 
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Start Date *</FormLabel>
+                    <Popover open={isStartDateOpen} onOpenChange={setIsStartDateOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "h-11 justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar 
+                          mode="single" 
+                          selected={field.value} 
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setIsStartDateOpen(false);
+                          }} 
+                          // Disable all dates before the start of this month
+                          disabled={(date) => {
+                            const firstDayOfMonth = new Date(
+                              new Date().getFullYear(),
+                              new Date().getMonth(),
+                              1
+                            );
+                            return date < firstDayOfMonth;
+                          }}
+                          initialFocus
+                          // Always show the calendar starting from the first of the month
+                          defaultMonth={new Date(
+                            new Date().getFullYear(),
+                            new Date().getMonth(),
+                            1
+                          )}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription>
+                      Joining date with Wisemonk EOR
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField 
                 control={form.control} 
