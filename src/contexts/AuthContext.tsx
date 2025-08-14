@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useAutoLogout } from '@/hooks/useAutoLogout';
+import { AutoLogoutWarningModal } from '@/components/AutoLogoutWarningModal';
 
 interface AuthContextType {
   user: User | null;
@@ -8,7 +10,8 @@ interface AuthContextType {
   loading: boolean;
   userRole: string | null;
   isEmailVerified: boolean;
-  signOut: () => Promise<void>;
+  lastActivity: number;
+  signOut: (reason?: 'auto' | 'manual') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
 
   useEffect(() => {
     // Set up auth state listener first
@@ -105,7 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signOut = async () => {
+  const signOut = async (reason: 'auto' | 'manual' = 'manual') => {
     try {
       // Immediately clear local state for instant UI feedback
       const currentUser = user;
@@ -120,9 +124,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           await supabase.from('auth_audit_logs').insert({
             user_id: currentUser.id,
-            event_type: 'sign_out',
+            event_type: reason === 'auto' ? 'auto_logout' : 'sign_out',
             success: true,
-            details: { method: 'manual' },
+            details: { 
+              method: reason,
+              inactivity_duration: reason === 'auto' ? Date.now() - lastActivity : undefined,
+              timestamp: new Date().toISOString()
+            },
             user_agent: navigator.userAgent,
           });
         } catch (auditError) {
@@ -147,14 +155,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Auto logout functionality
+  const {
+    showWarning,
+    warningCountdown,
+    extendSession,
+    logoutNow,
+  } = useAutoLogout({
+    timeoutMs: 30 * 60 * 1000, // 30 minutes
+    warningMs: 60 * 1000, // 1 minute warning
+    onLogout: signOut,
+    enabled: !!user && isEmailVerified,
+  });
+
+  // Update last activity when user is active
+  useEffect(() => {
+    if (user && isEmailVerified) {
+      setLastActivity(Date.now());
+    }
+  }, [user, isEmailVerified]);
+
   const value = {
     user,
     session,
     loading,
     userRole,
     isEmailVerified,
+    lastActivity,
     signOut,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <AutoLogoutWarningModal
+        isOpen={showWarning}
+        countdown={warningCountdown}
+        onStayLoggedIn={extendSession}
+        onLogoutNow={logoutNow}
+      />
+    </AuthContext.Provider>
+  );
 };

@@ -27,6 +27,10 @@ port = 54327
 [auth]
 enabled = true
 port = 54328
+# JWT expires after 30 minutes of inactivity
+jwt_expiry = 1800
+# Enable refresh token rotation for security
+enable_refresh_token_rotation = true
 
 [edge_runtime]
 enabled = true
