@@ -31,7 +31,7 @@ const userDetailsSchema = z.object({
 const companyDetailsSchema = z.object({
   companyName: createBusinessNameValidator('Brand name', 100),
   legalName: createBusinessNameValidator('Legal name', 100),
-  country: z.string().min(1, 'Please select a country'),
+  country: z.string().optional(),
   employeeCount: z.string().min(1, 'Please select employee count'),
 });
 
@@ -342,7 +342,7 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
                   <SelectContent>
                     {EMPLOYEE_COUNTS.map((count) => (
                       <SelectItem key={count} value={count}>
-                        {count}
+                        {count.replace(' employees', '')}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -384,16 +384,12 @@ function SetupCompleteStep({ onComplete }: SetupCompleteStepProps) {
           <CheckCircle className="w-10 h-10 text-success" />
         </div>
         <h2 className="text-2xl font-bold text-foreground">Great! You're almost ready</h2>
-        <p className="text-muted-foreground">
-          Your basic setup is complete. Complete the remaining steps to unlock all features.
-        </p>
       </div>
 
       <div className="space-y-3">
         <div className="w-full bg-muted rounded-full h-2">
           <div className="bg-primary h-2 rounded-full w-full"></div>
         </div>
-        <p className="text-sm text-muted-foreground text-center">Step 3 of 3</p>
       </div>
 
       <Button onClick={onComplete} className="w-full h-11">
