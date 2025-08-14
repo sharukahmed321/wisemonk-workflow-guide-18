@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { EmployeeDetailsData } from './EmployeeDetailsStep';
 import { createSalaryValidator } from '@/lib/validationUtils';
 import { sanitizeNumericInput, formatNumberWithCommas, convertNumberToWords } from '@/lib/salaryUtils';
@@ -221,6 +221,7 @@ export function CompensationReviewStep({
                 <CardTitle className="text-base">Complete Employee Record</CardTitle>
               </CardHeader>
               <ScrollArea className="max-h-96">
+                <ScrollBar />
                 <CardContent className="space-y-4 pt-4">
                   {/* Personal Information */}
                   <div>
@@ -330,10 +331,6 @@ export function CompensationReviewStep({
                     <FormLabel className="text-sm font-medium">
                       I confirm that all information provided is accurate and complete *
                     </FormLabel>
-                    <p className="text-xs text-muted-foreground">
-                      By checking this box, I verify that the employee details above are correct and 
-                      authorize the creation of this employee record in the system.
-                    </p>
                     <FormMessage />
                   </div>
                 </FormItem>
