@@ -15,6 +15,7 @@ interface DocumentUploadCardProps {
   status: 'pending' | 'uploading' | 'success' | 'error';
   onFileUpload: (file: File) => void;
   onFileRemove: () => void;
+  acceptedTypes?: string[];
 }
 
 export function DocumentUploadCard({
@@ -25,7 +26,8 @@ export function DocumentUploadCard({
   file,
   status,
   onFileUpload,
-  onFileRemove
+  onFileRemove,
+  acceptedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
 }: DocumentUploadCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -58,11 +60,19 @@ export function DocumentUploadCard({
   };
 
   const handleFileValidation = (selectedFile: File) => {
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
     const maxSize = 5 * 1024 * 1024; // 5MB
 
-    if (!validTypes.includes(selectedFile.type)) {
-      alert('Please upload a PDF, JPG, or PNG file.');
+    if (!acceptedTypes.includes(selectedFile.type)) {
+      const typeNames = acceptedTypes.map(type => {
+        switch(type) {
+          case 'application/pdf': return 'PDF';
+          case 'image/jpeg':
+          case 'image/jpg': return 'JPG';
+          case 'image/png': return 'PNG';
+          default: return type;
+        }
+      }).join(', ');
+      alert(`Please upload a ${typeNames} file.`);
       return;
     }
 

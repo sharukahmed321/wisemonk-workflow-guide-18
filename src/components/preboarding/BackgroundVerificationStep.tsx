@@ -209,6 +209,7 @@ export function BackgroundVerificationStep({ data, onComplete, onPrevious, emplo
             status={uploadStatus[docType.key]}
             onFileUpload={(file) => handleFileUpload(docType.key, file)}
             onFileRemove={() => handleFileRemove(docType.key)}
+            acceptedTypes={docType.key === 'previousOfferLetter' ? ['application/pdf'] : undefined}
           />
         ))}
         
