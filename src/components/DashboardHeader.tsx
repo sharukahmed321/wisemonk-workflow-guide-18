@@ -101,11 +101,6 @@ export function DashboardHeader() {
           </p>
         </div>
         
-        {/* Search */}
-        <div className="relative max-w-sm flex-1 ml-auto md:ml-6">
-          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input placeholder="Search employees..." className="pl-8 h-8 bg-background/60 border-border/60 text-sm" />
-        </div>
       </div>
 
       <div className="flex items-center gap-2">
