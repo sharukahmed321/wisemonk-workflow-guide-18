@@ -15,9 +15,7 @@ import {
   createNameValidator, 
   createJobTitleValidator, 
   createBusinessNameValidator,
-  createDropdownValidator,
-  EMPLOYEE_COUNTS,
-  COUNTRIES
+  EMPLOYEE_COUNTS
 } from '@/lib/validationUtils';
 
 interface OnboardingFlowProps {
@@ -33,8 +31,8 @@ const userDetailsSchema = z.object({
 const companyDetailsSchema = z.object({
   companyName: createBusinessNameValidator('Brand name', 100),
   legalName: createBusinessNameValidator('Legal name', 100),
-  country: createDropdownValidator('a country', COUNTRIES),
-  employeeCount: createDropdownValidator('employee count', EMPLOYEE_COUNTS),
+  country: z.string().min(1, 'Please select a country'),
+  employeeCount: z.string().min(1, 'Please select employee count'),
 });
 
 type UserDetailsFormData = z.infer<typeof userDetailsSchema>;
