@@ -6,10 +6,7 @@ import { OnboardingStepIndicator } from './OnboardingStepIndicator';
 import { PersonalInfoOnboardingStep } from './PersonalInfoOnboardingStep';
 import { DocumentCollectionStep } from './DocumentCollectionStep';
 import { BankDetailsStep } from './BankDetailsStep';
-import ProgressStateManager, { 
-  OnboardingProgressData, 
-  FileUploadStatus 
-} from '@/lib/progressStateManager';
+import ProgressStateManager, { OnboardingProgressData, FileUploadStatus } from '@/lib/progressStateManager';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,7 +15,6 @@ export interface PersonalInfoData {
   profilePicture?: File;
   dateOfBirth?: Date;
 }
-
 export interface DocumentData {
   graduationCert?: File;
   relievingLetter?: File;
@@ -26,7 +22,6 @@ export interface DocumentData {
   resume?: File;
   passport?: File;
 }
-
 export interface BankDetailsData {
   bankName: string;
   accountNumber: string;
@@ -35,7 +30,6 @@ export interface BankDetailsData {
   hasUAN: boolean;
   uanNumber?: string;
 }
-
 export interface OnboardingData {
   personalInfo: PersonalInfoData;
   documentCollection: DocumentData;
@@ -52,9 +46,7 @@ interface OnboardingContextType {
   setErrors: (errors: Record<string, string>) => void;
   setFormValidation?: (step: string, isValid: boolean) => void;
 }
-
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
-
 export const useOnboardingContext = () => {
   const context = useContext(OnboardingContext);
   if (!context) {
@@ -80,13 +72,11 @@ const STEPS = [{
   description: 'Provide your banking and EPF information',
   timeEstimate: '5 minutes'
 }];
-
 interface EmployeeOnboardingFlowProps {
   employeeId: string;
   employeeName: string;
   onComplete: () => void;
 }
-
 export function EmployeeOnboardingFlow({
   employeeId,
   employeeName,
@@ -96,7 +86,9 @@ export function EmployeeOnboardingFlow({
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formValidationStates, setFormValidationStates] = useState<Record<string, boolean>>({});
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // File upload status tracking
   const [fileUploadStatus, setFileUploadStatus] = useState<Record<string, FileUploadStatus>>({});
@@ -109,22 +101,18 @@ export function EmployeeOnboardingFlow({
       bankName: '',
       accountNumber: '',
       ifscCode: '',
-      hasUAN: false,
-    },
+      hasUAN: false
+    }
   });
-
   const getFirstName = () => {
     return employeeName.split(' ')[0] || employeeName;
   };
-
   useEffect(() => {
     const savedProgress = ProgressStateManager.loadOnboardingProgress(employeeId);
-    
     if (savedProgress && ProgressStateManager.validateOnboardingData(savedProgress)) {
       // Check for lost files and show toast notification
       const hasLost = ProgressStateManager.hasLostFiles(savedProgress.fileUploadStatus);
       const lostFiles = ProgressStateManager.getLostFiles(savedProgress.fileUploadStatus);
-      
       if (hasLost) {
         toast({
           title: "Previous progress detected",
@@ -136,11 +124,11 @@ export function EmployeeOnboardingFlow({
           description: "Your progress has been restored. You can continue where you left off."
         });
       }
-      
+
       // Set the saved data
       setCurrentStep(savedProgress.currentStep);
       setCompletedSteps(new Set(savedProgress.completedSteps));
-      
+
       // Map the data structure
       setData({
         personalInfo: savedProgress.personalInfoData,
@@ -150,14 +138,12 @@ export function EmployeeOnboardingFlow({
       setFileUploadStatus(savedProgress.fileUploadStatus);
     }
   }, [employeeId, toast]);
-
   const setFormValidation = useCallback((step: string, isValid: boolean) => {
     setFormValidationStates(prev => ({
       ...prev,
       [step]: isValid
     }));
   }, []);
-
   useEffect(() => {
     const progressData: OnboardingProgressData = {
       currentStep,
@@ -209,13 +195,14 @@ export function EmployeeOnboardingFlow({
   const validateStep = (step: number): boolean => {
     console.log(`Validating step ${step}:`, data);
     const newErrors: Record<string, string> = {};
-    
     switch (step) {
-      case 1: // Personal Info
+      case 1:
+        // Personal Info
         // No validation needed - all fields are optional
         setErrors({});
         return true;
-      case 2: // Document Collection
+      case 2:
+        // Document Collection
         console.log('Validating documents:', data.documentCollection);
         if (!data.documentCollection.graduationCert) {
           newErrors.graduationCert = 'Certificate of Graduation is required';
@@ -249,12 +236,10 @@ export function EmployeeOnboardingFlow({
         }
         break;
     }
-    
     console.log('Validation errors:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleNext = () => {
     console.log('Attempting to proceed from step:', currentStep);
     if (validateStep(currentStep)) {
@@ -268,24 +253,21 @@ export function EmployeeOnboardingFlow({
       console.log('Validation failed, cannot proceed');
     }
   };
-
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
-
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleComplete = async () => {
     try {
       setIsSubmitting(true);
-      
+
       // Create FormData for file uploads
       const formData = new FormData();
       formData.append('employeeId', employeeId);
       formData.append('onboardingData', JSON.stringify(data));
-      
+
       // Append files with their original File objects
       if (data.personalInfo.profilePicture) {
         formData.append('profilePicture', data.personalInfo.profilePicture);
@@ -307,41 +289,40 @@ export function EmployeeOnboardingFlow({
       }
 
       // Call the edge function
-      const { data: result, error } = await supabase.functions.invoke('complete-employee-onboarding', {
+      const {
+        data: result,
+        error
+      } = await supabase.functions.invoke('complete-employee-onboarding', {
         body: formData
       });
-
       if (error) {
         throw error;
       }
-
       if (!result.success) {
         throw new Error(result.error || 'Failed to complete onboarding');
       }
 
       // Clear localStorage and progress tracking on success
       ProgressStateManager.clearOnboardingProgress(employeeId);
-      
       toast({
         title: "Onboarding Complete!",
         description: "Welcome to the team! Your account is now fully set up."
       });
-      
+
       // Call onComplete callback
       onComplete();
-      
     } catch (error) {
       console.error('Error completing onboarding:', error);
-      setErrors({ submit: error.message || 'Failed to complete onboarding. Please try again.' });
+      setErrors({
+        submit: error.message || 'Failed to complete onboarding. Please try again.'
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const getStepProgress = () => {
     return Math.round((currentStep - 1) / (STEPS.length - 1) * 100);
   };
-
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
@@ -354,15 +335,14 @@ export function EmployeeOnboardingFlow({
         return null;
     }
   };
-
   const currentStepData = STEPS[currentStep - 1];
   const isLastStep = currentStep === STEPS.length;
-  
+
   // Check both custom validation errors and React Hook Form validation
   const hasCustomErrors = Object.keys(errors).length > 0;
   const currentStepKey = currentStep === 3 ? 'bankDetails' : `step${currentStep}`;
   const isFormValid = formValidationStates[currentStepKey] === true;
-  
+
   // Debug logging for validation state
   console.log('Validation Debug Info:', {
     currentStep,
@@ -373,24 +353,28 @@ export function EmployeeOnboardingFlow({
     formValidationStates,
     bankDetailsData: data.bankDetails
   });
-  
+
   // For step 3 (bank details), prioritize React Hook Form validation
   // For other steps, use custom validation
   let canProceed = false;
   if (currentStep === 3) {
     // For bank details step, require React Hook Form validation to be true
     canProceed = isFormValid && !hasCustomErrors;
-    console.log('Bank details validation:', { isFormValid, hasCustomErrors, canProceed });
+    console.log('Bank details validation:', {
+      isFormValid,
+      hasCustomErrors,
+      canProceed
+    });
   } else {
     // For other steps, just check custom validation
     canProceed = !hasCustomErrors;
-    console.log('Other step validation:', { hasCustomErrors, canProceed });
+    console.log('Other step validation:', {
+      hasCustomErrors,
+      canProceed
+    });
   }
-  
   const hasValidationErrors = hasCustomErrors;
-
-  return (
-    <OnboardingContext.Provider value={contextValue}>
+  return <OnboardingContext.Provider value={contextValue}>
       <div className="min-h-screen bg-muted/30 px-4 py-6">
         <div className="mx-auto max-w-4xl space-y-8">
           <div className="text-center">
@@ -401,11 +385,11 @@ export function EmployeeOnboardingFlow({
           </div>
 
           <OnboardingStepIndicator steps={STEPS.map((step, index) => ({
-            number: step.number,
-            title: step.title,
-            isCompleted: completedSteps.has(step.number),
-            isCurrent: currentStep === step.number
-          }))} />
+          number: step.number,
+          title: step.title,
+          isCompleted: completedSteps.has(step.number),
+          isCurrent: currentStep === step.number
+        }))} />
 
           <Card className="mx-auto max-w-3xl">
             <CardHeader className="border-b">
@@ -424,44 +408,18 @@ export function EmployeeOnboardingFlow({
             </CardContent>
 
             <div className="border-t bg-muted/20 px-6 py-4">
-              {hasValidationErrors && (
-                <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20">
-                  <div className="flex items-center gap-2 text-sm text-destructive font-medium mb-2">
-                    <span>Please fix the following errors:</span>
-                  </div>
-                  <ul className="text-sm text-destructive space-y-1">
-                    {Object.entries(errors).map(([field, error]) => (
-                      <li key={field}>• {error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {hasValidationErrors}
               <div className="flex items-center justify-between">
-                {currentStep > 1 ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handlePrevious}
-                    className="flex items-center gap-2"
-                  >
+                {currentStep > 1 ? <Button type="button" variant="outline" onClick={handlePrevious} className="flex items-center gap-2">
                     <ArrowLeft className="h-4 w-4" />
                     Previous
-                  </Button>
-                ) : (
-                  <div></div>
-                )}
+                  </Button> : <div></div>}
 
                 <div className="flex items-center gap-3">
-                  {!canProceed && !isSubmitting && (
-                    <span className="text-sm text-muted-foreground">
+                  {!canProceed && !isSubmitting && <span className="text-sm text-muted-foreground">
                       Complete all required fields to continue
-                    </span>
-                  )}
-                  <Button 
-                    onClick={handleNext} 
-                    disabled={!canProceed || isSubmitting} 
-                    className="flex items-center gap-2"
-                  >
+                    </span>}
+                  <Button onClick={handleNext} disabled={!canProceed || isSubmitting} className="flex items-center gap-2">
                     {isSubmitting ? 'Submitting...' : isLastStep ? 'Submit' : 'Next'}
                     {!isSubmitting && !isLastStep && <ArrowRight className="h-4 w-4" />}
                   </Button>
@@ -471,6 +429,5 @@ export function EmployeeOnboardingFlow({
           </Card>
         </div>
       </div>
-    </OnboardingContext.Provider>
-  );
+    </OnboardingContext.Provider>;
 }
