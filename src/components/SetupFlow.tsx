@@ -226,8 +226,8 @@ export function AddressStep({ onComplete }: AddressStepProps) {
 
                 <div className="flex gap-4 pt-4">
                  
-                  <Button type="submit" disabled={isSubmitting} className="flex-1">
-                    {isSubmitting ? 'Generating Agreement...' : 'Continue & Generate MSA'}
+                  <Button type="submit" disabled={isSubmitting} size="sm" className="flex-1">
+                    {isSubmitting ? 'Processing...' : 'Next'}
                   </Button>
                 </div>
               </form>
