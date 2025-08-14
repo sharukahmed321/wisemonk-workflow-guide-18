@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -210,7 +209,6 @@ function UserDetailsStep({ onNext, userData, setUserData }: UserDetailsStepProps
             className="w-full h-11 mt-6"
           >
             {isSubmitting ? 'Saving...' : 'Continue'}
-            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </form>
       </Form>
