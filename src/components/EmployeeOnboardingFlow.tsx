@@ -215,8 +215,14 @@ export function EmployeeOnboardingFlow({
         // No validation needed - all fields are optional
         setErrors({});
         return true;
-      case 2:
-        // Documents are optional, so no validation needed
+      case 2: // Document Collection
+        console.log('Validating documents:', data.documentCollection);
+        if (!data.documentCollection.graduationCert) {
+          newErrors.graduationCert = 'Certificate of Graduation is required';
+        }
+        if (!data.documentCollection.resume) {
+          newErrors.resume = 'Latest Resume is required';
+        }
         break;
       case 3:
         console.log('Validating bank details:', data.bankDetails);
