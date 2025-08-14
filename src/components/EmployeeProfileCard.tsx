@@ -63,14 +63,17 @@ export default function EmployeeProfileCard() {
         throw profileError;
       }
 
-      // Try to get employee data for additional fields including profile picture
+      // Try to get employee data for additional fields including profile picture and birthday
       const { data: employee, error: employeeError } = await supabase
         .from('employees')
-        .select('date_of_birth, job_title, department, phone, profile_picture_url, avatar_url')
+        .select('date_of_birth, birthday, job_title, department, phone, profile_picture_url, avatar_url')
         .eq('user_id', user.id)
         .maybeSingle();
 
       // Combine profile and employee data, prioritizing employee data
+      // Use birthday field if available, otherwise fall back to date_of_birth
+      const birthdayDate = employee?.birthday || employee?.date_of_birth || '';
+      
       const combinedData: ProfileData = {
         first_name: profile?.first_name || '',
         last_name: profile?.last_name || '',
@@ -79,7 +82,7 @@ export default function EmployeeProfileCard() {
         avatar_url: employee?.profile_picture_url || employee?.avatar_url || profile?.avatar_url || '',
         job_title: employee?.job_title || profile?.job_title || '',
         department: employee?.department || profile?.department || '',
-        date_of_birth: employee?.date_of_birth || ''
+        date_of_birth: birthdayDate
       };
 
       setProfileData(combinedData);
