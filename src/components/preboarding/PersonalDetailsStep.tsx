@@ -246,13 +246,7 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious, onDataChange
                       maxLength={12}
                     />
                   </FormControl>
-                  <div className="flex justify-between items-center">
-                    <div className="text-xs text-muted-foreground">
-                      {validateAadhaarNumber(field.value || '').isValid ? 
-                        '✓ Valid Aadhaar number' : 
-                        field.value?.length === 12 ? '✗ Invalid checksum' : 'Enter 12 digits'
-                      }
-                    </div>
+                  <div className="flex justify-end items-center">
                     <div className="text-sm text-muted-foreground">
                       {(field.value || '').length}/12
                     </div>
