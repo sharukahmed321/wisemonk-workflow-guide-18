@@ -96,7 +96,6 @@ export function DocumentCollectionStep() {
                   'application/pdf': ['.pdf'],
                   'image/*': ['.jpg', '.jpeg', '.png']
                 }}
-                hasError={!!hasError}
               />
             </div>;
       })}
