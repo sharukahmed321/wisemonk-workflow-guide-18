@@ -114,6 +114,11 @@ export function EmailVerificationGuard({ children }: EmailVerificationGuardProps
     );
   }
 
+  // If no user (signed out), render children immediately to allow Index.tsx routing
+  if (!user) {
+    return <>{children}</>;
+  }
+
   // If email is verified, render children (the dashboard)
   if (isVerified) {
     return <>{children}</>;
