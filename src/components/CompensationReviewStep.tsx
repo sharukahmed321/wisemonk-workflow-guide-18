@@ -15,9 +15,9 @@ import { format } from "date-fns";
 
 const compensationReviewSchema = z.object({
   salary: createSalaryValidator(240000),
-  currency: z.string().min(1, 'Currency is required'),
-  department: z.string().min(1, 'Department is required'),
-  employmentType: z.string().min(1, 'Employment type is required'),
+  currency: z.string().min(1, 'This field is required'),
+  department: z.string().min(1, 'This field is required'),
+  employmentType: z.string().min(1, 'This field is required'),
   agreementAccepted: z.boolean().refine(val => val === true, {
     message: 'You must accept the employment agreement to proceed'
   })

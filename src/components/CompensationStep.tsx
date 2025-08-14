@@ -16,8 +16,8 @@ import { createSalaryValidator } from "@/lib/validationUtils";
 
 const compensationSchema = z.object({
   salary: createSalaryValidator(),
-  currency: z.string().min(1, 'Currency is required'),
-  department: z.string().min(1, 'Department is required'),
+  currency: z.string().min(1, 'This field is required'),
+  department: z.string().min(1, 'This field is required'),
   employmentType: z.enum(['full-time', 'part-time', 'contract', 'intern']),
   agreementAccepted: z.boolean().refine(val => val === true, {
     message: 'You must accept the employment agreement to proceed'

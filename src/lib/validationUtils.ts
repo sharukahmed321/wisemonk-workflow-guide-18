@@ -1,4 +1,3 @@
-
 import * as z from 'zod';
 
 export const createPersonalDetailsSchema = () => {
@@ -77,4 +76,11 @@ export const validatePersonalDetails = (data: any) => {
 export const validateJobDetails = (data: any) => {
   const schema = createJobDetailsSchema();
   return schema.safeParse(data);
+};
+
+export const createSalaryValidator = (maxSalary: number = 500000) => {
+  return z.number()
+    .min(1, 'This field is required')
+    .max(maxSalary, `Salary cannot exceed ${maxSalary.toLocaleString()}`)
+    .positive('Salary must be a positive number');
 };
