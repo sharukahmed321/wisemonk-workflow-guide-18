@@ -77,7 +77,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
       title: 'Business Address',
       description: 'Add your company address information',
       ...getStepStatus('address', completedSteps),
-      action: 'Continue',
+      action: 'Next',
       url: '/dashboard/setup/address'
     },
     {
@@ -97,6 +97,9 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
       url: '/dashboard/add-employee'
     }
   ];
+
+  // Find the primary next action (first active, non-completed step)
+  const primaryNextActionId = setupSteps.find(step => step.active && !step.completed)?.id;
 
   const progressPercentage = getProgressPercentage(completedSteps);
   const isComplete = progressPercentage === 100;
@@ -185,7 +188,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
               
               {!step.completed && step.action && (
                 <Button
-                  variant="default"
+                  variant={step.id === primaryNextActionId ? "default" : "outline"}
                   size="sm"
                   onClick={() => onStepClick(step.id)}
                   disabled={!step.active}
