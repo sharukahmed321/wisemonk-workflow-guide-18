@@ -402,14 +402,14 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
         setShowSuccess(true);
         clearDraft();
 
-        // Auto-redirect after success
+        // Auto-redirect after success with reduced delay
         setTimeout(() => {
           if (onSuccess) {
             onSuccess();
           } else {
             navigate('/dashboard');
           }
-        }, 2500);
+        }, 1500);
 
       } catch (operationError) {
         console.error('❌ Transaction failed, attempting cleanup...', operationError);
