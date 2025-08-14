@@ -31,7 +31,7 @@ const userDetailsSchema = z.object({
 });
 
 const companyDetailsSchema = z.object({
-  companyName: createBusinessNameValidator('Company name', 100),
+  companyName: createBusinessNameValidator('Brand name', 100),
   legalName: createBusinessNameValidator('Legal name', 100),
   country: createDropdownValidator('a country', COUNTRIES),
   employeeCount: createDropdownValidator('employee count', EMPLOYEE_COUNTS),
@@ -266,8 +266,6 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
     }
   };
 
-  // Using COUNTRIES and EMPLOYEE_COUNTS from validationUtils
-
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
@@ -289,9 +287,9 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
             name="companyName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Company Name *</FormLabel>
+                <FormLabel>Brand Name *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter company name" className="h-11" {...field} />
+                  <Input placeholder="Enter brand name" className="h-11" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -346,7 +344,7 @@ function CompanyDetailsStep({ onNext, onBack, companyData, setCompanyData }: Com
                   <SelectContent>
                     {EMPLOYEE_COUNTS.map((count) => (
                       <SelectItem key={count} value={count}>
-                        {count} employees
+                        {count}
                       </SelectItem>
                     ))}
                   </SelectContent>
