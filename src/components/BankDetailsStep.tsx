@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -151,7 +149,7 @@ export function BankDetailsStep() {
           {/* EPF Details Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <h4 className="font-semibold text-foreground">EPF (Employee Provident Fund)</h4>
+              <h4 className="font-semibold text-foreground">Employee provident fund (EPF)</h4>
             </div>
 
             <FormField control={form.control} name="hasUAN" render={({
