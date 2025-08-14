@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -167,7 +168,7 @@ export function BankDetailsStep() {
                     </FormControl>
                     <div>
                       <FormLabel className="text-base font-medium">
-                        I have a UAN (Universal Account Number)
+                        I have an Universal account number (UAN)
                       </FormLabel>
                       <p className="text-sm text-muted-foreground">
                         Toggle this if you have worked before and have an existing UAN
