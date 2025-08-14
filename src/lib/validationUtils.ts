@@ -1,249 +1,80 @@
+
 import * as z from 'zod';
 
-// XSS and injection prevention
-export const sanitizeInput = (input: string): string => {
-  return input
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
-    .replace(/<applet\b[^<]*(?:(?!<\/applet>)<[^<]*)*<\/applet>/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/vbscript:/gi, '')
-    .replace(/on\w+\s*=/gi, '')
-    .trim();
+export const createPersonalDetailsSchema = () => {
+  return z.object({
+    firstName: z.string().min(1, 'This field is required'),
+    lastName: z.string().min(1, 'This field is required'),
+    middleName: z.string().optional(),
+    dateOfBirth: z.string().min(1, 'This field is required'),
+    fatherName: z.string().min(1, 'This field is required'),
+    gender: z.enum(['male', 'female', 'other'], {
+      required_error: 'This field is required',
+    }),
+    maritalStatus: z.enum(['single', 'married', 'divorced', 'widowed'], {
+      required_error: 'This field is required',
+    }),
+    bloodGroup: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], {
+      required_error: 'This field is required',
+    }),
+    phoneNumber: z.string().min(1, 'This field is required'),
+    email: z.string().min(1, 'This field is required').email('Please enter a valid email address'),
+    alternatePhoneNumber: z.string().optional(),
+    emergencyContactName: z.string().min(1, 'This field is required'),
+    emergencyContactRelationship: z.string().min(1, 'This field is required'),
+    emergencyContactPhone: z.string().min(1, 'This field is required'),
+    
+    // Address fields
+    currentAddress: z.string().min(1, 'This field is required'),
+    currentCity: z.string().min(1, 'This field is required'),
+    currentState: z.string().min(1, 'This field is required'),
+    currentPincode: z.string().min(1, 'This field is required'),
+    currentCountry: z.string().min(1, 'This field is required'),
+    
+    permanentAddress: z.string().min(1, 'This field is required'),
+    permanentCity: z.string().min(1, 'This field is required'),
+    permanentState: z.string().min(1, 'This field is required'),
+    permanentPincode: z.string().min(1, 'This field is required'),
+    permanentCountry: z.string().min(1, 'This field is required'),
+    
+    // Document fields
+    panCard: z.string().min(1, 'This field is required'),
+    aadharCard: z.string().min(1, 'This field is required'),
+    
+    // Job details
+    designation: z.string().min(1, 'This field is required'),
+    department: z.string().min(1, 'This field is required'),
+    dateOfJoining: z.string().min(1, 'This field is required'),
+    employmentType: z.enum(['full-time', 'part-time', 'contract', 'internship'], {
+      required_error: 'This field is required',
+    }),
+    workLocation: z.string().min(1, 'This field is required'),
+    reportingManager: z.string().min(1, 'This field is required'),
+  });
 };
 
-// Character type validators
-export const alphabeticalOnly = (value: string): boolean => {
-  return /^[A-Za-z\s\-']+$/.test(value);
+export const createJobDetailsSchema = () => {
+  return z.object({
+    designation: z.string().min(1, 'This field is required'),
+    department: z.string().min(1, 'This field is required'),
+    dateOfJoining: z.string().min(1, 'This field is required'),
+    employmentType: z.enum(['full-time', 'part-time', 'contract', 'internship'], {
+      required_error: 'This field is required',
+    }),
+    workLocation: z.string().min(1, 'This field is required'),
+    reportingManager: z.string().min(1, 'This field is required'),
+    probationPeriod: z.string().optional(),
+    workingHours: z.string().optional(),
+    salaryStructure: z.string().optional(),
+  });
 };
 
-export const alphabeticalWithHyphens = (value: string): boolean => {
-  return /^[A-Za-z\s\-']+$/.test(value);
+export const validatePersonalDetails = (data: any) => {
+  const schema = createPersonalDetailsSchema();
+  return schema.safeParse(data);
 };
 
-export const alphanumericWithSpaces = (value: string): boolean => {
-  return /^[A-Za-z0-9\s\-'.&]+$/.test(value);
+export const validateJobDetails = (data: any) => {
+  const schema = createJobDetailsSchema();
+  return schema.safeParse(data);
 };
-
-export const businessNameAllowed = (value: string): boolean => {
-  return /^[A-Za-z0-9\s\-'.&,()]+$/.test(value);
-};
-
-export const addressAllowed = (value: string): boolean => {
-  return /^[A-Za-z0-9\s\-'.,#/()]+$/.test(value);
-};
-
-export const internationalCityName = (value: string): boolean => {
-  return /^[A-Za-z\u00C0-\u017F\s\-'.]+$/.test(value);
-};
-
-export const numericOnly = (value: string): boolean => {
-  return /^\d+$/.test(value);
-};
-
-export const alphanumericPostal = (value: string): boolean => {
-  return /^[A-Za-z0-9\s\-]+$/.test(value);
-};
-
-// Whitespace validators
-export const notOnlyWhitespace = (value: string): boolean => {
-  return value.trim().length > 0;
-};
-
-// Country-specific postal code validation
-export const validatePostalCode = (code: string, country?: string): boolean => {
-  if (!code || !notOnlyWhitespace(code)) return false;
-  
-  const trimmedCode = code.trim();
-  
-  switch (country?.toLowerCase()) {
-    case 'united states':
-    case 'usa':
-      return /^\d{5}(-\d{4})?$/.test(trimmedCode);
-    case 'canada':
-      return /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/.test(trimmedCode);
-    case 'united kingdom':
-    case 'uk':
-      return /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s?\d[A-Za-z]{2}$/.test(trimmedCode);
-    case 'germany':
-      return /^\d{5}$/.test(trimmedCode);
-    case 'france':
-      return /^\d{5}$/.test(trimmedCode);
-    case 'australia':
-      return /^\d{4}$/.test(trimmedCode);
-    case 'india':
-      return /^\d{6}$/.test(trimmedCode);
-    case 'japan':
-      return /^\d{3}-\d{4}$/.test(trimmedCode);
-    default:
-      return alphanumericPostal(trimmedCode);
-  }
-};
-
-// Enhanced Zod validation schemas
-export const createNameValidator = (fieldName: string, minLength: number = 2, maxLength: number = 50) => {
-  return z.string()
-    .min(1, `${fieldName} is required`)
-    .refine(notOnlyWhitespace, `${fieldName} cannot be only whitespace`)
-    .transform(sanitizeInput)
-    .refine(alphabeticalWithHyphens, `${fieldName} must contain only letters, spaces, and hyphens`)
-    .refine(val => val.length >= minLength, `${fieldName} must be at least ${minLength} characters`)
-    .refine(val => val.length <= maxLength, `${fieldName} must be no more than ${maxLength} characters`);
-};
-
-export const createJobTitleValidator = (maxLength: number = 100) => {
-  return z.string()
-    .min(1, 'Job title is required')
-    .refine(notOnlyWhitespace, 'Job title cannot be only whitespace')
-    .transform(sanitizeInput)
-    .refine(alphanumericWithSpaces, 'Job title contains invalid characters')
-    .refine(val => val.length <= maxLength, `Job title must be no more than ${maxLength} characters`);
-};
-
-export const createBusinessNameValidator = (fieldName: string, maxLength: number = 100) => {
-  return z.string()
-    .min(1, `${fieldName} is required`)
-    .refine(notOnlyWhitespace, `${fieldName} cannot be only whitespace`)
-    .transform(sanitizeInput)
-    .refine(businessNameAllowed, `${fieldName} contains invalid characters`)
-    .refine(val => val.length <= maxLength, `${fieldName} must be no more than ${maxLength} characters`);
-};
-
-export const createAddressValidator = (fieldName: string, maxLength: number = 200) => {
-  return z.string()
-    .min(1, `${fieldName} is required`)
-    .refine(notOnlyWhitespace, `${fieldName} cannot be only whitespace`)
-    .transform(sanitizeInput)
-    .refine(addressAllowed, `${fieldName} contains invalid characters`)
-    .refine(val => val.length <= maxLength, `${fieldName} must be no more than ${maxLength} characters`);
-};
-
-export const createCityValidator = (minLength: number = 2, maxLength: number = 100) => {
-  return z.string()
-    .min(1, 'City is required')
-    .refine(notOnlyWhitespace, 'City cannot be only whitespace')
-    .transform(sanitizeInput)
-    .refine(internationalCityName, 'City name contains invalid characters')
-    .refine(val => val.length >= minLength, `City must be at least ${minLength} characters`)
-    .refine(val => val.length <= maxLength, `City must be no more than ${maxLength} characters`);
-};
-
-export const createStateValidator = (maxLength: number = 100) => {
-  return z.string()
-    .min(1, 'State/Province is required')
-    .refine(notOnlyWhitespace, 'State/Province cannot be only whitespace')
-    .transform(sanitizeInput)
-    .refine(alphabeticalOnly, 'State/Province must contain only letters and spaces')
-    .refine(val => val.length <= maxLength, `State/Province must be no more than ${maxLength} characters`);
-};
-
-export const createPostalCodeValidator = (country?: string) => {
-  return z.string()
-    .min(1, 'Postal code is required')
-    .refine(notOnlyWhitespace, 'Postal code cannot be only whitespace')
-    .transform(val => val.trim())
-    .refine(val => validatePostalCode(val, country), 'Invalid postal code format');
-};
-
-// Job description character validation (allows comprehensive text formatting)
-export const jobDescriptionAllowed = (value: string): boolean => {
-  return /^[A-Za-z0-9\s\-'.,;:()\[\]{}"/&%@#*+=$!?\n\t\r]+$/.test(value);
-};
-
-export const createJobDescriptionValidator = (minLength: number = 10, maxLength: number = 10000) => {
-  return z.string()
-    .min(1, 'Job description is required')
-    .refine(notOnlyWhitespace, 'Job description cannot be only whitespace')
-    .transform(sanitizeInput)
-    .refine(jobDescriptionAllowed, 'Job description contains invalid characters')
-    .refine(val => val.length >= minLength, `Job description must be at least ${minLength} characters`)
-    .refine(val => val.length <= maxLength, `Job description must be no more than ${maxLength} characters`);
-};
-
-// Age calculation utility
-const calculateAge = (birthDate: Date): number => {
-  const today = new Date();
-  const age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    return age - 1;
-  }
-  
-  return age;
-};
-
-export const createDateOfBirthValidator = () => {
-  return z.date({
-    message: 'Date of birth is required'
-  })
-    .refine(date => !isNaN(date.getTime()), 'Invalid date format')
-    .refine(date => date <= new Date(), 'Date of birth cannot be in the future')
-    .refine(date => calculateAge(date) >= 18, 'You must be at least 18 years old');
-};
-
-export const createSalaryValidator = (minSalary: number = 240000, maxSalary?: number) => {
-  return z.number()
-    .min(1, 'Salary is required')
-    .refine(val => val >= minSalary, `Annual salary must be at least ${minSalary.toLocaleString()}`)
-    .refine(val => !maxSalary || val <= maxSalary, maxSalary ? `Annual salary must not exceed ${maxSalary.toLocaleString()}` : undefined);
-};
-
-export const createPhoneValidator = () => {
-  return z.string()
-    .min(1, 'Phone number is required')
-    .refine(notOnlyWhitespace, 'Phone number cannot be only whitespace')
-    .transform(val => val.trim())
-    .refine(val => /^\d{10}$/.test(val), 'Phone number should be 10 digits');
-};
-
-export const createDropdownValidator = (fieldName: string, allowedValues?: string[]) => {
-  return z.string()
-    .min(1, `Please select ${fieldName}`)
-    .refine(val => !allowedValues || allowedValues.length === 0 || allowedValues.includes(val), `Invalid ${fieldName} selection`);
-};
-
-// Complete country list
-export const COUNTRIES = [
-  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina', 'Armenia', 'Australia',
-  'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium',
-  'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil',
-  'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon', 'Canada',
-  'Cape Verde', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros',
-  'Congo', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti',
-  'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea',
-  'Eritrea', 'Estonia', 'Ethiopia', 'Fiji', 'Finland', 'France', 'Gabon', 'Gambia',
-  'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau',
-  'Guyana', 'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran',
-  'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan',
-  'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho',
-  'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Madagascar', 'Malawi',
-  'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius',
-  'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco',
-  'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand',
-  'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway', 'Oman',
-  'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru',
-  'Philippines', 'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda',
-  'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa',
-  'San Marino', 'São Tomé and Príncipe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles',
-  'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia',
-  'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname',
-  'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand',
-  'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan',
-  'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States',
-  'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam', 'Yemen',
-  'Zambia', 'Zimbabwe'
-];
-
-// Employee count ranges
-export const EMPLOYEE_COUNTS = [
-  '1-10',
-  '11-50', 
-  '51-200',
-  '201-500',
-  '501-1000',
-  '1001-5000',
-  '5000+'
-];
