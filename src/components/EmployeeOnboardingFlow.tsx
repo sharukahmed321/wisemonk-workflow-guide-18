@@ -113,6 +113,10 @@ export function EmployeeOnboardingFlow({
     },
   });
 
+  const getFirstName = () => {
+    return employeeName.split(' ')[0] || employeeName;
+  };
+
   useEffect(() => {
     const savedProgress = ProgressStateManager.loadOnboardingProgress(employeeId);
     
