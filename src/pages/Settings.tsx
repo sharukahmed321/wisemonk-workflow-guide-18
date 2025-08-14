@@ -687,52 +687,6 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Legal Documents */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Legal Documents
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Master Service Agreement and compliance documents
-                  </p>
-                </div>
-                <StatusBadge complete={msaComplete} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Master Service Agreement (MSA)</p>
-                      <p className="text-sm text-muted-foreground">
-                        {profileData.msaStatus?.signed && profileData.msaStatus?.signedDate
-                          ? `Signed on ${new Date(profileData.msaStatus.signedDate).toLocaleDateString()}` 
-                          : 'Agreement pending signature'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge 
-                      complete={profileData.msaStatus?.signed} 
-                      label={profileData.msaStatus?.signed ? 'Signed' : 'Pending'}
-                    />
-                    {!profileData.msaStatus?.signed && (
-                      <Button variant="outline" size="sm">
-                        Review & Sign
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
