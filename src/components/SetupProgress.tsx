@@ -77,7 +77,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
       title: 'Business Address',
       description: 'Add your company address information',
       ...getStepStatus('address', completedSteps),
-      action: 'Add Address',
+      action: 'Continue',
       url: '/dashboard/setup/address'
     },
     {
