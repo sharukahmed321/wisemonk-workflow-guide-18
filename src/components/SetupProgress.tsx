@@ -185,7 +185,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
               
               {!step.completed && step.action && (
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={() => onStepClick(step.id)}
                   disabled={!step.active}
