@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { CreditCard, Building2, Shield, FileCheck } from 'lucide-react';
 import { useOnboardingContext, BankDetailsData } from './EmployeeOnboardingFlow';
 import { FileUploadZone } from './FileUploadZone';
+
 const bankDetailsSchema = z.object({
   bankName: z.string().min(1, 'Bank name is required'),
   accountNumber: z.string().min(1, 'Account number is required').regex(/^\d{9,18}$/, 'Please enter a valid account number'),
@@ -34,7 +35,9 @@ const bankDetailsSchema = z.object({
   message: 'UAN number must be exactly 12 digits when UAN is selected',
   path: ['uanNumber']
 }) satisfies z.ZodType<BankDetailsData>;
+
 type BankDetailsForm = z.infer<typeof bankDetailsSchema>;
+
 export function BankDetailsStep() {
   const {
     data,
@@ -42,6 +45,7 @@ export function BankDetailsStep() {
     errors,
     setFormValidation
   } = useOnboardingContext();
+
   const form = useForm<BankDetailsForm>({
     resolver: zodResolver(bankDetailsSchema),
     defaultValues: data.bankDetails,
@@ -52,6 +56,7 @@ export function BankDetailsStep() {
   React.useEffect(() => {
     setFormValidation?.('bankDetails', form.formState.isValid);
   }, [form.formState.isValid, setFormValidation]);
+
   const handleFormChange = (field: keyof BankDetailsData, value: any) => {
     console.log(`Updating ${field}:`, value);
     updateBankDetails({
@@ -59,11 +64,14 @@ export function BankDetailsStep() {
     });
     form.setValue(field as keyof BankDetailsForm, value);
   };
+
   const handleFileUpload = (file: File | null) => {
     console.log('File upload:', file);
     handleFormChange('cancelledCheque', file || undefined);
   };
+
   const watchedHasUAN = form.watch('hasUAN');
+
   return <div className="space-y-6">
       <Form {...form}>
         <div className="space-y-6">
@@ -115,10 +123,8 @@ export function BankDetailsStep() {
                 }} maxLength={11} />
                     </FormControl>
                     <FormMessage />
-                    
                   </FormItem>} />
 
-           
             </div>
 
             {/* Bank Proof Document */}
@@ -128,7 +134,7 @@ export function BankDetailsStep() {
                 <Label>Bank Proof Document *</Label>
               </div>
               <p className="text-sm text-muted-foreground mb-3">
-                Upload a cancelled cheque, bank passbook page, or account statement
+                Upload a cancelled cheque or bank passbook page
               </p>
               <FileUploadZone onFileSelect={handleFileUpload} currentFile={data.bankDetails.cancelledCheque} placeholder="Upload bank proof" description="PDF, JPG, PNG up to 5MB" accept={{
               'application/pdf': ['.pdf'],
