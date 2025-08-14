@@ -89,8 +89,7 @@ export const createPostalCodeValidator = (country: string = 'us') => {
 
 export const createDateOfBirthValidator = () => {
   return z.date({
-    required_error: 'This field is required',
-    invalid_type_error: 'Please select a valid date',
+    message: 'This field is required',
   })
   .refine(date => {
     const today = new Date();
