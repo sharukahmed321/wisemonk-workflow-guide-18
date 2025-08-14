@@ -373,9 +373,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                     🔐 What happens next?
                   </h4>
                   <div className="text-sm text-muted-foreground space-y-2">
-                    <p>When you click "Send for E-Signature", we'll automatically generate your personalized MSA agreement and send it for electronic signature.</p>
-                    <p>Both you and Wisemonk will receive email invitations to sign the document electronically.</p>
-                    <p>You'll be redirected to the dashboard immediately while the process completes in the background.</p>
+                    <p>When you click "Send for E-Signature", we'll create your personalized MSA and send it via our e-sign partner, Zoho. Please review and sign it so we can onboard your employees quickly and seamlessly.</p>
                   </div>
                 </div>
               </div>
