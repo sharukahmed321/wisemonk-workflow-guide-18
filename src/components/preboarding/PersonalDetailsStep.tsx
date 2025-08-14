@@ -378,9 +378,6 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious, onDataChange
                       maxLength={6}
                     />
                   </FormControl>
-                  <div className="text-xs text-muted-foreground">
-                    {field.value?.length === 6 ? '✓ Valid pincode format' : 'Enter 6 digits'}
-                  </div>
                   <FormMessage />
                 </FormItem>
               )}
