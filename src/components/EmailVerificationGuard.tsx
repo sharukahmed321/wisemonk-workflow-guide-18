@@ -12,7 +12,17 @@ interface EmailVerificationGuardProps {
 }
 
 export function EmailVerificationGuard({ children }: EmailVerificationGuardProps) {
-  const { user } = useAuth();
+  // Safely get auth context with error handling
+  let authContext;
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    // If useAuth fails (context not available), render children directly
+    console.warn('EmailVerificationGuard: AuthContext not available, rendering children directly');
+    return <>{children}</>;
+  }
+  
+  const { user } = authContext;
   const { toast } = useToast();
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   const [canResend, setCanResend] = useState(true);

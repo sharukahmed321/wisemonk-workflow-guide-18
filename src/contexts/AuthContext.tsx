@@ -113,12 +113,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Immediately clear local state for instant UI feedback
       const currentUser = user;
-      setUser(null);
-      setSession(null);
-      setUserRole(null);
-      setIsEmailVerified(false);
-      setLoading(false);
-
+      
       // Log sign out event (before actual signout to avoid RLS issues)
       if (currentUser) {
         try {
@@ -139,18 +134,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
-      // Sign out from all sessions globally
+      // Sign out from all sessions globally first
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) {
         console.error('Error signing out:', error);
-        // Don't throw here since we already cleared local state
       }
+
+      // Clear local state after successful signout
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      setIsEmailVerified(false);
+      setLoading(false);
+      
     } catch (error) {
       console.error('Sign out error:', error);
       // Ensure state is cleared even if signout fails
       setUser(null);
       setSession(null);
       setUserRole(null);
+      setIsEmailVerified(false);
       setLoading(false);
     }
   };
