@@ -157,7 +157,7 @@ export function PersonalDetailsStep({ data, onComplete, onPrevious, onDataChange
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-foreground">
-                    Full Name *
+                    Full Name (As per Aadhaar) *
                   </FormLabel>
                   <FormControl>
                     <Input
