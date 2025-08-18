@@ -46,7 +46,7 @@ export function QuickActions() {
       <Card className="shadow-sm border-0 bg-gradient-to-br from-card to-card/50">
         <CardHeader className="pb-4 p-6">
           <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+            
             Quick Actions
           </CardTitle>
           
