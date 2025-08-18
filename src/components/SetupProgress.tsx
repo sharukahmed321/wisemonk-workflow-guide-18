@@ -83,7 +83,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
     {
       id: 'msa',
       title: 'Master Service Agreement',
-      description: 'Review and sign the MSA document (Optional)',
+      description: 'Review and sign the MSA document',
       ...getStepStatus('msa', completedSteps),
       action: 'Sign Agreement',
       url: '/dashboard/setup/msa'
