@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Users, FileText, Settings, BarChart3, Clock } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/hooks/usePermissions';
 
@@ -44,47 +44,6 @@ export function QuickActions() {
       gradient: 'from-blue-50 to-blue-25',
       action: () => navigate('/dashboard/people'),
       permission: (perms) => perms.canViewAllEmployees
-    },
-    {
-      id: 'reports',
-      label: 'View Reports',
-      description: 'Analytics & insights',
-      tooltip: 'Access HR analytics and reports',
-      icon: BarChart3,
-      primary: false,
-      gradient: 'from-green-50 to-green-25',
-      action: () => navigate('/dashboard/reports')
-    },
-    {
-      id: 'documents',
-      label: 'Documents',
-      description: 'Manage documents',
-      tooltip: 'Access document management center',
-      icon: FileText,
-      primary: false,
-      gradient: 'from-orange-50 to-orange-25',
-      action: () => navigate('/dashboard/documents'),
-      permission: (perms) => perms.canManageDocuments
-    },
-    {
-      id: 'time-tracking',
-      label: 'Time & Attendance',
-      description: 'Track work hours',
-      tooltip: 'Manage time tracking and attendance',
-      icon: Clock,
-      primary: false,
-      gradient: 'from-purple-50 to-purple-25',
-      action: () => navigate('/dashboard/time')
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      description: 'System configuration',
-      tooltip: 'Manage system settings and preferences',
-      icon: Settings,
-      primary: false,
-      gradient: 'from-gray-50 to-gray-25',
-      action: () => navigate('/dashboard/settings')
     }
   ];
 
@@ -105,7 +64,7 @@ export function QuickActions() {
           </p>
         </CardHeader>
         
-        <CardContent className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 p-6 pt-0">
+        <CardContent className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 p-6 pt-0">
           {filteredActions.map((action) => (
             <Tooltip key={action.id}>
               <TooltipTrigger asChild>
