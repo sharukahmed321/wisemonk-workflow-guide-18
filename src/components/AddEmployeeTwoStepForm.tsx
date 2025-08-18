@@ -404,12 +404,18 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
 
         // Auto-redirect after success with reduced delay
         setTimeout(() => {
-          if (onSuccess) {
-            onSuccess();
-          } else {
+          try {
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              navigate('/dashboard/people?tab=Invited');
+            }
+          } catch (navError) {
+            console.error('❌ Navigation error:', navError);
+            // Fallback to basic dashboard navigation
             navigate('/dashboard');
           }
-        }, 1500);
+        }, 500); // Reduced from 1500ms to 500ms
 
       } catch (operationError) {
         console.error('❌ Transaction failed, attempting cleanup...', operationError);
@@ -507,7 +513,7 @@ export function AddEmployeeTwoStepForm({ onSuccess }: AddEmployeeTwoStepFormProp
                 </p>
               </div>
               <div className="text-sm text-muted-foreground">
-                Redirecting to dashboard...
+                Redirecting to People page...
               </div>
             </CardContent>
           </Card>
