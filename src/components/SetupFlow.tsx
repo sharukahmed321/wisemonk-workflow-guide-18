@@ -10,16 +10,30 @@ import { ArrowLeft, ExternalLink, CheckCircle, FileText, Download, RefreshCw } f
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { createAddressValidator, createCityValidator, createStateValidator, createPostalCodeValidator } from '@/lib/validationUtils';
+import { 
+  createAddressValidator, 
+  createCityValidator, 
+  createStateValidator, 
+  createPostalCodeValidator 
+} from '@/lib/validationUtils';
+
 const addressSchema = z.object({
   address: createAddressValidator('Street address'),
   city: createCityValidator(),
   state: createStateValidator(),
-  postalCode: z.string().min(1, 'Postal code is required').refine(val => val.trim().length > 0, 'Postal code cannot be only whitespace').transform(val => val.trim()).refine(val => /^\d+$/.test(val), 'Postal code must contain only numbers').refine(val => val.length >= 3 && val.length <= 10, 'Postal code must be between 3-10 digits')
+  postalCode: z.string()
+    .min(1, 'Postal code is required')
+    .refine(val => val.trim().length > 0, 'Postal code cannot be only whitespace')
+    .transform(val => val.trim())
+    .refine(val => /^\d+$/.test(val), 'Postal code must contain only numbers')
+    .refine(val => val.length >= 3 && val.length <= 10, 'Postal code must be between 3-10 digits')
 });
+
 const msaSchema = z.object({});
+
 type AddressFormData = z.infer<typeof addressSchema>;
 type MSAFormData = z.infer<typeof msaSchema>;
+
 interface MSADocument {
   id: string;
   file_name: string;
@@ -29,17 +43,16 @@ interface MSADocument {
   is_signed: boolean;
   generation_method: string;
 }
+
 interface AddressStepProps {
   onComplete: () => void;
 }
-export function AddressStep({
-  onComplete
-}: AddressStepProps) {
+
+export function AddressStep({ onComplete }: AddressStepProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  
   const form = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
@@ -49,61 +62,67 @@ export function AddressStep({
       postalCode: ''
     }
   });
+
   const onSubmit = async (data: AddressFormData) => {
     setIsSubmitting(true);
+
     try {
       // Get the user's current profile to find organization_id
-      const {
-        data: user
-      } = await supabase.auth.getUser();
-      const {
-        data: profile
-      } = await supabase.from('profiles').select('organization_id').eq('user_id', user.user?.id).single();
+      const { data: user } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('user_id', user.user?.id)
+        .single();
+
       if (!profile?.organization_id) {
         throw new Error('No organization found for user');
       }
 
       // Update the organization with address information
-      const {
-        error
-      } = await supabase.rpc('upsert_organization', {
+      const { error } = await supabase.rpc('upsert_organization', {
         p_organization_id: profile.organization_id,
         p_business_address: data.address,
         p_business_city: data.city,
         p_business_state: data.state,
-        p_business_postal_code: data.postalCode
+        p_business_postal_code: data.postalCode,
       });
+
       if (error) {
         throw error;
       }
+
       toast({
         title: "Success",
-        description: "Business address saved successfully. Generating MSA agreement..."
+        description: "Business address saved successfully. Generating MSA agreement...",
       });
 
       // Generate MSA agreement after address is saved
-      /* console.log('🔄 Generating MSA agreement...');
-       const { data: authData } = await supabase.auth.getSession();
-       
-       if (!authData.session) {
-         throw new Error('No active session');
-       }
-        const response = await supabase.functions.invoke('generate-msa-agreement', {
-         headers: {
-           Authorization: `Bearer ${authData.session.access_token}`,
-         },
-       });
-        if (response.error) {
-         console.error('MSA generation error:', response.error);
-         throw new Error(`Failed to generate MSA: ${response.error.message}`);
-       }
-        console.log('✅ MSA agreement generated successfully');
-       
-       toast({
-         title: "Success",
-         description: "MSA agreement generated and stored successfully! Proceeding to signature step.",
-       });
-      */
+     /* console.log('🔄 Generating MSA agreement...');
+      const { data: authData } = await supabase.auth.getSession();
+      
+      if (!authData.session) {
+        throw new Error('No active session');
+      }
+
+      const response = await supabase.functions.invoke('generate-msa-agreement', {
+        headers: {
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        console.error('MSA generation error:', response.error);
+        throw new Error(`Failed to generate MSA: ${response.error.message}`);
+      }
+
+      console.log('✅ MSA agreement generated successfully');
+      
+      toast({
+        title: "Success",
+        description: "MSA agreement generated and stored successfully! Proceeding to signature step.",
+      });
+*/
       // Navigate to dashboard
       navigate('/dashboard');
     } catch (error) {
@@ -111,13 +130,15 @@ export function AddressStep({
       toast({
         title: "Error",
         description: "Failed to save address or generate MSA. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-  return <div className="min-h-screen bg-background p-6">
+
+  return (
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
@@ -138,46 +159,62 @@ export function AddressStep({
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField control={form.control} name="address" render={({
-                field
-              }) => <FormItem>
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
                       <FormLabel>Street Address *</FormLabel>
                       <FormControl>
                         <Input placeholder="123 Business Street, Suite 100" className="h-11" {...field} />
                       </FormControl>
                       <FormMessage />
-                    </FormItem>} />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid gap-4 md:grid-cols-3">
-                  <FormField control={form.control} name="city" render={({
-                  field
-                }) => <FormItem>
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormLabel>City *</FormLabel>
                         <FormControl>
                           <Input placeholder="New York" className="h-11" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>} />
+                      </FormItem>
+                    )}
+                  />
 
-                  <FormField control={form.control} name="state" render={({
-                  field
-                }) => <FormItem>
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormLabel>State/Province *</FormLabel>
                         <FormControl>
                           <Input placeholder="NY" className="h-11" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>} />
+                      </FormItem>
+                    )}
+                  />
 
-                  <FormField control={form.control} name="postalCode" render={({
-                  field
-                }) => <FormItem>
+                  <FormField
+                    control={form.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
                         <FormLabel>Postal Code *</FormLabel>
                         <FormControl>
                           <Input placeholder="10001" className="h-11" {...field} />
                         </FormControl>
                         <FormMessage />
-                      </FormItem>} />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="bg-muted/30 p-4 rounded-lg">
@@ -198,37 +235,39 @@ export function AddressStep({
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 }
+
 interface MSAStepProps {
   onComplete: () => void;
 }
-export function MSAStep({
-  onComplete
-}: MSAStepProps) {
+
+export function MSAStep({ onComplete }: MSAStepProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  
   const form = useForm<MSAFormData>({
     resolver: zodResolver(msaSchema),
     defaultValues: {}
   });
+
   const sendForSigning = async () => {
     setIsSubmitting(true);
+
     try {
       // First mark MSA as completed to trigger 75% progress
-      const {
-        data: user
-      } = await supabase.auth.getUser();
+      const { data: user } = await supabase.auth.getUser();
       if (user.user) {
-        const {
-          error: updateError
-        } = await supabase.from('profiles').update({
-          msa_completed: true,
-          msa_status: 'completed'
-        }).eq('user_id', user.user.id);
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ 
+            msa_completed: true,
+            msa_status: 'completed'
+          })
+          .eq('user_id', user.user.id);
+          
         if (updateError) {
           console.error('Error updating MSA completion status:', updateError);
         }
@@ -236,49 +275,56 @@ export function MSAStep({
 
       // Then redirect to dashboard immediately
       navigate('/dashboard');
+      
       toast({
         title: "Processing",
-        description: "MSA generation and e-signature process has started in the background."
+        description: "MSA generation and e-signature process has started in the background.",
       });
 
       // Then run MSA generation and signing in background
-      const {
-        data: authData
-      } = await supabase.auth.getSession();
+      const { data: authData } = await supabase.auth.getSession();
+      
       if (!authData.session) {
         throw new Error('No active session');
       }
+
       console.log('🔄 Generating MSA agreement...');
 
       // Generate MSA agreement first
       const msaResponse = await supabase.functions.invoke('generate-msa-agreement', {
         headers: {
-          Authorization: `Bearer ${authData.session.access_token}`
-        }
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
       });
+
       if (msaResponse.error) {
         console.error('MSA generation error:', msaResponse.error);
         throw new Error(`Failed to generate MSA: ${msaResponse.error.message}`);
       }
+
       console.log('✅ MSA agreement generated successfully');
 
       // Now send for signing
       if (msaResponse.data?.document) {
         console.log('🔄 Sending MSA for e-signature via Zoho Sign...');
+        
         const signResponse = await supabase.functions.invoke('send-msa-for-signing', {
           body: {
             msa_document_id: msaResponse.data.document.id
           },
           headers: {
-            Authorization: `Bearer ${authData.session.access_token}`
-          }
+            Authorization: `Bearer ${authData.session.access_token}`,
+          },
         });
+
         if (signResponse.error) {
           console.error('Zoho Sign error:', signResponse.error);
           throw new Error(`Failed to send for signing: ${signResponse.error.message}`);
         }
+
         console.log('✅ MSA sent for e-signature successfully');
       }
+
     } catch (error) {
       console.error('Error in MSA background process:', error);
       // Don't show error toast to user since they're already on dashboard
@@ -286,7 +332,9 @@ export function MSAStep({
       setIsSubmitting(false);
     }
   };
-  return <div className="min-h-screen bg-background p-6">
+
+  return (
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
@@ -301,11 +349,17 @@ export function MSAStep({
               <FileText className="h-6 w-6" />
               Master Service Agreement
             </CardTitle>
-            
+            <p className="text-muted-foreground">
+              Ready to generate and send your personalized MSA agreement for electronic signature.
+            </p>
           </CardHeader>
           
           <div className="flex justify-end px-6 pb-4">
-            <Button variant="outline" onClick={() => window.open('https://docs.google.com/document/d/19gpL98DSu_jvbU7Ol5NXU5AJPYG4SKEXKR_-_YElZ40/edit?tab=t.0', '_blank')} className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => window.open('https://docs.google.com/document/d/19gpL98DSu_jvbU7Ol5NXU5AJPYG4SKEXKR_-_YElZ40/edit?tab=t.0', '_blank')}
+              className="flex items-center gap-2"
+            >
               <ExternalLink className="h-4 w-4" />
               View MSA Template
             </Button>
@@ -328,7 +382,11 @@ export function MSAStep({
                 <Button type="button" variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
                   Review Later
                 </Button>
-                <Button onClick={sendForSigning} disabled={isSubmitting} className="flex-1">
+                <Button 
+                  onClick={sendForSigning} 
+                  disabled={isSubmitting} 
+                  className="flex-1"
+                >
                   {isSubmitting ? 'Processing...' : 'Send for E-Signature'}
                 </Button>
               </div>
@@ -336,15 +394,17 @@ export function MSAStep({
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 }
+
 interface SetupCompleteProps {
   onContinue: () => void;
 }
-export function SetupComplete({
-  onContinue
-}: SetupCompleteProps) {
-  return <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+
+export function SetupComplete({ onContinue }: SetupCompleteProps) {
+  return (
+    <div className="min-h-screen bg-background p-6 flex items-center justify-center">
       <Card className="w-full max-w-md">
         <CardContent className="p-8 text-center space-y-6">
           <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto">
@@ -381,5 +441,6 @@ export function SetupComplete({
           </Button>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 }
