@@ -319,7 +319,8 @@ export function MSAStep({
                     🔐 What happens next?
                   </h4>
                   <div className="text-sm text-muted-foreground space-y-2">
-                    <p>When you click "Send for Signature", we'll create your personalized MSA and send it via our e-sign partner, Zoho. Please review and sign it so we can onboard your employees quickly and seamlessly.</p>
+                    <p>When you click "Send for Signature", we'll create your personalized MSA and send it via our e-sign partner, Zoho.
+Please review and sign it so we can onboard your employees quickly and seamlessly.</p>
                   </div>
                 </div>
               </div>
