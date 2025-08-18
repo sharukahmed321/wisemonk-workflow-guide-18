@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -5,15 +6,17 @@ import { LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from './Logo';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 export function EmployeeHeader() {
-  const {
-    user,
-    signOut
-  } = useAuth();
+  const { user, signOut } = useAuth();
   const userInitials = user?.email ? user.email.split('@')[0].slice(0, 2).toUpperCase() : 'U';
-  return <header className="flex h-16 items-center justify-between border-b border-border bg-background px-6">
+  
+  return (
+    <header className="flex h-16 items-center justify-between border-b border-border bg-background px-6">
       {/* Logo */}
-      
+      <div className="flex items-center">
+        <Logo />
+      </div>
 
       {/* User Menu */}
       <DropdownMenu>
@@ -31,7 +34,9 @@ export function EmployeeHeader() {
           <div className="flex items-center justify-start gap-2 p-2">
             <div className="flex flex-col space-y-1 leading-none">
               <p className="font-medium text-sm text-foreground">
-                {user?.user_metadata?.first_name && user?.user_metadata?.last_name ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}` : user?.email?.split('@')[0]}
+                {user?.user_metadata?.first_name && user?.user_metadata?.last_name 
+                  ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}` 
+                  : user?.email?.split('@')[0]}
               </p>
               <p className="text-xs text-muted-foreground">
                 {user?.email}
@@ -45,5 +50,6 @@ export function EmployeeHeader() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </header>;
+    </header>
+  );
 }
