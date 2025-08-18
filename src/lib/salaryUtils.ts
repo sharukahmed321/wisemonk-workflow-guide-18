@@ -9,8 +9,14 @@ export const formatNumberWithCommas = (number: number): string => {
   return number.toLocaleString('en-IN');
 };
 
+const toTitleCase = (str: string): string => {
+  return str.replace(/\w\S*/g, (txt) => 
+    txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+  );
+};
+
 export const convertNumberToWords = (number: number): string => {
-  if (number === 0) return 'zero';
+  if (number === 0) return 'Zero Rupees';
   
   const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
   const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
@@ -39,35 +45,40 @@ export const convertNumberToWords = (number: number): string => {
     return result.trim();
   };
   
+  let result = '';
+  
   if (number >= 10000000) { // 1 crore
     const crores = Math.floor(number / 10000000);
     const remainder = number % 10000000;
-    let result = convertHundreds(crores) + ' crore';
+    result = convertHundreds(crores) + ' crore';
     if (remainder > 0) {
-      result += ' ' + convertNumberToWords(remainder);
+      const remainderWords = convertNumberToWords(remainder);
+      // Remove 'rupees' from the remainder as we'll add it at the end
+      const cleanRemainder = remainderWords.replace(/ rupees$/i, '');
+      result += ' ' + cleanRemainder;
     }
-    return result + ' rupees';
+    return toTitleCase(result) + ' Rupees';
   }
   
   if (number >= 100000) { // 1 lakh
     const lakhs = Math.floor(number / 100000);
     const remainder = number % 100000;
-    let result = convertHundreds(lakhs) + ' lakh';
+    result = convertHundreds(lakhs) + ' lakh';
     if (remainder > 0) {
-      result += ' ' + convertNumberToWords(remainder);
+      result += ' ' + convertHundreds(remainder);
     }
-    return result + ' rupees';
+    return toTitleCase(result) + ' Rupees';
   }
   
   if (number >= 1000) {
     const thousands = Math.floor(number / 1000);
     const remainder = number % 1000;
-    let result = convertHundreds(thousands) + ' thousand';
+    result = convertHundreds(thousands) + ' thousand';
     if (remainder > 0) {
       result += ' ' + convertHundreds(remainder);
     }
-    return result + ' rupees';
+    return toTitleCase(result) + ' Rupees';
   }
   
-  return convertHundreds(number) + ' rupees';
+  return toTitleCase(convertHundreds(number)) + ' Rupees';
 };
