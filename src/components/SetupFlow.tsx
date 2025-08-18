@@ -373,7 +373,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                     🔐 What happens next?
                   </h4>
                   <div className="text-sm text-muted-foreground space-y-2">
-                    <p>When you click "Send for E-Signature", we'll create your personalized MSA and send it via our e-sign partner, Zoho. Please review and sign it so we can onboard your employees quickly and seamlessly.</p>
+                    <p>When you click "Send for Signature", we'll create your personalized MSA and send it via our e-sign partner, Zoho. Please review and sign it so we can onboard your employees quickly and seamlessly.</p>
                   </div>
                 </div>
               </div>
@@ -387,7 +387,7 @@ export function MSAStep({ onComplete }: MSAStepProps) {
                   disabled={isSubmitting} 
                   className="flex-1"
                 >
-                  {isSubmitting ? 'Processing...' : 'Send for E-Signature'}
+                  {isSubmitting ? 'Processing...' : 'Send for Signature'}
                 </Button>
               </div>
             </div>
