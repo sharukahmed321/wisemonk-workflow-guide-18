@@ -220,9 +220,8 @@ export function CompensationReviewStep({
               <CardHeader className="sticky top-0 bg-background z-10 border-b">
                 <CardTitle className="text-base">Complete Employee Record</CardTitle>
               </CardHeader>
-              <ScrollArea className="max-h-96">
-                <ScrollBar />
-                <CardContent className="space-y-4 pt-4">
+              <ScrollArea className="h-96 w-full">
+                <CardContent className="space-y-4 pt-4 pr-4">
                   {/* Personal Information */}
                   <div>
                     <h5 className="font-medium text-sm text-muted-foreground mb-2">Personal Information</h5>
@@ -309,6 +308,7 @@ export function CompensationReviewStep({
                     </>
                   )}
                 </CardContent>
+                <ScrollBar orientation="vertical" />
               </ScrollArea>
             </Card>
             <p className="text-xs text-muted-foreground mt-2">Scroll to review full details.</p>
