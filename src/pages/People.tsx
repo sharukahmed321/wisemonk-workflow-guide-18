@@ -17,7 +17,7 @@ export default function People() {
   // Set initial tab based on URL parameter
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['Active', 'Invited', 'Inactive', 'Terminated'].includes(tabParam)) {
+    if (tabParam && ['Active', 'Onboarding', 'Preboarding', 'Invited'].includes(tabParam)) {
       setSelectedStatus(tabParam as EmployeeStatus);
     }
   }, [searchParams]);
