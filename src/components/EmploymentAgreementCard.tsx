@@ -23,22 +23,19 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
     }
   }, [isGenerated, onGenerated]);
 
-  const handleGenerate = async () => {
-    const generatedDocument = await generateAgreement();
-    if (generatedDocument && onGenerated && !hasNotifiedRef.current) {
-      onGenerated();
-      hasNotifiedRef.current = true;
-    }
-  };
-
   const handleDownload = () => {
     if (document) {
       downloadDocument(document);
     }
   };
+
+  // Only show the card if there's a generated document or if we're loading
+  if (!isLoading && !isGenerated) {
+    return null;
+  }
+
   return (
     <Card>
-     
       <CardContent className="space-y-4">
         {isLoading ? (
           <Button disabled className="w-full">
@@ -53,25 +50,7 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
             <Download className="w-4 h-4 mr-2" />
             Download Employment Agreement
           </Button>
-        ) : (
-          <Button 
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="w-full"
-          >
-            {isGenerating ? (
-              <>
-                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                Generating Agreement...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4 mr-2" />
-                Generate Employment Agreement
-              </>
-            )}
-          </Button>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );

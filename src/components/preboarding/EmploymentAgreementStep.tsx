@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,8 +35,8 @@ export function EmploymentAgreementStep({
   // Always allow completion - agreement generation is now optional
   const isComplete = true;
   return <div className="space-y-6">
-      <div className="text-center">
-        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="text-left">
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
           <FileText className="w-8 h-8 text-primary" />
         </div>
         <h3 className="text-2xl font-semibold text-foreground mb-2">Employment Agreement</h3>
