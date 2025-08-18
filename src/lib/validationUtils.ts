@@ -1,4 +1,3 @@
-
 import * as z from 'zod';
 
 // Constants for dropdowns
@@ -104,10 +103,9 @@ export const createDropdownValidator = (fieldName: string, options: string[]) =>
     .refine(val => options.includes(val), 'Please select a valid option');
 };
 
-export const createSalaryValidator = (maxSalary: number = 500000) => {
+export const createSalaryValidator = () => {
   return z.number()
     .min(240000, 'Minimum salary is ₹2,40,000')
-    .max(maxSalary, `Salary cannot exceed ${maxSalary.toLocaleString()}`)
     .positive('Salary must be a positive number');
 };
 

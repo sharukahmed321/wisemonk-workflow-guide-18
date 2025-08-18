@@ -16,7 +16,7 @@ import { sanitizeNumericInput, formatNumberWithCommas, convertNumberToWords } fr
 import { format } from "date-fns";
 
 const compensationReviewSchema = z.object({
-  salary: createSalaryValidator(10000000), // Set max salary to 1 crore
+  salary: createSalaryValidator(),
   currency: z.string().min(1, 'This field is required'),
   department: z.string().min(1, 'This field is required'),
   employmentType: z.string().min(1, 'This field is required'),
