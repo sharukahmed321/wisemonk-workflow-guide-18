@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
+
 interface QuickAction {
   label: string;
   description: string;
@@ -12,21 +14,18 @@ interface QuickAction {
   primary: boolean;
   action: () => void;
 }
+
 export function QuickActions() {
   const navigate = useNavigate();
+  
   const actions: QuickAction[] = [{
     label: 'Add Employee',
     description: 'Onboard new team member',
     icon: Plus,
     primary: true,
     action: () => navigate('/dashboard/add-employee')
-  }, {
-    label: 'Review Leaves',
-    description: 'Approve pending requests',
-    icon: CheckCircle,
-    primary: false,
-    action: () => navigate('/dashboard/leaves')
   }];
+
   return <Card className="shadow-sm">
       <CardHeader className="pb-6 p-6">
         <CardTitle className="text-base font-semibold text-foreground">
