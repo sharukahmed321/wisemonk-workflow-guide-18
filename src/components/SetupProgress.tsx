@@ -91,7 +91,7 @@ export function SetupProgress({ completedSteps, onStepClick, onDismiss }: SetupP
     {
       id: 'first-employee',
       title: 'Add First Employee',
-      description: 'Add your first team member (Alternative)',
+      description: 'Add your first team member',
       ...getStepStatus('first-employee', completedSteps),
       action: 'Add Employee',
       url: '/dashboard/add-employee'
