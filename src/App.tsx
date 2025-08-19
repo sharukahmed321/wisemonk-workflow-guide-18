@@ -21,6 +21,9 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      <div className="fixed bottom-3 right-3 z-50 rounded bg-black/80 px-2 py-1 text-xs text-white">
+        Deployed: vercel-deploy
+      </div>
     </TooltipProvider>
   </QueryClientProvider>
 );
