@@ -236,9 +236,27 @@ export function PreboardingFlow({
       // Call the completion callback immediately to route to onboarding
       onComplete?.();
 
-      // Run e-signing process in the background (non-blocking)
-      console.log('🔄 Starting background e-signing process...');
+      // Run background process: generate agreement if needed, then send for e-signing
+      console.log('🔄 Starting background employment agreement and e-signing process...');
       try {
+        // First, check if employment agreement exists, if not generate it
+        console.log('📋 Checking for existing employment agreement...');
+        const { data: generateResponse, error: generateError } = await supabase.functions.invoke(
+          'generate-employment-agreement',
+          {
+            body: { employeeId }
+          }
+        );
+
+        if (generateError) {
+          console.error('❌ Background agreement generation error:', generateError);
+          return; // Don't proceed to e-signing if generation failed
+        }
+
+        console.log('✅ Background agreement generation completed:', generateResponse);
+
+        // Now send for e-signing
+        console.log('📨 Sending employment agreement for e-signing...');
         const { data: zohoResponse, error: zohoError } = await supabase.functions.invoke(
           'send-employment-for-signing',
           {
@@ -251,8 +269,8 @@ export function PreboardingFlow({
         } else {
           console.log('✅ Background e-signing completed:', zohoResponse);
         }
-      } catch (signError) {
-        console.error('❌ Background e-signing failed:', signError);
+      } catch (backgroundError) {
+        console.error('❌ Background process failed:', backgroundError);
       }
 
     } catch (error) {

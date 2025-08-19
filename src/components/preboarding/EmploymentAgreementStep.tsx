@@ -25,15 +25,15 @@ export function EmploymentAgreementStep({
     setDocumentGenerated(true);
   };
   const handleComplete = () => {
-    // Remove dependency on documentGenerated - allow proceeding without generating agreement
+    // Allow proceeding without generating agreement - will be handled in background
     onComplete({
       completedAt: new Date(),
       documentGenerated
     });
   };
 
-  // Allow completion only when document is generated
-  const isComplete = documentGenerated;
+  // Always allow completion - document generation will happen in background if needed
+  const isComplete = true;
   return <div className="space-y-6">
       <div className="text-left">
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -54,7 +54,7 @@ Please review and sign to complete your preboarding.</p>
         <div className="flex flex-col items-end gap-2">
           {!documentGenerated && (
             <p className="text-sm text-muted-foreground">
-              Please generate the employment agreement first
+              Agreement will be generated automatically if needed
             </p>
           )}
           <Button onClick={handleComplete} disabled={!isComplete} className="px-8">

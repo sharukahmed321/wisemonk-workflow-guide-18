@@ -38,6 +38,11 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="mb-3">
+          <p className="text-sm text-muted-foreground">
+            You can optionally generate and review the employment agreement here, or it will be generated automatically when you proceed.
+          </p>
+        </div>
         {isLoading ? (
           <Button disabled className="w-full">
             <Clock className="w-4 h-4 mr-2 animate-spin" />
