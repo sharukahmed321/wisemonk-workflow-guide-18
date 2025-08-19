@@ -8,12 +8,14 @@ import InvitationPage from './pages/InvitationPage';
 import StandalonePreboardingPage from './pages/StandalonePreboarding';
 import PreboardingCompletePage from './pages/PreboardingComplete';
 import OnboardingPage from './pages/OnboardingPage';
+import UpdatePassword from './pages/UpdatePassword';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/update-password" element={<UpdatePassword />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/invite/:token" element={<InvitationPage />} />
         <Route path="/preboarding/:employeeId" element={<StandalonePreboardingPage />} />
