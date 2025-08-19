@@ -57,6 +57,7 @@ export function FileUploadZone({
       return;
     }
 
+    console.log('📎 FileUploadZone: File selected:', file.name, formatFileSize(file.size));
     onFileSelect(file);
     
     // Create preview for images
@@ -91,6 +92,7 @@ export function FileUploadZone({
   };
 
   const removeFile = () => {
+    console.log('🗑️ FileUploadZone: File removed');
     onFileSelect(null);
     setPreview(null);
     setError(null);

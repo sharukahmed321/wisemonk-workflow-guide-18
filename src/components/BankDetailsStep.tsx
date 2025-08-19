@@ -52,10 +52,22 @@ export function BankDetailsStep() {
     mode: "onChange"
   });
 
-  // Sync React Hook Form validation state with context
+  // Sync React Hook Form validation state with context (debounced)
   React.useEffect(() => {
-    setFormValidation?.('bankDetails', form.formState.isValid);
-  }, [form.formState.isValid, setFormValidation]);
+    const timer = setTimeout(() => {
+      const isValid = form.formState.isValid;
+      console.log('🏦 Bank Details Form Validation Update:', {
+        isValid,
+        errors: form.formState.errors,
+        dirtyFields: form.formState.dirtyFields,
+        touchedFields: form.formState.touchedFields,
+        values: form.getValues()
+      });
+      setFormValidation?.('bankDetails', isValid);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [form.formState.isValid, form.formState.errors, setFormValidation]);
 
   const handleFormChange = (field: keyof BankDetailsData, value: any) => {
     console.log(`Updating ${field}:`, value);
@@ -66,8 +78,16 @@ export function BankDetailsStep() {
   };
 
   const handleFileUpload = (file: File | null) => {
-    console.log('File upload:', file);
-    handleFormChange('cancelledCheque', file || undefined);
+    console.log('📄 Bank Details File Upload:', file?.name || 'File removed');
+    const fileValue = file || undefined;
+    handleFormChange('cancelledCheque', fileValue);
+    
+    // Manually trigger React Hook Form validation for the file field
+    form.setValue('cancelledCheque', fileValue, { 
+      shouldValidate: true, 
+      shouldDirty: true,
+      shouldTouch: true 
+    });
   };
 
   const watchedHasUAN = form.watch('hasUAN');

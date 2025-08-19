@@ -338,40 +338,53 @@ export function EmployeeOnboardingFlow({
   const currentStepData = STEPS[currentStep - 1];
   const isLastStep = currentStep === STEPS.length;
 
-  // Check both custom validation errors and React Hook Form validation
+  // Simplified validation logic using React Hook Form as primary source
   const hasCustomErrors = Object.keys(errors).length > 0;
   const currentStepKey = currentStep === 3 ? 'bankDetails' : `step${currentStep}`;
   const isFormValid = formValidationStates[currentStepKey] === true;
 
   // Debug logging for validation state
-  console.log('Validation Debug Info:', {
+  console.log('🔍 Validation Debug Info:', {
     currentStep,
     currentStepKey,
     hasCustomErrors,
     isFormValid,
     errors,
     formValidationStates,
-    bankDetailsData: data.bankDetails
+    dataSnapshot: {
+      bankDetails: data.bankDetails,
+      documents: Object.keys(data.documentCollection).filter(key => data.documentCollection[key as keyof DocumentData]),
+      personalInfo: Object.keys(data.personalInfo).filter(key => data.personalInfo[key as keyof PersonalInfoData])
+    }
   });
 
-  // For step 3 (bank details), prioritize React Hook Form validation
-  // For other steps, use custom validation
+  // Simplified canProceed logic
   let canProceed = false;
-  if (currentStep === 3) {
-    // For bank details step, require React Hook Form validation to be true
-    canProceed = isFormValid && !hasCustomErrors;
-    console.log('Bank details validation:', {
-      isFormValid,
-      hasCustomErrors,
-      canProceed
-    });
-  } else {
-    // For other steps, just check custom validation
-    canProceed = !hasCustomErrors;
-    console.log('Other step validation:', {
-      hasCustomErrors,
-      canProceed
-    });
+  
+  switch (currentStep) {
+    case 1:
+      // Personal info is always valid (optional fields)
+      canProceed = true;
+      break;
+    case 2:
+      // Document collection - check for required documents
+      canProceed = !!(data.documentCollection.graduationCert && data.documentCollection.resume);
+      break;
+    case 3:
+      // Bank details - use React Hook Form validation
+      canProceed = isFormValid && !hasCustomErrors;
+      break;
+    default:
+      canProceed = false;
+  }
+
+  console.log(`✅ Step ${currentStep} validation result:`, { canProceed, reason: getValidationReason() });
+  
+  function getValidationReason() {
+    if (currentStep === 1) return 'Personal info always valid';
+    if (currentStep === 2) return `Documents: ${data.documentCollection.graduationCert ? '✅' : '❌'} graduation, ${data.documentCollection.resume ? '✅' : '❌'} resume`;
+    if (currentStep === 3) return `Form valid: ${isFormValid}, No errors: ${!hasCustomErrors}`;
+    return 'Unknown step';
   }
   const hasValidationErrors = hasCustomErrors;
   return <OnboardingContext.Provider value={contextValue}>
