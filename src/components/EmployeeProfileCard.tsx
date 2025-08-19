@@ -71,8 +71,13 @@ export default function EmployeeProfileCard() {
         .maybeSingle();
 
       // Combine profile and employee data, prioritizing employee data
-      // Use birthday field if available, otherwise fall back to date_of_birth
-      const birthdayDate = employee?.birthday || employee?.date_of_birth || '';
+      // Use birthday (employees table) if available, otherwise fall back to date_of_birth, and normalize to YYYY-MM-DD
+      const rawBirthday = employee?.birthday || employee?.date_of_birth || '';
+      const birthdayDate = rawBirthday
+        ? (typeof rawBirthday === 'string'
+          ? rawBirthday.split('T')[0]
+          : new Date(rawBirthday as any).toISOString().split('T')[0])
+        : '';
       
       const combinedData: ProfileData = {
         first_name: profile?.first_name || '',
