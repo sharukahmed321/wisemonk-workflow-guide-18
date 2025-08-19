@@ -97,7 +97,7 @@ serve(async (req) => {
       console.log('✅ Successfully updated employee data:', data);
     }
 
-    // Handle final completion - update status
+    // Handle final completion - update status and trigger background tasks
     if (stepNumber === 'complete' && finalizeStatus) {
       // Use the new flag to determine status (Onboarding vs Active)
       const targetStatus = setStatusToOnboarding ? 'Onboarding' : 'Active';
@@ -117,6 +117,42 @@ serve(async (req) => {
       }
 
       console.log(`✅ Employee status updated to ${targetStatus}:`, data);
+
+      // Kick off background tasks for agreement generation and e-signing
+      // Only when the employee is moving into Onboarding state
+      if (targetStatus === 'Onboarding') {
+        try {
+          EdgeRuntime.waitUntil((async () => {
+            try {
+              console.log('🧵 Background task: starting employment agreement generation for', employeeId);
+              const genRes = await supabaseAdmin.functions.invoke('generate-employment-agreement', {
+                body: { employeeId }
+              });
+
+              if (genRes.error) {
+                console.error('❌ Background generation error:', genRes.error);
+              } else {
+                console.log('📄 Background generation success:', genRes.data);
+              }
+
+              console.log('✉️ Background task: submitting for e-signing for', employeeId);
+              const signRes = await supabaseAdmin.functions.invoke('send-employment-for-signing', {
+                body: { employeeId }
+              });
+
+              if (signRes.error) {
+                console.error('❌ Background e-sign submission error:', signRes.error);
+              } else {
+                console.log('✅ Background e-sign submission success:', signRes.data);
+              }
+            } catch (bgErr) {
+              console.error('💥 Background task failure:', bgErr);
+            }
+          })());
+        } catch (waitErr) {
+          console.error('⚠️ Failed to schedule background tasks:', waitErr);
+        }
+      }
     }
 
     return new Response(
