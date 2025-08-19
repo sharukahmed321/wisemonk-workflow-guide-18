@@ -133,53 +133,17 @@ const createZohoSignRequest = async (accessToken, pdfUrl, fileName, employee, or
     employee_id: employee.id
   });
 
-  // Create multipart form data manually
-  const boundary = `----WebKitFormBoundary${Math.random().toString(16).substr(2)}`;
-  let bodyParts = [];
-
-  // Add JSON data part
-  const jsonPart = new TextEncoder().encode(
-    `--${boundary}\r\n` +
-    'Content-Disposition: form-data; name="data"\r\n' +
-    'Content-Type: application/json\r\n\r\n' +
-    JSON.stringify(requestData) + '\r\n'
-  );
-  bodyParts.push(jsonPart);
-
-  // Add file part header
-  const fileHeaderPart = new TextEncoder().encode(
-    `--${boundary}\r\n` +
-    `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-    'Content-Type: application/pdf\r\n\r\n'
-  );
-  bodyParts.push(fileHeaderPart);
-
-  // Add file buffer
-  bodyParts.push(new Uint8Array(pdfBuffer));
-
-  // Add end boundary
-  const endPart = new TextEncoder().encode(`\r\n--${boundary}--\r\n`);
-  bodyParts.push(endPart);
-
-  // Combine all parts
-  const totalLength = bodyParts.reduce((sum, part) => sum + part.length, 0);
-  const requestBody = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const part of bodyParts) {
-    requestBody.set(part, offset);
-    offset += part.length;
-  }
-
-  console.log(`Multipart body created, total size: ${totalLength} bytes`);
+  // Create multipart form data using FormData/Blob (fixes Zoho 2005 errors)
+  const formData = new FormData();
+  formData.append('data', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));
+  formData.append('file', new Blob([pdfBuffer], { type: 'application/pdf' }), fileName);
 
   const response = await fetch('https://sign.zoho.in/api/v1/requests', {
     method: 'POST',
     headers: {
-      'Authorization': 'Zoho-oauthtoken ' + accessToken,
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      'Content-Length': requestBody.length.toString()
+      'Authorization': 'Zoho-oauthtoken ' + accessToken
     },
-    body: requestBody
+    body: formData
   });
 
   console.log(`Create document response status: ${response.status}`);
@@ -370,15 +334,37 @@ serve(async (req) => {
     //   });
     // }
 
-    // If no agreement URL, log it but don't fail
-    if (!employee.employment_agreement_url) {
-      console.log('⚠️ No employment agreement URL found - skipping e-signing process');
+    // Resolve the Employment Agreement URL
+    let pdfUrl: string | null = employee.employment_agreement_url || null;
+    let docRecord: any = null;
+    if (!pdfUrl) {
+      console.log('⚠️ No employment_agreement_url on employee — looking up latest from employment_agreements...');
+      const { data: docs, error: docsError } = await supabase
+        .from('employment_agreements')
+        .select('id, file_path, file_name, created_at')
+        .eq('organization_id', employee.organization_id)
+        .eq('user_id', employee.user_id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (docsError) {
+        console.error('❌ Failed to look up employment_agreements:', docsError);
+      }
+      if (docs && docs.length > 0) {
+        docRecord = docs[0];
+        const { data: publicUrlData } = await supabase
+          .storage
+          .from('employment-agreements')
+          .getPublicUrl(docRecord.file_path);
+        pdfUrl = publicUrlData?.publicUrl || null;
+        console.log('✅ Resolved agreement from storage:', { file_path: docRecord.file_path, pdfUrl });
+      }
+    }
+
+    if (!pdfUrl) {
       return new Response(JSON.stringify({
-        success: true,
-        message: 'Employee status updated to Onboarding. E-signing skipped - no agreement URL available.',
-        employee_id: employeeId,
-        skipped_reason: 'No employment agreement URL'
+        error: 'No employment agreement PDF available. Please generate the agreement first.'
       }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -393,7 +379,7 @@ serve(async (req) => {
       });
     }
 
-    console.log('Employment agreement PDF found:', employee.employment_agreement_url);
+    console.log('Employment agreement PDF found:', pdfUrl);
 
     // Update status to indicate signing process has started
     console.log('Setting status to processing...');
@@ -411,12 +397,12 @@ serve(async (req) => {
     console.log('Access token obtained');
 
     // Create Zoho Sign request
-    const fileName = `employment_agreement_${employee.first_name}_${employee.last_name}.pdf`;
+    const fileName = (docRecord?.file_name) || `employment_agreement_${employee.first_name}_${employee.last_name}.pdf`;
     console.log('Creating Zoho Sign request with filename:', fileName);
     
     const { requestId, documentId } = await createZohoSignRequest(
       accessToken, 
-      employee.employment_agreement_url, 
+      pdfUrl as string, 
       fileName, 
       employee, 
       employee.organizations

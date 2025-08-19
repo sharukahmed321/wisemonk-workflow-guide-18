@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.verify-otp]
 verify_jwt = false
+
+[functions.generate-employment-agreement]
+verify_jwt = false
+
+[functions.send-employment-for-signing]
+verify_jwt = false
