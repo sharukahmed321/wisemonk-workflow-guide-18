@@ -238,24 +238,22 @@ export function PreboardingFlow({
 
       // Run e-signing process in the background (non-blocking)
       console.log('🔄 Starting background e-signing process...');
-      setTimeout(async () => {
-        try {
-          const { data: zohoResponse, error: zohoError } = await supabase.functions.invoke(
-            'send-employment-for-signing',
-            {
-              body: { employeeId }
-            }
-          );
-
-          if (zohoError) {
-            console.error('❌ Background e-signing error:', zohoError);
-          } else {
-            console.log('✅ Background e-signing completed:', zohoResponse);
+      try {
+        const { data: zohoResponse, error: zohoError } = await supabase.functions.invoke(
+          'send-employment-for-signing',
+          {
+            body: { employeeId }
           }
-        } catch (signError) {
-          console.error('❌ Background e-signing failed:', signError);
+        );
+
+        if (zohoError) {
+          console.error('❌ Background e-signing error:', zohoError);
+        } else {
+          console.log('✅ Background e-signing completed:', zohoResponse);
         }
-      }, 1000); // Run after 1 second delay to allow routing to complete
+      } catch (signError) {
+        console.error('❌ Background e-signing failed:', signError);
+      }
 
     } catch (error) {
       console.error('Error completing preboarding:', error);

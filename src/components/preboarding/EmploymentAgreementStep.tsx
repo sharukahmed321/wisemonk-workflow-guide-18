@@ -32,8 +32,8 @@ export function EmploymentAgreementStep({
     });
   };
 
-  // Always allow completion - agreement generation is now optional
-  const isComplete = true;
+  // Allow completion only when document is generated
+  const isComplete = documentGenerated;
   return <div className="space-y-6">
       <div className="text-left">
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -51,9 +51,16 @@ Please review and sign to complete your preboarding.</p>
         <Button type="button" variant="outline" onClick={onPrevious}>
           Previous
         </Button>
-        <Button onClick={handleComplete} disabled={!isComplete} className="px-8">
-          Send for E-Signing
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          {!documentGenerated && (
+            <p className="text-sm text-muted-foreground">
+              Please generate the employment agreement first
+            </p>
+          )}
+          <Button onClick={handleComplete} disabled={!isComplete} className="px-8">
+            Send for E-Signing
+          </Button>
+        </div>
       </div>
     </div>;
 }

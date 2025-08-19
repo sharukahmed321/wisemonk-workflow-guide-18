@@ -29,13 +29,14 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
     }
   };
 
-  // Only show the card if there's a generated document or if we're loading
-  if (!isLoading && !isGenerated) {
-    return null;
-  }
-
   return (
     <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="w-5 h-5" />
+          Employment Agreement
+        </CardTitle>
+      </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
           <Button disabled className="w-full">
@@ -43,14 +44,47 @@ export function EmploymentAgreementCard({ onGenerated, employeeId }: EmploymentA
             Checking for existing agreements...
           </Button>
         ) : isGenerated ? (
-          <Button 
-            onClick={handleDownload}
-            className="w-full"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Download Employment Agreement
-          </Button>
-        ) : null}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              Employment agreement generated successfully
+            </div>
+            <Button 
+              onClick={handleDownload}
+              className="w-full"
+              variant="outline"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Employment Agreement
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </div>
+            )}
+            <Button 
+              onClick={generateAgreement}
+              disabled={isGenerating}
+              className="w-full"
+            >
+              {isGenerating ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  Generating Agreement...
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Generate Employment Agreement
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
