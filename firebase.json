@@ -1,0 +1,40 @@
+{
+  "hosting": {
+    "public": "dist",
+    "ignore": ["**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "**/*.{js,css}",
+        "headers": [{ "key": "Cache-Control", "value": "public,max-age=31536000,immutable" }]
+      }
+    ],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  }
+}
+{
+  "hosting": [
+    {
+      "target": "dev",
+      "public": "dist",
+      "ignore": ["**/.*", "**/node_modules/**"],
+      "headers": [
+        {
+          "source": "**/*.{js,css}",
+          "headers": [{ "key": "Cache-Control", "value": "public,max-age=31536000,immutable" }]
+        }
+      ],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
+      "public": "dist",
+      "ignore": ["**/.*", "**/node_modules/**"],
+      "headers": [
+        {
+          "source": "**/*.{js,css}",
+          "headers": [{ "key": "Cache-Control", "value": "public,max-age=31536000,immutable" }]
+        }
+      ],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    }
+  ]
+}

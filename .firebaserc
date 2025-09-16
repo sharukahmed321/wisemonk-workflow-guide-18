@@ -1,0 +1,13 @@
+{
+  "projects": { "default": "wisemonk-fe" }
+}
+{
+  "projects": { "default": "wisemonk-fe" },
+  "targets": {
+    "wisemonk-fe": {
+      "hosting": {
+        "dev": ["wisemonk-fe-dev"]
+      }
+    }
+  }
+}
