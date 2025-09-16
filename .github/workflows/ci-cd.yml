@@ -1,0 +1,297 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ empLeave ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  FIREBASE_PROJECT_ID: 'wisemonk-fe'
+
+jobs:
+  test:
+    name: Test and Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies (tolerate peer conflicts)
+        run: npm ci --legacy-peer-deps
+
+      - name: Run linter (non-blocking)
+        run: npm run lint || echo "Lint errors detected (non-blocking)"
+        continue-on-error: true
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+  deploy_development:
+    name: Deploy to Development (wisemonk-fe-dev live)
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/empLeave'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies (tolerate peer conflicts)
+        run: npm ci --legacy-peer-deps
+
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+      - name: Prepare Firebase service account JSON (raw or base64)
+        id: sa
+        shell: bash
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if echo "$FIREBASE_SERVICE_ACCOUNT" | grep -q '^{'; then
+            JSON="$FIREBASE_SERVICE_ACCOUNT"
+          else
+            JSON=$(echo "$FIREBASE_SERVICE_ACCOUNT" | base64 -d)
+          fi
+          ONE_LINE=$(echo "$JSON" | tr -d '\n' | tr -d '\r')
+          echo "json=$ONE_LINE" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Firebase Hosting (Development Live - target dev)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ steps.sa.outputs.json }}'
+          channelId: live
+          target: dev
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
+
+  notify:
+    name: Deployment Status
+    runs-on: ubuntu-latest
+    needs: [test, deploy_development]
+    if: always()
+    steps:
+      - name: Deployment Status
+        run: |
+          echo "## 🚀 Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | ${{ needs.test.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Development Deploy | ${{ needs.deploy_development.result == 'success' && '✅ Success' || needs.deploy_development.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, empLeave ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  FIREBASE_PROJECT_ID: 'wisemonk-fe'
+  FIREBASE_SITE_ID: 'wisemonk-fe'
+
+jobs:
+  test:
+    name: Test and Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linter (non-blocking)
+      run: npm run lint || echo "Lint errors detected (non-blocking)"
+      continue-on-error: true
+
+    - name: Type check
+      run: npx tsc --noEmit
+
+    - name: Build application
+      run: npm run build
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+        VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+        VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+        VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+
+  deploy_development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/empLeave'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+        VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+        VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+        VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+    - name: Prepare Firebase service account JSON (raw or base64)
+      id: sa
+      shell: bash
+      env:
+        FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      run: |
+        if echo "$FIREBASE_SERVICE_ACCOUNT" | grep -q '^{'; then
+          JSON="$FIREBASE_SERVICE_ACCOUNT"
+        else
+          JSON=$(echo "$FIREBASE_SERVICE_ACCOUNT" | base64 -d)
+        fi
+        # Minify to one line to avoid YAML/JSON parsing issues
+        ONE_LINE=$(echo "$JSON" | tr -d '\n' | tr -d '\r')
+        echo "json=$ONE_LINE" >> "$GITHUB_OUTPUT"
+
+    - name: Deploy to Firebase Hosting (Development Live - wisemonk-fe-dev)
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: '${{ secrets.GITHUB_TOKEN }}'
+        firebaseServiceAccount: '${{ steps.sa.outputs.json }}'
+        channelId: live
+        target: dev
+        projectId: ${{ env.FIREBASE_PROJECT_ID }}
+
+  deploy_production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+        VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+        VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+        VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+    - name: Prepare Firebase service account JSON (raw or base64)
+      id: sa_prod
+      shell: bash
+      env:
+        FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      run: |
+        if echo "$FIREBASE_SERVICE_ACCOUNT" | grep -q '^{'; then
+          JSON="$FIREBASE_SERVICE_ACCOUNT"
+        else
+          JSON=$(echo "$FIREBASE_SERVICE_ACCOUNT" | base64 -d)
+        fi
+        ONE_LINE=$(echo "$JSON" | tr -d '\n' | tr -d '\r')
+        echo "json=$ONE_LINE" >> "$GITHUB_OUTPUT"
+
+    - name: Deploy to Firebase Hosting (Production Live - wisemonk-fe)
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: '${{ secrets.GITHUB_TOKEN }}'
+        firebaseServiceAccount: '${{ steps.sa_prod.outputs.json }}'
+        channelId: live
+        projectId: ${{ env.FIREBASE_PROJECT_ID }}
+
+  notify:
+    name: Deployment Status
+    runs-on: ubuntu-latest
+    needs: [test, deploy_development, deploy_production]
+    if: always()
+    
+    steps:
+    - name: Deployment Status
+      run: |
+        echo "## 🚀 Deployment Status" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Test | ${{ needs.test.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Development Deploy | ${{ needs.deploy_development.result == 'success' && '✅ Success' || needs.deploy_development.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
